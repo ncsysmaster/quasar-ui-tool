@@ -1,0 +1,7 @@
+Quasar Tool Screen Component Guide - source ledger
+Source code: local repository vscode-extension/src and src/generator (accessed 2026-06-20)
+Screen capture: user-provided Form Search grid screenshot; slides 1, 4, 7
+Browser capture: user-provided Quasar UI Builder screenshot; slide 5
+Editor capture: user-provided Screen/Script/DataSet screenshot; slide 3
+Cell split dialog: recreated as editable shapes from the current implementation; slide 8
+All diagrams and interface mockups are editable native presentation shapes.

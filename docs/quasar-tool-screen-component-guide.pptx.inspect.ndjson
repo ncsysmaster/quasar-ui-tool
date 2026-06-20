@@ -1,0 +1,429 @@
+{"kind":"deck","id":"pr/d492yv","name":"Deck"}
+{"kind":"layout","layoutId":"641f6aa1-bb19-48e4-82b7-2b18978bf5c8","name":"Master","type":"master"}
+{"kind":"layout","layoutId":"2436ef30-b673-4a65-8a13-9b1a3433ff5c","name":"Title Slide","type":"title"}
+{"kind":"slide","id":"sl/mx0vk0","slide":1,"title":"QUASAR TOOL","textShapes":8}
+{"kind":"textbox","id":"sh/qxs72x4n","slide":1,"text":"QUASAR TOOL","textPreview":"QUASAR TOOL","textChars":11,"textLines":1,"bbox":[62,58,470,28]}
+{"kind":"textbox","id":"sh/xobm58z2","slide":1,"text":"Screen 컴포넌트\n사용 가이드","textPreview":"Screen 컴포넌트 | 사용 가이드","textChars":18,"textLines":2,"bbox":[62,104,470,150]}
+{"kind":"textbox","id":"sh/83itgfml","slide":1,"text":"JSON 기반 Quasar/Vue 화면을 VS Code에서 설계하고\n실행 가능한 Vue 파일로 연결하는 방법","textPreview":"JSON 기반 Quasar/Vue 화면을 VS Code에서 설계하고 | 실행 가능한 Vue 파일로 연결하는 방법","textChars":60,"textLines":2,"bbox":[62,268,460,90]}
+{"kind":"shape","id":"sh/fu18jqh0","slide":1,"bbox":[62,376,106,30]}
+{"kind":"textbox","id":"sh/m94fu18j","slide":1,"text":"Screen","textPreview":"Screen","textChars":6,"textLines":1,"bbox":[70,376,90,30]}
+{"kind":"shape","id":"sh/x0nuxc3y","slide":1,"bbox":[180,376,106,30]}
+{"kind":"textbox","id":"sh/4fu18jqh","slide":1,"text":"Script","textPreview":"Script","textChars":6,"textLines":1,"bbox":[188,376,90,30]}
+{"kind":"shape","id":"sh/f6dcbulw","slide":1,"bbox":[298,376,118,30]}
+{"kind":"textbox","id":"sh/mlkjm1cf","slide":1,"text":"DataSet","textPreview":"DataSet","textChars":7,"textLines":1,"bbox":[306,376,102,30]}
+{"kind":"shape","id":"sh/gbq1oryt","slide":1,"bbox":[555,52,670,570]}
+{"kind":"textbox","id":"sh/y90je9cv","slide":1,"text":"설계 · 편집 · 생성","textPreview":"설계 · 편집 · 생성","textChars":12,"textLines":1,"bbox":[62,612,400,36]}
+{"kind":"textbox","id":"sh/nuxc3ylc","slide":1,"text":"v0.1.0","textPreview":"v0.1.0","textChars":6,"textLines":1,"bbox":[1135,660,90,20]}
+{"kind":"image","id":"im/29gr2p8n","slide":1,"name":"","alt":"Form Search Grid가 열린 Screen 화면","bbox":[575,90,630,490]}
+{"kind":"notes","id":"nt/mx0vk0","slide":1,"text":""}
+{"kind":"slide","id":"sl/w6nvix","slide":2,"title":"01 · WORKFLOW","textShapes":28}
+{"kind":"textbox","id":"sh/a5gbq1or","slide":2,"text":"01 · WORKFLOW","textPreview":"01 · WORKFLOW","textChars":13,"textLines":1,"bbox":[54,28,470,24]}
+{"kind":"textbox","id":"sh/lszqtcj6","slide":2,"text":"한 화면의 원본은 JSON과 JS, 결과는 Vue","textPreview":"한 화면의 원본은 JSON과 JS, 결과는 Vue","textChars":27,"textLines":1,"bbox":[54,52,1168,56]}
+{"kind":"textbox","id":"sh/s72x4nap","slide":2,"text":"Screen 편집과 코드 편집이 같은 상태 모델을 공유합니다.","textPreview":"Screen 편집과 코드 편집이 같은 상태 모델을 공유합니다.","textChars":34,"textLines":1,"bbox":[54,108,1150,32]}
+{"kind":"shape","id":"sh/3ylc7u54","slide":2,"bbox":[54,146,1172,2]}
+{"kind":"shape","id":"sh/adsji5sn","slide":2,"bbox":[54,220,198,230]}
+{"kind":"shape","id":"sh/h4byhgn2","slide":2,"bbox":[118,250,70,70]}
+{"kind":"textbox","id":"sh/sji5snel","slide":2,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[118,250,70,70]}
+{"kind":"textbox","id":"sh/za1gvy90","slide":2,"text":"Open With","textPreview":"Open With","textChars":9,"textLines":1,"bbox":[72,340,162,34]}
+{"kind":"textbox","id":"sh/ap4r65wj","slide":2,"text":".src/pages/Page.json","textPreview":".src/pages/Page.json","textChars":20,"textLines":1,"bbox":[70,384,166,48]}
+{"kind":"textbox","id":"sh/0je9cvix","slide":2,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[252,294,37,50]}
+{"kind":"shape","id":"sh/t47y1kre","slide":2,"bbox":[289,220,198,230]}
+{"kind":"shape","id":"sh/idonyd0z","slide":2,"bbox":[353,250,70,70]}
+{"kind":"textbox","id":"sh/byhgn29g","slide":2,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[353,250,70,70]}
+{"kind":"textbox","id":"sh/0rqd4vmt","slide":2,"text":"Screen 설계","textPreview":"Screen 설계","textChars":9,"textLines":1,"bbox":[307,340,162,34]}
+{"kind":"textbox","id":"sh/tcj6tova","slide":2,"text":"Palette · Properties · Tree","textPreview":"Palette · Properties · Tree","textChars":27,"textLines":1,"bbox":[305,384,166,48]}
+{"kind":"textbox","id":"sh/il0rqd4v","slide":2,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[487,294,37,50]}
+{"kind":"shape","id":"sh/b6xkf6dc","slide":2,"bbox":[524,220,198,230]}
+{"kind":"shape","id":"sh/032lszqt","slide":2,"bbox":[588,250,70,70]}
+{"kind":"textbox","id":"sh/tovahoza","slide":2,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[588,250,70,70]}
+{"kind":"textbox","id":"sh/tgfmlkjm","slide":2,"text":"Script 작성","textPreview":"Script 작성","textChars":9,"textLines":1,"bbox":[542,340,162,34]}
+{"kind":"textbox","id":"sh/4vmtwra5","slide":2,"text":".src/pages/Page.js","textPreview":".src/pages/Page.js","textChars":18,"textLines":1,"bbox":[540,384,166,48]}
+{"kind":"textbox","id":"sh/bat47y1k","slide":2,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[722,294,37,50]}
+{"kind":"shape","id":"sh/mp0bi9s3","slide":2,"bbox":[759,220,198,230]}
+{"kind":"shape","id":"sh/tsvu9kni","slide":2,"bbox":[823,250,70,70]}
+{"kind":"textbox","id":"sh/47y1kre1","slide":2,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[823,250,70,70]}
+{"kind":"textbox","id":"sh/bm58z25k","slide":2,"text":"Vue 생성","textPreview":"Vue 생성","textChars":6,"textLines":1,"bbox":[777,340,162,34]}
+{"kind":"textbox","id":"sh/m1cfa9w3","slide":2,"text":"src/pages/Page.vue","textPreview":"src/pages/Page.vue","textChars":18,"textLines":1,"bbox":[775,384,166,48]}
+{"kind":"textbox","id":"sh/twra5gbq","slide":2,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[957,294,37,50]}
+{"kind":"shape","id":"sh/4byhgn29","slide":2,"bbox":[994,220,198,230]}
+{"kind":"shape","id":"sh/ed8bat47","slide":2,"bbox":[1058,250,70,70]}
+{"kind":"textbox","id":"sh/7u54zido","slide":2,"text":"5","textPreview":"5","textChars":1,"textLines":1,"bbox":[1058,250,70,70]}
+{"kind":"textbox","id":"sh/wfyxobm5","slide":2,"text":"브라우저 확인","textPreview":"브라우저 확인","textChars":7,"textLines":1,"bbox":[1012,340,162,34]}
+{"kind":"textbox","id":"sh/l0rqd4vm","slide":2,"text":"Quasar dev :9000","textPreview":"Quasar dev :9000","textChars":16,"textLines":1,"bbox":[1010,384,166,48]}
+{"kind":"shape","id":"sh/eloj2t83","slide":2,"bbox":[54,500,548,116]}
+{"kind":"shape","id":"sh/36hcrmhk","slide":2,"bbox":[54,500,5,116]}
+{"kind":"textbox","id":"sh/wra5gbq1","slide":2,"text":"원본 관리 원칙","textPreview":"원본 관리 원칙","textChars":8,"textLines":1,"bbox":[74,514,514,30]}
+{"kind":"textbox","id":"sh/lc7u54zi","slide":2,"text":"생성된 Vue보다 .src/pages의 JSON/JS 쌍을 기준으로 버전 관리합니다.","textPreview":"생성된 Vue보다 .src/pages의 JSON/JS 쌍을 기준으로 버전 관리합니다.","textChars":47,"textLines":1,"bbox":[74,548,514,58]}
+{"kind":"shape","id":"sh/epkzupwb","slide":2,"bbox":[622,500,604,116]}
+{"kind":"shape","id":"sh/7adsji5s","slide":2,"bbox":[622,500,5,116]}
+{"kind":"textbox","id":"sh/re1w7mp0","slide":2,"text":"자동 동기화","textPreview":"자동 동기화","textChars":6,"textLines":1,"bbox":[642,514,570,30]}
+{"kind":"textbox","id":"sh/2t83itgf","slide":2,"text":"JSON 또는 JS 저장 시 해당 화면만 generate-vue.mjs가 실행됩니다.","textPreview":"JSON 또는 JS 저장 시 해당 화면만 generate-vue.mjs가 실행됩니다.","textChars":47,"textLines":1,"bbox":[642,548,570,58]}
+{"kind":"textbox","id":"sh/9knih4by","slide":2,"text":"QUASAR TOOL · SCREEN COMPONENT GUIDE","textPreview":"QUASAR TOOL · SCREEN COMPONENT GUIDE","textChars":36,"textLines":1,"bbox":[54,686,500,18]}
+{"kind":"textbox","id":"sh/kzupwb2h","slide":2,"text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[1170,682,54,24]}
+{"kind":"notes","id":"nt/w6nvix","slide":2,"text":""}
+{"kind":"slide","id":"sl/k7jpun","slide":3,"title":"02 · SCREEN","textShapes":13}
+{"kind":"textbox","id":"sh/ra5gbq1o","slide":3,"text":"02 · SCREEN","textPreview":"02 · SCREEN","textChars":11,"textLines":1,"bbox":[54,28,470,24]}
+{"kind":"textbox","id":"sh/gvy90je9","slide":3,"text":"Screen은 실제 Quasar 런타임으로 렌더링","textPreview":"Screen은 실제 Quasar 런타임으로 렌더링","textChars":27,"textLines":1,"bbox":[54,52,1168,56]}
+{"kind":"textbox","id":"sh/9gr2p8nq","slide":3,"text":"편집 보조선만 추가되고 컴포넌트 구조는 생성 Vue와 같은 규칙을 사용합니다.","textPreview":"편집 보조선만 추가되고 컴포넌트 구조는 생성 Vue와 같은 규칙을 사용합니다.","textChars":43,"textLines":1,"bbox":[54,108,1150,32]}
+{"kind":"shape","id":"sh/2hwfyxob","slide":3,"bbox":[54,146,1172,2]}
+{"kind":"shape","id":"sh/r2p8nqxs","slide":3,"bbox":[54,180,820,430]}
+{"kind":"shape","id":"sh/94fu18jq","slide":3,"bbox":[84,190,34,34]}
+{"kind":"textbox","id":"sh/25kb6xkf","slide":3,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[84,190,34,34]}
+{"kind":"shape","id":"sh/rqd4vmtw","slide":3,"bbox":[820,410,34,34]}
+{"kind":"textbox","id":"sh/jm1cfa9w","slide":3,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[820,410,34,34]}
+{"kind":"shape","id":"sh/u18jqh0f","slide":3,"bbox":[902,180,324,115]}
+{"kind":"shape","id":"sh/1orytsvu","slide":3,"bbox":[902,180,5,115]}
+{"kind":"textbox","id":"sh/c7u54zid","slide":3,"text":"1 · Editor 탭","textPreview":"1 · Editor 탭","textChars":12,"textLines":1,"bbox":[922,194,290,30]}
+{"kind":"textbox","id":"sh/judg7ads","slide":3,"text":"Screen / Script / DataSet을 전환합니다.","textPreview":"Screen / Script / DataSet을 전환합니다.","textChars":33,"textLines":1,"bbox":[922,228,290,57]}
+{"kind":"shape","id":"sh/u9knih4b","slide":3,"bbox":[902,313,324,115]}
+{"kind":"shape","id":"sh/1032lszq","slide":3,"bbox":[902,313,5,115]}
+{"kind":"textbox","id":"sh/cfa9w3m9","slide":3,"text":"2 · 런타임 Canvas","textPreview":"2 · 런타임 Canvas","textChars":14,"textLines":1,"bbox":[922,327,290,30]}
+{"kind":"textbox","id":"sh/nyd0z610","slide":3,"text":"Vue + Quasar CSS로 JSON 컴포넌트를 직접 렌더링합니다.","textPreview":"Vue + Quasar CSS로 JSON 컴포넌트를 직접 렌더링합니다.","textChars":39,"textLines":1,"bbox":[922,361,290,57]}
+{"kind":"shape","id":"sh/udg7adsj","slide":3,"bbox":[902,446,324,164]}
+{"kind":"shape","id":"sh/2p8nqxs7","slide":3,"bbox":[902,446,5,164]}
+{"kind":"textbox","id":"sh/ra5gbq1o","slide":3,"text":"선택 동기화","textPreview":"선택 동기화","textChars":6,"textLines":1,"bbox":[922,460,290,30]}
+{"kind":"textbox","id":"sh/gvy90je9","slide":3,"text":"Screen에서 선택하면 Page Tree가 자동 펼침되고 Properties와 Events가 같은 ID를 표시합니다.","textPreview":"Screen에서 선택하면 Page Tree가 자동 펼침되고 Properties와 Events가 같은 ID를 표시합니다.","textChars":66,"textLines":1,"bbox":[922,494,290,106]}
+{"kind":"textbox","id":"sh/9gr2p8nq","slide":3,"text":"QUASAR TOOL · SCREEN COMPONENT GUIDE","textPreview":"QUASAR TOOL · SCREEN COMPONENT GUIDE","textChars":36,"textLines":1,"bbox":[54,686,500,18]}
+{"kind":"textbox","id":"sh/2hwfyxob","slide":3,"text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[1170,682,54,24]}
+{"kind":"image","id":"im/xobm58z2","slide":3,"name":"","alt":"Screen Script DataSet 탭이 있는 VS Code 편집 화면","bbox":[65,195,798,400]}
+{"kind":"notes","id":"nt/k7jpun","slide":3,"text":""}
+{"kind":"slide","id":"sl/v1dik6","slide":4,"title":"03 · FORM SEARCH","textShapes":17}
+{"kind":"textbox","id":"sh/32lszqtc","slide":4,"text":"03 · FORM SEARCH","textPreview":"03 · FORM SEARCH","textChars":16,"textLines":1,"bbox":[54,28,470,24]}
+{"kind":"textbox","id":"sh/sneloj2t","slide":4,"text":"Form Search는 조회 화면의 표준 골격을 한 번에 생성","textPreview":"Form Search는 조회 화면의 표준 골격을 한 번에 생성","textChars":34,"textLines":1,"bbox":[54,52,1168,56]}
+{"kind":"textbox","id":"sh/l87ed8ba","slide":4,"text":"Palette에서 클릭하면 조회 필드, 토글, 입력, 초기화/검색 버튼 구조와 기본 데이터를 함께 만듭니다.","textPreview":"Palette에서 클릭하면 조회 필드, 토글, 입력, 초기화/검색 버튼 구조와 기본 데이터를 함께 만듭니다.","textChars":60,"textLines":1,"bbox":[54,108,1150,32]}
+{"kind":"shape","id":"sh/at47y1kr","slide":4,"bbox":[54,146,1172,2]}
+{"kind":"shape","id":"sh/3ex0nuxc","slide":4,"bbox":[54,176,1172,344]}
+{"kind":"shape","id":"sh/lkjm1cfa","slide":4,"bbox":[74,208,34,34]}
+{"kind":"textbox","id":"sh/ex0nuxc3","slide":4,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[74,208,34,34]}
+{"kind":"shape","id":"sh/3itgfmlk","slide":4,"bbox":[415,208,34,34]}
+{"kind":"textbox","id":"sh/bm58z25k","slide":4,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[415,208,34,34]}
+{"kind":"shape","id":"sh/m1cfa9w3","slide":4,"bbox":[835,208,34,34]}
+{"kind":"textbox","id":"sh/tsvu9kni","slide":4,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[835,208,34,34]}
+{"kind":"shape","id":"sh/47y1kre1","slide":4,"bbox":[1138,451,34,34]}
+{"kind":"textbox","id":"sh/bat47y1k","slide":4,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[1138,451,34,34]}
+{"kind":"shape","id":"sh/mp0bi9s3","slide":4,"bbox":[54,548,272,100]}
+{"kind":"shape","id":"sh/tgfmlkjm","slide":4,"bbox":[54,548,5,100]}
+{"kind":"textbox","id":"sh/4vmtwra5","slide":4,"text":"1 · 라벨 셀","textPreview":"1 · 라벨 셀","textChars":8,"textLines":1,"bbox":[74,562,238,30]}
+{"kind":"textbox","id":"sh/b2hwfyxo","slide":4,"text":"필수 표시와 배경 class를 Properties에서 수정","textPreview":"필수 표시와 배경 class를 Properties에서 수정","textChars":32,"textLines":1,"bbox":[74,596,238,42]}
+{"kind":"shape","id":"sh/mhk3q5o7","slide":4,"bbox":[350,548,272,100]}
+{"kind":"shape","id":"sh/udg7adsj","slide":4,"bbox":[350,548,5,100]}
+{"kind":"textbox","id":"sh/nyd0z610","slide":4,"text":"2 · 입력 셀","textPreview":"2 · 입력 셀","textChars":8,"textLines":1,"bbox":[370,562,238,30]}
+{"kind":"textbox","id":"sh/cj6tovah","slide":4,"text":"QSelect/QInput과 v-model을 배치","textPreview":"QSelect/QInput과 v-model을 배치","textChars":27,"textLines":1,"bbox":[370,596,238,42]}
+{"kind":"shape","id":"sh/54zidony","slide":4,"bbox":[646,548,272,100]}
+{"kind":"shape","id":"sh/upwb2hwf","slide":4,"bbox":[646,548,5,100]}
+{"kind":"textbox","id":"sh/nap4r65w","slide":4,"text":"3 · 토글 셀","textPreview":"3 · 토글 셀","textChars":8,"textLines":1,"bbox":[666,562,238,30]}
+{"kind":"textbox","id":"sh/cvixczed","slide":4,"text":"QToggle로 boolean 조회 조건 구성","textPreview":"QToggle로 boolean 조회 조건 구성","textChars":25,"textLines":1,"bbox":[666,596,238,42]}
+{"kind":"shape","id":"sh/5gbq1ory","slide":4,"bbox":[942,548,272,100]}
+{"kind":"shape","id":"sh/u18jqh0f","slide":4,"bbox":[942,548,5,100]}
+{"kind":"textbox","id":"sh/jm1cfa9w","slide":4,"text":"4 · 명령 셀","textPreview":"4 · 명령 셀","textChars":8,"textLines":1,"bbox":[962,562,238,30]}
+{"kind":"textbox","id":"sh/9knih4by","slide":4,"text":"초기화와 검색 이벤트 연결","textPreview":"초기화와 검색 이벤트 연결","textChars":14,"textLines":1,"bbox":[962,596,238,42]}
+{"kind":"textbox","id":"sh/kzupwb2h","slide":4,"text":"QUASAR TOOL · SCREEN COMPONENT GUIDE","textPreview":"QUASAR TOOL · SCREEN COMPONENT GUIDE","textChars":36,"textLines":1,"bbox":[54,686,500,18]}
+{"kind":"textbox","id":"sh/re1w7mp0","slide":4,"text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[1170,682,54,24]}
+{"kind":"image","id":"im/t47y1kre","slide":4,"name":"","alt":"Form Search Grid 편집 화면","bbox":[66,190,1148,316]}
+{"kind":"notes","id":"nt/v1dik6","slide":4,"text":""}
+{"kind":"slide","id":"sl/c6wov3","slide":5,"title":"04 · BASIC COMPONENTS","textShapes":14}
+{"kind":"textbox","id":"sh/adsji5sn","slide":5,"text":"04 · BASIC COMPONENTS","textPreview":"04 · BASIC COMPONENTS","textChars":21,"textLines":1,"bbox":[54,28,470,24]}
+{"kind":"textbox","id":"sh/h4byhgn2","slide":5,"text":"Button · Input · Text는 가장 빠른 화면 조립 단위","textPreview":"Button · Input · Text는 가장 빠른 화면 조립 단위","textChars":37,"textLines":1,"bbox":[54,52,1168,56]}
+{"kind":"textbox","id":"sh/sji5snel","slide":5,"text":"Palette 클릭 후 Properties와 Events에서 동작을 완성합니다.","textPreview":"Palette 클릭 후 Properties와 Events에서 동작을 완성합니다.","textChars":44,"textLines":1,"bbox":[54,108,1150,32]}
+{"kind":"shape","id":"sh/3m94fu18","slide":5,"bbox":[54,146,1172,2]}
+{"kind":"shape","id":"sh/a5gbq1or","slide":5,"bbox":[54,176,720,420]}
+{"kind":"shape","id":"sh/s72x4nap","slide":5,"bbox":[810,176,416,122]}
+{"kind":"shape","id":"sh/zidonyd0","slide":5,"bbox":[810,176,5,122]}
+{"kind":"textbox","id":"sh/a1gvy90j","slide":5,"text":"BUTTON · QBtn","textPreview":"BUTTON · QBtn","textChars":13,"textLines":1,"bbox":[830,190,382,30]}
+{"kind":"textbox","id":"sh/8nqxs72x","slide":5,"text":"label/color/flat/outline을 설정하고 @click 메서드를 연결합니다.","textPreview":"label/color/flat/outline을 설정하고 @click 메서드를 연결합니다.","textChars":49,"textLines":1,"bbox":[830,224,382,64]}
+{"kind":"shape","id":"sh/18jqh0fe","slide":5,"bbox":[1020,258,186,30]}
+{"kind":"textbox","id":"sh/qh0fepkz","slide":5,"text":"클릭 → Events → ...","textPreview":"클릭 → Events → ...","textChars":17,"textLines":1,"bbox":[1028,258,170,30]}
+{"kind":"shape","id":"sh/j2t83itg","slide":5,"bbox":[810,316,416,122]}
+{"kind":"shape","id":"sh/8bat47y1","slide":5,"bbox":[810,316,5,122]}
+{"kind":"textbox","id":"sh/1w7mp0bi","slide":5,"text":"INPUT · QInput","textPreview":"INPUT · QInput","textChars":14,"textLines":1,"bbox":[830,330,382,30]}
+{"kind":"textbox","id":"sh/q5o7qpg3","slide":5,"text":"label/dense/outlined와 model을 설정하고 Enter 또는 change 이벤트를 연결합니다.","textPreview":"label/dense/outlined와 model을 설정하고 Enter 또는 change 이벤트를 연결합니다.","textChars":61,"textLines":1,"bbox":[830,364,382,64]}
+{"kind":"shape","id":"sh/jqh0fepk","slide":5,"bbox":[1020,398,186,30]}
+{"kind":"textbox","id":"sh/c3ylc7u5","slide":5,"text":"입력 → Properties","textPreview":"입력 → Properties","textChars":15,"textLines":1,"bbox":[1028,398,170,30]}
+{"kind":"shape","id":"sh/1kre1w7m","slide":5,"bbox":[810,456,416,122]}
+{"kind":"shape","id":"sh/58z25kb6","slide":5,"bbox":[810,456,5,122]}
+{"kind":"textbox","id":"sh/gn29gr2p","slide":5,"text":"TEXT · HtmlElement","textPreview":"TEXT · HtmlElement","textChars":18,"textLines":1,"bbox":[830,470,382,30]}
+{"kind":"textbox","id":"sh/n29gr2p8","slide":5,"text":"Screen에서 더블클릭해 직접 편집하고 class/style로 표현을 조절합니다.","textPreview":"Screen에서 더블클릭해 직접 편집하고 class/style로 표현을 조절합니다.","textChars":46,"textLines":1,"bbox":[830,504,382,64]}
+{"kind":"shape","id":"sh/yhgn29gr","slide":5,"bbox":[1020,538,186,30]}
+{"kind":"textbox","id":"sh/5wjudg7a","slide":5,"text":"더블클릭 → 직접 편집","textPreview":"더블클릭 → 직접 편집","textChars":12,"textLines":1,"bbox":[1028,538,170,30]}
+{"kind":"textbox","id":"sh/gbq1oryt","slide":5,"text":"QUASAR TOOL · SCREEN COMPONENT GUIDE","textPreview":"QUASAR TOOL · SCREEN COMPONENT GUIDE","textChars":36,"textLines":1,"bbox":[54,686,500,18]}
+{"kind":"textbox","id":"sh/nuxc3ylc","slide":5,"text":"05","textPreview":"05","textChars":2,"textLines":1,"bbox":[1170,682,54,24]}
+{"kind":"image","id":"im/8nqxs72x","slide":5,"name":"","alt":"Button Input Text가 렌더링된 브라우저 화면","bbox":[66,188,696,396]}
+{"kind":"notes","id":"nt/c6wov3","slide":5,"text":""}
+{"kind":"slide","id":"sl/a6oavl","slide":6,"title":"05 · CONTAINERS","textShapes":17}
+{"kind":"textbox","id":"sh/lkjm1cfa","slide":6,"text":"05 · CONTAINERS","textPreview":"05 · CONTAINERS","textChars":15,"textLines":1,"bbox":[54,28,470,24]}
+{"kind":"textbox","id":"sh/at47y1kr","slide":6,"text":"Card · Card Section · Table은 정보 구획과 목록을 구성","textPreview":"Card · Card Section · Table은 정보 구획과 목록을 구성","textChars":42,"textLines":1,"bbox":[54,52,1168,56]}
+{"kind":"textbox","id":"sh/3ex0nuxc","slide":6,"text":"Page Tree에서 부모-자식 구조를 먼저 확인하면 배치 오류를 줄일 수 있습니다.","textPreview":"Page Tree에서 부모-자식 구조를 먼저 확인하면 배치 오류를 줄일 수 있습니다.","textChars":47,"textLines":1,"bbox":[54,108,1150,32]}
+{"kind":"shape","id":"sh/sneloj2t","slide":6,"bbox":[54,146,1172,2]}
+{"kind":"shape","id":"sh/l87ed8ba","slide":6,"bbox":[54,184,350,350]}
+{"kind":"shape","id":"sh/ahoza1gv","slide":6,"bbox":[80,218,298,166]}
+{"kind":"shape","id":"sh/32lszqtc","slide":6,"bbox":[106,248,246,26]}
+{"kind":"shape","id":"sh/wb2hwfyx","slide":6,"bbox":[106,290,246,76]}
+{"kind":"textbox","id":"sh/lwval87e","slide":6,"text":"CARD · QCard","textPreview":"CARD · QCard","textChars":12,"textLines":1,"bbox":[78,404,302,34]}
+{"kind":"textbox","id":"sh/hoza1gvy","slide":6,"text":"페이지의 독립 구획","textPreview":"페이지의 독립 구획","textChars":10,"textLines":1,"bbox":[78,443,302,28]}
+{"kind":"shape","id":"sh/s36hcrmh","slide":6,"bbox":[78,484,302,30]}
+{"kind":"textbox","id":"sh/zidonyd0","slide":6,"text":"flat / bordered / class","textPreview":"flat / bordered / class","textChars":23,"textLines":1,"bbox":[86,484,286,30]}
+{"kind":"shape","id":"sh/a1gvy90j","slide":6,"bbox":[444,184,350,350]}
+{"kind":"shape","id":"sh/hgn29gr2","slide":6,"bbox":[470,218,298,166]}
+{"kind":"shape","id":"sh/svu9knih","slide":6,"bbox":[492,242,254,108]}
+{"kind":"textbox","id":"sh/za1gvy90","slide":6,"text":"content","textPreview":"content","textChars":7,"textLines":1,"bbox":[492,274,254,34]}
+{"kind":"textbox","id":"sh/ap4r65wj","slide":6,"text":"CARD SECTION","textPreview":"CARD SECTION","textChars":12,"textLines":1,"bbox":[468,404,302,34]}
+{"kind":"textbox","id":"sh/h4byhgn2","slide":6,"text":"Card 내부 패딩 영역","textPreview":"Card 내부 패딩 영역","textChars":13,"textLines":1,"bbox":[468,443,302,28]}
+{"kind":"shape","id":"sh/sji5snel","slide":6,"bbox":[468,484,302,30]}
+{"kind":"textbox","id":"sh/87ed8bat","slide":6,"text":"QCard의 children으로 배치","textPreview":"QCard의 children으로 배치","textChars":20,"textLines":1,"bbox":[476,484,286,30]}
+{"kind":"shape","id":"sh/xs72x4na","slide":6,"bbox":[834,184,350,350]}
+{"kind":"shape","id":"sh/q1orytsv","slide":6,"bbox":[860,218,298,166]}
+{"kind":"shape","id":"sh/fmlkjm1c","slide":6,"bbox":[882,238,254,28]}
+{"kind":"shape","id":"sh/8z25kb6x","slide":6,"bbox":[882,267,254,28]}
+{"kind":"shape","id":"sh/1gvy90je","slide":6,"bbox":[882,296,254,28]}
+{"kind":"shape","id":"sh/qtcj6tov","slide":6,"bbox":[882,325,254,28]}
+{"kind":"textbox","id":"sh/je9cvixc","slide":6,"text":"TABLE · QTable","textPreview":"TABLE · QTable","textChars":14,"textLines":1,"bbox":[858,404,302,34]}
+{"kind":"textbox","id":"sh/8v6psfil","slide":6,"text":"rows/columns 목록","textPreview":"rows/columns 목록","textChars":15,"textLines":1,"bbox":[858,443,302,28]}
+{"kind":"shape","id":"sh/xczed8v6","slide":6,"bbox":[858,484,302,30]}
+{"kind":"textbox","id":"sh/neloj2t8","slide":6,"text":"dense / request / row-click","textPreview":"dense / request / row-click","textChars":27,"textLines":1,"bbox":[866,484,286,30]}
+{"kind":"shape","id":"sh/ytsvu9kn","slide":6,"bbox":[54,562,1130,84]}
+{"kind":"shape","id":"sh/5kb6xkf6","slide":6,"bbox":[54,562,5,84]}
+{"kind":"textbox","id":"sh/czed8v6p","slide":6,"text":"권장 계층","textPreview":"권장 계층","textChars":5,"textLines":1,"bbox":[74,576,1096,30]}
+{"kind":"textbox","id":"sh/nqxs72x4","slide":6,"text":"QPage → QCard → QCardSection → Row/Column 또는 QTable. Page Tree에서 드래그해 부모를 조정합니다.","textPreview":"QPage → QCard → QCardSection → Row/Column 또는 QTable. Page Tree에서 드래그해 부모를 조정합니다.","textChars":80,"textLines":1,"bbox":[74,610,1096,26]}
+{"kind":"textbox","id":"sh/u54zidon","slide":6,"text":"QUASAR TOOL · SCREEN COMPONENT GUIDE","textPreview":"QUASAR TOOL · SCREEN COMPONENT GUIDE","textChars":36,"textLines":1,"bbox":[54,686,500,18]}
+{"kind":"textbox","id":"sh/5sneloj2","slide":6,"text":"06","textPreview":"06","textChars":2,"textLines":1,"bbox":[1170,682,54,24]}
+{"kind":"notes","id":"nt/a6oavl","slide":6,"text":""}
+{"kind":"slide","id":"sl/4h1xiz","slide":7,"title":"06 · LAYOUT","textShapes":14}
+{"kind":"textbox","id":"sh/4fu18jqh","slide":7,"text":"06 · LAYOUT","textPreview":"06 · LAYOUT","textChars":11,"textLines":1,"bbox":[54,28,470,24]}
+{"kind":"textbox","id":"sh/fu18jqh0","slide":7,"text":"Row · Column과 col-N 배지로 12칸 Grid를 읽기","textPreview":"Row · Column과 col-N 배지로 12칸 Grid를 읽기","textChars":36,"textLines":1,"bbox":[54,52,1168,56]}
+{"kind":"textbox","id":"sh/m94fu18j","slide":7,"text":"각 행의 합계와 각 셀 폭을 동시에 확인해 레이아웃 오류를 빠르게 찾습니다.","textPreview":"각 행의 합계와 각 셀 폭을 동시에 확인해 레이아웃 오류를 빠르게 찾습니다.","textChars":42,"textLines":1,"bbox":[54,108,1150,32]}
+{"kind":"shape","id":"sh/xobm58z2","slide":7,"bbox":[54,146,1172,2]}
+{"kind":"shape","id":"sh/83itgfml","slide":7,"bbox":[54,176,1172,318]}
+{"kind":"shape","id":"sh/qxs72x4n","slide":7,"bbox":[58,199,34,34]}
+{"kind":"textbox","id":"sh/xkf6dcbu","slide":7,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[58,199,34,34]}
+{"kind":"shape","id":"sh/4zidonyd","slide":7,"bbox":[218,199,34,34]}
+{"kind":"textbox","id":"sh/mhk3q5o7","slide":7,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[218,199,34,34]}
+{"kind":"shape","id":"sh/b2hwfyxo","slide":7,"bbox":[1115,430,34,34]}
+{"kind":"textbox","id":"sh/4nap4r65","slide":7,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[1115,430,34,34]}
+{"kind":"shape","id":"sh/t83itgfm","slide":7,"bbox":[54,522,354,112]}
+{"kind":"shape","id":"sh/m58z25kb","slide":7,"bbox":[54,522,5,112]}
+{"kind":"textbox","id":"sh/bq1oryts","slide":7,"text":"1 · 행 합계","textPreview":"1 · 행 합계","textChars":8,"textLines":1,"bbox":[74,536,320,30]}
+{"kind":"textbox","id":"sh/4byhgn29","slide":7,"text":"왼쪽 col-12 배지는 현재 행의 셀 폭 합계입니다.","textPreview":"왼쪽 col-12 배지는 현재 행의 셀 폭 합계입니다.","textChars":30,"textLines":1,"bbox":[74,570,320,54]}
+{"kind":"shape","id":"sh/twra5gbq","slide":7,"bbox":[426,522,354,112]}
+{"kind":"shape","id":"sh/m1cfa9w3","slide":7,"bbox":[426,522,5,112]}
+{"kind":"textbox","id":"sh/bm58z25k","slide":7,"text":"2 · 셀 폭","textPreview":"2 · 셀 폭","textChars":7,"textLines":1,"bbox":[446,536,320,30]}
+{"kind":"textbox","id":"sh/7adsji5s","slide":7,"text":"오른쪽 위 col-2/col-4 배지는 해당 셀의 Quasar 폭입니다.","textPreview":"오른쪽 위 col-2/col-4 배지는 해당 셀의 Quasar 폭입니다.","textChars":40,"textLines":1,"bbox":[446,570,320,54]}
+{"kind":"shape","id":"sh/epkzupwb","slide":7,"bbox":[798,522,428,112]}
+{"kind":"shape","id":"sh/pg3ex0nu","slide":7,"bbox":[798,522,5,112]}
+{"kind":"textbox","id":"sh/wval87ed","slide":7,"text":"3 · 표시 토글","textPreview":"3 · 표시 토글","textChars":9,"textLines":1,"bbox":[818,536,394,30]}
+{"kind":"textbox","id":"sh/7mp0bi9s","slide":7,"text":"Screen 도구의 보기 아이콘으로 배지를 숨기거나 다시 표시합니다.","textPreview":"Screen 도구의 보기 아이콘으로 배지를 숨기거나 다시 표시합니다.","textChars":38,"textLines":1,"bbox":[818,570,394,54]}
+{"kind":"textbox","id":"sh/e1w7mp0b","slide":7,"text":"QUASAR TOOL · SCREEN COMPONENT GUIDE","textPreview":"QUASAR TOOL · SCREEN COMPONENT GUIDE","textChars":36,"textLines":1,"bbox":[54,686,500,18]}
+{"kind":"textbox","id":"sh/psfil0rq","slide":7,"text":"07","textPreview":"07","textChars":2,"textLines":1,"bbox":[1170,682,54,24]}
+{"kind":"image","id":"im/ulwval87","slide":7,"name":"","alt":"col-N 배지가 표시된 Form Search Grid","bbox":[64,188,1152,294]}
+{"kind":"notes","id":"nt/4h1xiz","slide":7,"text":""}
+{"kind":"slide","id":"sl/bwgpdn","slide":8,"title":"07 · CELL SPLIT","textShapes":25}
+{"kind":"textbox","id":"sh/cvixczed","slide":8,"text":"07 · CELL SPLIT","textPreview":"07 · CELL SPLIT","textChars":15,"textLines":1,"bbox":[54,28,470,24]}
+{"kind":"textbox","id":"sh/nap4r65w","slide":8,"text":"셀 나누기는 선택 셀만 줄 또는 칸으로 분할","textPreview":"셀 나누기는 선택 셀만 줄 또는 칸으로 분할","textChars":24,"textLines":1,"bbox":[54,52,1168,56]}
+{"kind":"textbox","id":"sh/upwb2hwf","slide":8,"text":"행 자체를 선택하면 메뉴가 비활성화되며 줄과 칸은 동시에 선택할 수 없습니다.","textPreview":"행 자체를 선택하면 메뉴가 비활성화되며 줄과 칸은 동시에 선택할 수 없습니다.","textChars":43,"textLines":1,"bbox":[54,108,1150,32]}
+{"kind":"shape","id":"sh/54zidony","slide":8,"bbox":[54,146,1172,2]}
+{"kind":"shape","id":"sh/cj6tovah","slide":8,"bbox":[54,184,350,262]}
+{"kind":"shape","id":"sh/nyd0z610","slide":8,"bbox":[66,198,326,38]}
+{"kind":"textbox","id":"sh/udg7adsj","slide":8,"text":"셀 나누기","textPreview":"셀 나누기","textChars":5,"textLines":1,"bbox":[78,198,180,38]}
+{"kind":"textbox","id":"sh/1032lszq","slide":8,"text":"×","textPreview":"×","textChars":1,"textLines":1,"bbox":[352,198,24,38]}
+{"kind":"shape","id":"sh/cfa9w3m9","slide":8,"bbox":[78,250,210,128]}
+{"kind":"textbox","id":"sh/25kb6xkf","slide":8,"text":"줄/칸 나누기","textPreview":"줄/칸 나누기","textChars":7,"textLines":1,"bbox":[90,242,120,24]}
+{"kind":"shape","id":"sh/rqd4vmtw","slide":8,"bbox":[92,278,15,15]}
+{"kind":"shape","id":"sh/kb6xkf6d","slide":8,"bbox":[96,282,7,7]}
+{"kind":"textbox","id":"sh/9w3m94fu","slide":8,"text":"줄 개수","textPreview":"줄 개수","textChars":4,"textLines":1,"bbox":[116,271,72,28]}
+{"kind":"shape","id":"sh/2t83itgf","slide":8,"bbox":[194,270,76,30]}
+{"kind":"textbox","id":"sh/re1w7mp0","slide":8,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[204,270,48,30]}
+{"kind":"shape","id":"sh/kzupwb2h","slide":8,"bbox":[92,326,15,15]}
+{"kind":"textbox","id":"sh/9knih4by","slide":8,"text":"칸 개수","textPreview":"칸 개수","textChars":4,"textLines":1,"bbox":[116,319,72,28]}
+{"kind":"shape","id":"sh/2p8nqxs7","slide":8,"bbox":[194,318,76,30]}
+{"kind":"textbox","id":"sh/ra5gbq1o","slide":8,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[204,318,48,30]}
+{"kind":"shape","id":"sh/nyd0z610","slide":8,"bbox":[304,250,76,36]}
+{"kind":"textbox","id":"sh/udg7adsj","slide":8,"text":"나누기","textPreview":"나누기","textChars":3,"textLines":1,"bbox":[304,250,76,36]}
+{"kind":"shape","id":"sh/54zidony","slide":8,"bbox":[304,296,76,36]}
+{"kind":"textbox","id":"sh/cj6tovah","slide":8,"text":"취소","textPreview":"취소","textChars":2,"textLines":1,"bbox":[304,296,76,36]}
+{"kind":"textbox","id":"sh/nap4r65w","slide":8,"text":"줄/칸 중 하나만 선택","textPreview":"줄/칸 중 하나만 선택","textChars":12,"textLines":1,"bbox":[66,396,326,24]}
+{"kind":"textbox","id":"sh/upwb2hwf","slide":8,"text":"줄 나누기","textPreview":"줄 나누기","textChars":5,"textLines":1,"bbox":[456,184,300,32]}
+{"kind":"shape","id":"sh/5gbq1ory","slide":8,"bbox":[456,228,300,190]}
+{"kind":"shape","id":"sh/cvixczed","slide":8,"bbox":[492,256,228,132]}
+{"kind":"shape","id":"sh/jm1cfa9w","slide":8,"bbox":[508,270,196,45]}
+{"kind":"shape","id":"sh/u18jqh0f","slide":8,"bbox":[508,328,196,45]}
+{"kind":"textbox","id":"sh/47y1kre1","slide":8,"text":"선택 셀 내부","textPreview":"선택 셀 내부","textChars":7,"textLines":1,"bbox":[508,270,196,45]}
+{"kind":"textbox","id":"sh/tsvu9kni","slide":8,"text":"새 세로 구획","textPreview":"새 세로 구획","textChars":7,"textLines":1,"bbox":[508,328,196,45]}
+{"kind":"textbox","id":"sh/m1cfa9w3","slide":8,"text":"바깥 col-N 유지","textPreview":"바깥 col-N 유지","textChars":11,"textLines":1,"bbox":[456,428,300,30]}
+{"kind":"textbox","id":"sh/bm58z25k","slide":8,"text":"칸 나누기","textPreview":"칸 나누기","textChars":5,"textLines":1,"bbox":[818,184,300,32]}
+{"kind":"shape","id":"sh/4vmtwra5","slide":8,"bbox":[818,228,408,190]}
+{"kind":"shape","id":"sh/tgfmlkjm","slide":8,"bbox":[850,270,158,104]}
+{"kind":"textbox","id":"sh/mp0bi9s3","slide":8,"text":"col-5","textPreview":"col-5","textChars":5,"textLines":1,"bbox":[850,270,158,104]}
+{"kind":"shape","id":"sh/bat47y1k","slide":8,"bbox":[1024,270,158,104]}
+{"kind":"textbox","id":"sh/4nap4r65","slide":8,"text":"col-5","textPreview":"col-5","textChars":5,"textLines":1,"bbox":[1024,270,158,104]}
+{"kind":"textbox","id":"sh/t83itgfm","slide":8,"text":"col-10 → col-5 + col-5","textPreview":"col-10 → col-5 + col-5","textChars":22,"textLines":1,"bbox":[818,428,408,30]}
+{"kind":"shape","id":"sh/l0rqd4vm","slide":8,"bbox":[54,492,1172,132]}
+{"kind":"shape","id":"sh/wfyxobm5","slide":8,"bbox":[54,492,5,132]}
+{"kind":"textbox","id":"sh/7u54zido","slide":8,"text":"사용 순서","textPreview":"사용 순서","textChars":5,"textLines":1,"bbox":[74,506,1138,30]}
+{"kind":"textbox","id":"sh/ed8bat47","slide":8,"text":"1) 셀 선택  2) 우클릭 → 셀 나누기  3) 줄 또는 칸 선택  4) 개수 입력  5) 나누기. 기존 내용은 첫 구획에 유지됩니다.","textPreview":"1) 셀 선택  2) 우클릭 → 셀 나누기  3) 줄 또는 칸 선택  4) 개수 입력  5) 나누기. 기존 내용은 첫 구획에 유지됩니다.","textChars":76,"textLines":1,"bbox":[74,540,1138,74]}
+{"kind":"textbox","id":"sh/lc7u54zi","slide":8,"text":"QUASAR TOOL · SCREEN COMPONENT GUIDE","textPreview":"QUASAR TOOL · SCREEN COMPONENT GUIDE","textChars":36,"textLines":1,"bbox":[54,686,500,18]}
+{"kind":"textbox","id":"sh/wra5gbq1","slide":8,"text":"08","textPreview":"08","textChars":2,"textLines":1,"bbox":[1170,682,54,24]}
+{"kind":"notes","id":"nt/bwgpdn","slide":8,"text":""}
+{"kind":"slide","id":"sl/azlwli","slide":9,"title":"08 · SIDE PANELS","textShapes":27}
+{"kind":"textbox","id":"sh/tovahoza","slide":9,"text":"08 · SIDE PANELS","textPreview":"08 · SIDE PANELS","textChars":16,"textLines":1,"bbox":[54,28,470,24]}
+{"kind":"textbox","id":"sh/ixczed8v","slide":9,"text":"Palette · Properties · Events · Page Tree가 선택 ID를 공유","textPreview":"Palette · Properties · Events · Page Tree가 선택 ID를 공유","textChars":52,"textLines":1,"bbox":[54,52,1168,56]}
+{"kind":"textbox","id":"sh/bi9s36hc","slide":9,"text":"화면 조립, 속성 편집, 이벤트 연결, 계층 이동이 한 흐름으로 이어집니다.","textPreview":"화면 조립, 속성 편집, 이벤트 연결, 계층 이동이 한 흐름으로 이어집니다.","textChars":42,"textLines":1,"bbox":[54,108,1150,32]}
+{"kind":"shape","id":"sh/0fepkzup","slide":9,"bbox":[54,146,1172,2]}
+{"kind":"shape","id":"sh/p0bi9s36","slide":9,"bbox":[54,182,268,406]}
+{"kind":"textbox","id":"sh/i9s36hcr","slide":9,"text":"Component Palette","textPreview":"Component Palette","textChars":17,"textLines":1,"bbox":[70,194,236,34]}
+{"kind":"shape","id":"sh/bulwval8","slide":9,"bbox":[66,234,244,1]}
+{"kind":"shape","id":"sh/0je9cvix","slide":9,"bbox":[68,252,240,50]}
+{"kind":"textbox","id":"sh/t47y1kre","slide":9,"text":"Form Search","textPreview":"Form Search","textChars":11,"textLines":1,"bbox":[82,252,212,50]}
+{"kind":"shape","id":"sh/9s36hcrm","slide":9,"bbox":[68,318,240,50]}
+{"kind":"textbox","id":"sh/g7adsji5","slide":9,"text":"Button","textPreview":"Button","textChars":6,"textLines":1,"bbox":[82,318,212,50]}
+{"kind":"shape","id":"sh/rmhk3q5o","slide":9,"bbox":[68,384,240,50]}
+{"kind":"textbox","id":"sh/y1kre1w7","slide":9,"text":"Input","textPreview":"Input","textChars":5,"textLines":1,"bbox":[82,384,212,50]}
+{"kind":"shape","id":"sh/90je9cvi","slide":9,"bbox":[68,450,240,50]}
+{"kind":"textbox","id":"sh/gfmlkjm1","slide":9,"text":"Card","textPreview":"Card","textChars":4,"textLines":1,"bbox":[82,450,212,50]}
+{"kind":"shape","id":"sh/rytsvu9k","slide":9,"bbox":[68,516,240,50]}
+{"kind":"textbox","id":"sh/yd0z6103","slide":9,"text":"Table","textPreview":"Table","textChars":5,"textLines":1,"bbox":[82,516,212,50]}
+{"kind":"shape","id":"sh/9cvixcze","slide":9,"bbox":[350,182,268,406]}
+{"kind":"textbox","id":"sh/gr2p8nqx","slide":9,"text":"Properties","textPreview":"Properties","textChars":10,"textLines":1,"bbox":[366,194,236,34]}
+{"kind":"shape","id":"sh/c7u54zid","slide":9,"bbox":[362,234,244,1]}
+{"kind":"shape","id":"sh/1orytsvu","slide":9,"bbox":[364,252,240,50]}
+{"kind":"textbox","id":"sh/u18jqh0f","slide":9,"text":"id  QBtn001","textPreview":"id  QBtn001","textChars":11,"textLines":1,"bbox":[378,252,212,50]}
+{"kind":"shape","id":"sh/jm1cfa9w","slide":9,"bbox":[364,318,240,50]}
+{"kind":"textbox","id":"sh/cfa9w3m9","slide":9,"text":"class  q-ml-sm","textPreview":"class  q-ml-sm","textChars":14,"textLines":1,"bbox":[378,318,212,50]}
+{"kind":"shape","id":"sh/1032lszq","slide":9,"bbox":[364,384,240,50]}
+{"kind":"textbox","id":"sh/u9knih4b","slide":9,"text":"style  min-width:80px","textPreview":"style  min-width:80px","textChars":21,"textLines":1,"bbox":[378,384,212,50]}
+{"kind":"shape","id":"sh/judg7ads","slide":9,"bbox":[364,450,240,50]}
+{"kind":"textbox","id":"sh/cj6tovah","slide":9,"text":"color  primary","textPreview":"color  primary","textChars":14,"textLines":1,"bbox":[378,450,212,50]}
+{"kind":"shape","id":"sh/54zidony","slide":9,"bbox":[646,182,268,406]}
+{"kind":"textbox","id":"sh/ra5gbq1o","slide":9,"text":"Events","textPreview":"Events","textChars":6,"textLines":1,"bbox":[662,194,236,34]}
+{"kind":"shape","id":"sh/2p8nqxs7","slide":9,"bbox":[658,234,244,1]}
+{"kind":"shape","id":"sh/9gr2p8nq","slide":9,"bbox":[660,252,240,50]}
+{"kind":"textbox","id":"sh/gvy90je9","slide":9,"text":"@click  onClick_QBtn001","textPreview":"@click  onClick_QBtn001","textChars":23,"textLines":1,"bbox":[674,252,212,50]}
+{"kind":"shape","id":"sh/r2p8nqxs","slide":9,"bbox":[660,318,240,50]}
+{"kind":"textbox","id":"sh/2hwfyxob","slide":9,"text":"@focus","textPreview":"@focus","textChars":6,"textLines":1,"bbox":[674,318,212,50]}
+{"kind":"shape","id":"sh/94fu18jq","slide":9,"bbox":[660,384,240,50]}
+{"kind":"textbox","id":"sh/kjm1cfa9","slide":9,"text":"@blur","textPreview":"@blur","textChars":5,"textLines":1,"bbox":[674,384,212,50]}
+{"kind":"shape","id":"sh/rqd4vmtw","slide":9,"bbox":[660,450,240,50]}
+{"kind":"textbox","id":"sh/25kb6xkf","slide":9,"text":"[...] 메서드 열기","textPreview":"[...] 메서드 열기","textChars":12,"textLines":1,"bbox":[674,450,212,50]}
+{"kind":"shape","id":"sh/i9s36hcr","slide":9,"bbox":[942,182,268,406]}
+{"kind":"textbox","id":"sh/bulwval8","slide":9,"text":"Page Tree","textPreview":"Page Tree","textChars":9,"textLines":1,"bbox":[958,194,236,34]}
+{"kind":"shape","id":"sh/0fepkzup","slide":9,"bbox":[954,234,244,1]}
+{"kind":"shape","id":"sh/p0bi9s36","slide":9,"bbox":[956,252,240,50]}
+{"kind":"textbox","id":"sh/ixczed8v","slide":9,"text":"▾ QPage","textPreview":"▾ QPage","textChars":7,"textLines":1,"bbox":[970,252,212,50]}
+{"kind":"shape","id":"sh/bi9s36hc","slide":9,"bbox":[956,318,240,50]}
+{"kind":"textbox","id":"sh/032lszqt","slide":9,"text":"  ▾ QCard","textPreview":"▾ QCard","textChars":9,"textLines":1,"bbox":[970,318,212,50]}
+{"kind":"shape","id":"sh/tovahoza","slide":9,"bbox":[956,384,240,50]}
+{"kind":"textbox","id":"sh/il0rqd4v","slide":9,"text":"    ▾ Row","textPreview":"▾ Row","textChars":9,"textLines":1,"bbox":[970,384,212,50]}
+{"kind":"shape","id":"sh/b6xkf6dc","slide":9,"bbox":[956,450,240,50]}
+{"kind":"textbox","id":"sh/hwfyxobm","slide":9,"text":"      QBtn001","textPreview":"QBtn001","textChars":13,"textLines":1,"bbox":[970,450,212,50]}
+{"kind":"shape","id":"sh/obm58z25","slide":9,"bbox":[416,620,448,30]}
+{"kind":"textbox","id":"sh/zqtcj6to","slide":9,"text":"선택 → 속성 → 이벤트 → 계층","textPreview":"선택 → 속성 → 이벤트 → 계층","textChars":18,"textLines":1,"bbox":[424,620,432,30]}
+{"kind":"textbox","id":"sh/65wjudg7","slide":9,"text":"QUASAR TOOL · SCREEN COMPONENT GUIDE","textPreview":"QUASAR TOOL · SCREEN COMPONENT GUIDE","textChars":36,"textLines":1,"bbox":[54,686,500,18]}
+{"kind":"textbox","id":"sh/hk3q5o7q","slide":9,"text":"09","textPreview":"09","textChars":2,"textLines":1,"bbox":[1170,682,54,24]}
+{"kind":"notes","id":"nt/azlwli","slide":9,"text":""}
+{"kind":"slide","id":"sl/y19ro7","slide":10,"title":"09 · SCRIPT & DATASET","textShapes":28}
+{"kind":"textbox","id":"sh/n29gr2p8","slide":10,"text":"09 · SCRIPT & DATASET","textPreview":"09 · SCRIPT & DATASET","textChars":21,"textLines":1,"bbox":[54,28,470,24]}
+{"kind":"textbox","id":"sh/gn29gr2p","slide":10,"text":"Monaco로 JavaScript를 편집하고 DataSet으로 데이터 구조를 정의","textPreview":"Monaco로 JavaScript를 편집하고 DataSet으로 데이터 구조를 정의","textChars":45,"textLines":1,"bbox":[54,52,1168,56]}
+{"kind":"textbox","id":"sh/58z25kb6","slide":10,"text":"이벤트 메서드 생성 시 Script 탭이 해당 함수 위치로 이동합니다.","textPreview":"이벤트 메서드 생성 시 Script 탭이 해당 함수 위치로 이동합니다.","textChars":39,"textLines":1,"bbox":[54,108,1150,32]}
+{"kind":"shape","id":"sh/y90je9cv","slide":10,"bbox":[54,146,1172,2]}
+{"kind":"shape","id":"sh/nuxc3ylc","slide":10,"bbox":[54,182,760,424]}
+{"kind":"textbox","id":"sh/gbq1oryt","slide":10,"text":"IndexPage.js","textPreview":"IndexPage.js","textChars":12,"textLines":1,"bbox":[74,194,230,30]}
+{"kind":"textbox","id":"sh/5wjudg7a","slide":10,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[68,246,28,30]}
+{"kind":"textbox","id":"sh/u54zidon","slide":10,"text":"const search = reactive({","textPreview":"const search = reactive({","textChars":25,"textLines":1,"bbox":[112,246,650,30]}
+{"kind":"textbox","id":"sh/nqxs72x4","slide":10,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[68,286,28,30]}
+{"kind":"textbox","id":"sh/z25kb6xk","slide":10,"text":"  name: '', requiredYn: false","textPreview":"name: '', requiredYn: false","textChars":29,"textLines":1,"bbox":[112,286,650,30]}
+{"kind":"textbox","id":"sh/6hcrmhk3","slide":10,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[68,326,28,30]}
+{"kind":"textbox","id":"sh/d8v6psfi","slide":10,"text":"})","textPreview":"})","textChars":2,"textLines":1,"bbox":[112,326,650,30]}
+{"kind":"textbox","id":"sh/onyd0z61","slide":10,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[68,366,28,30]}
+{"kind":"shape","id":"sh/vahoza1g","slide":10,"bbox":[112,366,650,30]}
+{"kind":"textbox","id":"sh/6tovahoz","slide":10,"text":"5","textPreview":"5","textChars":1,"textLines":1,"bbox":[68,406,28,30]}
+{"kind":"textbox","id":"sh/dg7adsji","slide":10,"text":"function onClick_QBtn001(payload) {","textPreview":"function onClick_QBtn001(payload) {","textChars":35,"textLines":1,"bbox":[112,406,650,30]}
+{"kind":"textbox","id":"sh/ovahoza1","slide":10,"text":"6","textPreview":"6","textChars":1,"textLines":1,"bbox":[68,446,28,30]}
+{"kind":"textbox","id":"sh/vmtwra5g","slide":10,"text":"  console.log('click', payload)","textPreview":"console.log('click', payload)","textChars":31,"textLines":1,"bbox":[112,446,650,30]}
+{"kind":"textbox","id":"sh/61032lsz","slide":10,"text":"7","textPreview":"7","textChars":1,"textLines":1,"bbox":[68,486,28,30]}
+{"kind":"textbox","id":"sh/e9cvixcz","slide":10,"text":"}","textPreview":"}","textChars":1,"textLines":1,"bbox":[112,486,650,30]}
+{"kind":"shape","id":"sh/3q5o7qpg","slide":10,"bbox":[846,182,380,424]}
+{"kind":"textbox","id":"sh/wb2hwfyx","slide":10,"text":"DataSet","textPreview":"DataSet","textChars":7,"textLines":1,"bbox":[870,202,240,34]}
+{"kind":"shape","id":"sh/lwval87e","slide":10,"bbox":[870,248,188,30]}
+{"kind":"textbox","id":"sh/ex0nuxc3","slide":10,"text":"defaultDataset","textPreview":"defaultDataset","textChars":14,"textLines":1,"bbox":[878,248,172,30]}
+{"kind":"shape","id":"sh/3itgfmlk","slide":10,"bbox":[870,304,332,58]}
+{"kind":"textbox","id":"sh/w3m94fu1","slide":10,"text":"courseNm","textPreview":"courseNm","textChars":8,"textLines":1,"bbox":[888,304,194,58]}
+{"kind":"shape","id":"sh/loj2t83i","slide":10,"bbox":[1080,318,102,30]}
+{"kind":"textbox","id":"sh/at47y1kr","slide":10,"text":"string","textPreview":"string","textChars":6,"textLines":1,"bbox":[1088,318,86,30]}
+{"kind":"shape","id":"sh/3ex0nuxc","slide":10,"bbox":[870,380,332,58]}
+{"kind":"textbox","id":"sh/tcj6tova","slide":10,"text":"requiredYn","textPreview":"requiredYn","textChars":10,"textLines":1,"bbox":[888,380,194,58]}
+{"kind":"shape","id":"sh/0rqd4vmt","slide":10,"bbox":[1080,394,102,30]}
+{"kind":"textbox","id":"sh/b6xkf6dc","slide":10,"text":"boolean","textPreview":"boolean","textChars":7,"textLines":1,"bbox":[1088,394,86,30]}
+{"kind":"shape","id":"sh/il0rqd4v","slide":10,"bbox":[870,456,332,58]}
+{"kind":"textbox","id":"sh/t47y1kre","slide":10,"text":"rows","textPreview":"rows","textChars":4,"textLines":1,"bbox":[888,456,194,58]}
+{"kind":"shape","id":"sh/0je9cvix","slide":10,"bbox":[1080,470,102,30]}
+{"kind":"textbox","id":"sh/byhgn29g","slide":10,"text":"object","textPreview":"object","textChars":6,"textLines":1,"bbox":[1088,470,86,30]}
+{"kind":"textbox","id":"sh/idonyd0z","slide":10,"text":"Ctrl+C / Ctrl+V / Ctrl+Z · 자동 완성 · 오류 밑줄","textPreview":"Ctrl+C / Ctrl+V / Ctrl+Z · 자동 완성 · 오류 밑줄","textChars":40,"textLines":1,"bbox":[54,626,760,30]}
+{"kind":"textbox","id":"sh/p0bi9s36","slide":10,"text":"QUASAR TOOL · SCREEN COMPONENT GUIDE","textPreview":"QUASAR TOOL · SCREEN COMPONENT GUIDE","textChars":36,"textLines":1,"bbox":[54,686,500,18]}
+{"kind":"textbox","id":"sh/0fepkzup","slide":10,"text":"10","textPreview":"10","textChars":2,"textLines":1,"bbox":[1170,682,54,24]}
+{"kind":"notes","id":"nt/y19ro7","slide":10,"text":""}
+{"kind":"slide","id":"sl/f33s3k","slide":11,"title":"10 · GENERATION","textShapes":20}
+{"kind":"textbox","id":"sh/jqh0fepk","slide":11,"text":"10 · GENERATION","textPreview":"10 · GENERATION","textChars":15,"textLines":1,"bbox":[54,28,470,24]}
+{"kind":"textbox","id":"sh/8bat47y1","slide":11,"text":"저장 순간 화면 단위로 Vue를 다시 생성","textPreview":"저장 순간 화면 단위로 Vue를 다시 생성","textChars":23,"textLines":1,"bbox":[54,52,1168,56]}
+{"kind":"textbox","id":"sh/1w7mp0bi","slide":11,"text":"정방향 생성과 역변환을 모두 지원하며 수동 명령으로도 동일하게 실행할 수 있습니다.","textPreview":"정방향 생성과 역변환을 모두 지원하며 수동 명령으로도 동일하게 실행할 수 있습니다.","textChars":46,"textLines":1,"bbox":[54,108,1150,32]}
+{"kind":"shape","id":"sh/qh0fepkz","slide":11,"bbox":[54,146,1172,2]}
+{"kind":"shape","id":"sh/j2t83itg","slide":11,"bbox":[54,218,286,130]}
+{"kind":"shape","id":"sh/8nqxs72x","slide":11,"bbox":[54,218,5,130]}
+{"kind":"textbox","id":"sh/18jqh0fe","slide":11,"text":"Page.json","textPreview":"Page.json","textChars":9,"textLines":1,"bbox":[74,232,252,30]}
+{"kind":"textbox","id":"sh/ulwval87","slide":11,"text":"컴포넌트 · props · data","textPreview":"컴포넌트 · props · data","textChars":19,"textLines":1,"bbox":[74,266,252,72]}
+{"kind":"shape","id":"sh/j6tovaho","slide":11,"bbox":[54,390,286,130]}
+{"kind":"shape","id":"sh/j2t83itg","slide":11,"bbox":[54,390,5,130]}
+{"kind":"textbox","id":"sh/qh0fepkz","slide":11,"text":"Page.js","textPreview":"Page.js","textChars":7,"textLines":1,"bbox":[74,404,252,30]}
+{"kind":"textbox","id":"sh/18jqh0fe","slide":11,"text":"<script setup> 본문","textPreview":"<script setup> 본문","textChars":17,"textLines":1,"bbox":[74,438,252,72]}
+{"kind":"shape","id":"sh/8nqxs72x","slide":11,"bbox":[488,304,300,150]}
+{"kind":"shape","id":"sh/jqh0fepk","slide":11,"bbox":[488,304,5,150]}
+{"kind":"textbox","id":"sh/q5o7qpg3","slide":11,"text":"generate-vue.mjs","textPreview":"generate-vue.mjs","textChars":16,"textLines":1,"bbox":[508,318,266,30]}
+{"kind":"textbox","id":"sh/1w7mp0bi","slide":11,"text":"검증 · template · script","textPreview":"검증 · template · script","textChars":22,"textLines":1,"bbox":[508,352,266,92]}
+{"kind":"shape","id":"sh/8bat47y1","slide":11,"bbox":[936,304,290,150]}
+{"kind":"shape","id":"sh/ji5snelo","slide":11,"bbox":[936,304,5,150]}
+{"kind":"textbox","id":"sh/uxc3ylc7","slide":11,"text":"Page.vue","textPreview":"Page.vue","textChars":8,"textLines":1,"bbox":[956,318,256,30]}
+{"kind":"textbox","id":"sh/2t83itgf","slide":11,"text":"Quasar 실행 결과","textPreview":"Quasar 실행 결과","textChars":12,"textLines":1,"bbox":[956,352,256,92]}
+{"kind":"textbox","id":"sh/re1w7mp0","slide":11,"text":"↘","textPreview":"↘","textChars":1,"textLines":1,"bbox":[356,250,100,80]}
+{"kind":"textbox","id":"sh/kzupwb2h","slide":11,"text":"↗","textPreview":"↗","textChars":1,"textLines":1,"bbox":[356,402,100,80]}
+{"kind":"textbox","id":"sh/9knih4by","slide":11,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[806,332,108,80]}
+{"kind":"shape","id":"sh/25kb6xkf","slide":11,"bbox":[488,486,300,30]}
+{"kind":"textbox","id":"sh/rqd4vmtw","slide":11,"text":"npm run generate:vue","textPreview":"npm run generate:vue","textChars":20,"textLines":1,"bbox":[496,486,284,30]}
+{"kind":"shape","id":"sh/kb6xkf6d","slide":11,"bbox":[882,504,344,30]}
+{"kind":"textbox","id":"sh/9w3m94fu","slide":11,"text":"npm run generate:json  ← 역변환","textPreview":"npm run generate:json  ← 역변환","textChars":28,"textLines":1,"bbox":[890,504,328,30]}
+{"kind":"shape","id":"sh/2hwfyxob","slide":11,"bbox":[54,562,1172,84]}
+{"kind":"shape","id":"sh/r2p8nqxs","slide":11,"bbox":[54,562,5,84]}
+{"kind":"textbox","id":"sh/1gvy90je","slide":11,"text":"자동 처리","textPreview":"자동 처리","textChars":5,"textLines":1,"bbox":[74,576,1138,30]}
+{"kind":"textbox","id":"sh/8z25kb6x","slide":11,"text":"VS Code 저장 이벤트 또는 watch:vue가 변경된 JSON/JS의 대응 화면만 생성합니다.","textPreview":"VS Code 저장 이벤트 또는 watch:vue가 변경된 JSON/JS의 대응 화면만 생성합니다.","textChars":55,"textLines":1,"bbox":[74,610,1138,26]}
+{"kind":"textbox","id":"sh/je9cvixc","slide":11,"text":"QUASAR TOOL · SCREEN COMPONENT GUIDE","textPreview":"QUASAR TOOL · SCREEN COMPONENT GUIDE","textChars":36,"textLines":1,"bbox":[54,686,500,18]}
+{"kind":"textbox","id":"sh/qtcj6tov","slide":11,"text":"11","textPreview":"11","textChars":2,"textLines":1,"bbox":[1170,682,54,24]}
+{"kind":"notes","id":"nt/f33s3k","slide":11,"text":""}
+{"kind":"slide","id":"sl/7jdcas","slide":12,"title":"QUICK START","textShapes":24}
+{"kind":"textbox","id":"sh/qxs72x4n","slide":12,"text":"QUICK START","textPreview":"QUICK START","textChars":11,"textLines":1,"bbox":[54,38,300,26]}
+{"kind":"textbox","id":"sh/xobm58z2","slide":12,"text":"화면 하나를 완성하는 6단계","textPreview":"화면 하나를 완성하는 6단계","textChars":15,"textLines":1,"bbox":[54,72,780,58]}
+{"kind":"shape","id":"sh/83itgfml","slide":12,"bbox":[54,174,352,146]}
+{"kind":"textbox","id":"sh/fu18jqh0","slide":12,"text":"01","textPreview":"01","textChars":2,"textLines":1,"bbox":[72,190,54,36]}
+{"kind":"textbox","id":"sh/m94fu18j","slide":12,"text":"JSON Open With","textPreview":"JSON Open With","textChars":14,"textLines":1,"bbox":[72,226,312,34]}
+{"kind":"textbox","id":"sh/x0nuxc3y","slide":12,"text":"Quasar UI Tool Editor","textPreview":"Quasar UI Tool Editor","textChars":21,"textLines":1,"bbox":[72,266,312,30]}
+{"kind":"shape","id":"sh/4fu18jqh","slide":12,"bbox":[444,174,352,146]}
+{"kind":"textbox","id":"sh/f6dcbulw","slide":12,"text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[462,190,54,36]}
+{"kind":"textbox","id":"sh/mlkjm1cf","slide":12,"text":"Palette 추가","textPreview":"Palette 추가","textChars":10,"textLines":1,"bbox":[462,226,312,34]}
+{"kind":"textbox","id":"sh/gbq1oryt","slide":12,"text":"클릭 또는 드래그","textPreview":"클릭 또는 드래그","textChars":9,"textLines":1,"bbox":[462,266,312,30]}
+{"kind":"shape","id":"sh/5wjudg7a","slide":12,"bbox":[834,174,352,146]}
+{"kind":"textbox","id":"sh/y90je9cv","slide":12,"text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[852,190,54,36]}
+{"kind":"textbox","id":"sh/nuxc3ylc","slide":12,"text":"Properties 설정","textPreview":"Properties 설정","textChars":13,"textLines":1,"bbox":[852,226,312,34]}
+{"kind":"textbox","id":"sh/gn29gr2p","slide":12,"text":"class · style · props","textPreview":"class · style · props","textChars":21,"textLines":1,"bbox":[852,266,312,30]}
+{"kind":"shape","id":"sh/58z25kb6","slide":12,"bbox":[54,358,352,146]}
+{"kind":"textbox","id":"sh/yhgn29gr","slide":12,"text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[72,374,54,36]}
+{"kind":"textbox","id":"sh/n29gr2p8","slide":12,"text":"Events 연결","textPreview":"Events 연결","textChars":9,"textLines":1,"bbox":[72,410,312,34]}
+{"kind":"textbox","id":"sh/czed8v6p","slide":12,"text":"[...] 메서드 생성","textPreview":"[...] 메서드 생성","textChars":12,"textLines":1,"bbox":[72,450,312,30]}
+{"kind":"shape","id":"sh/5kb6xkf6","slide":12,"bbox":[444,358,352,146]}
+{"kind":"textbox","id":"sh/9cvixcze","slide":12,"text":"05","textPreview":"05","textChars":2,"textLines":1,"bbox":[462,374,54,36]}
+{"kind":"textbox","id":"sh/gr2p8nqx","slide":12,"text":"Script/DataSet 편집","textPreview":"Script/DataSet 편집","textChars":17,"textLines":1,"bbox":[462,410,312,34]}
+{"kind":"textbox","id":"sh/r65wjudg","slide":12,"text":"Monaco와 필드 정의","textPreview":"Monaco와 필드 정의","textChars":13,"textLines":1,"bbox":[462,450,312,30]}
+{"kind":"shape","id":"sh/ylc7u54z","slide":12,"bbox":[834,358,352,146]}
+{"kind":"textbox","id":"sh/5o7qpg3e","slide":12,"text":"06","textPreview":"06","textChars":2,"textLines":1,"bbox":[852,374,54,36]}
+{"kind":"textbox","id":"sh/g3ex0nux","slide":12,"text":"저장 후 확인","textPreview":"저장 후 확인","textChars":7,"textLines":1,"bbox":[852,410,312,34]}
+{"kind":"textbox","id":"sh/nih4byhg","slide":12,"text":"Vue 생성 · Browser","textPreview":"Vue 생성 · Browser","textChars":16,"textLines":1,"bbox":[852,450,312,30]}
+{"kind":"shape","id":"sh/yxobm58z","slide":12,"bbox":[54,566,1132,70]}
+{"kind":"textbox","id":"sh/9s36hcrm","slide":12,"text":"기준 문서","textPreview":"기준 문서","textChars":5,"textLines":1,"bbox":[76,583,120,30]}
+{"kind":"textbox","id":"sh/g7adsji5","slide":12,"text":"docs/user-manual.md  ·  development-guide.md  ·  vscode-extension-file-reference.md","textPreview":"docs/user-manual.md  ·  development-guide.md  ·  vscode-extension-file-reference.md","textChars":83,"textLines":1,"bbox":[204,583,940,30]}
+{"kind":"textbox","id":"sh/ap4r65wj","slide":12,"text":"QUASAR TOOL","textPreview":"QUASAR TOOL","textChars":11,"textLines":1,"bbox":[54,674,300,18]}
+{"kind":"textbox","id":"sh/za1gvy90","slide":12,"text":"12","textPreview":"12","textChars":2,"textLines":1,"bbox":[1160,670,40,22]}
+{"kind":"notes","id":"nt/7jdcas","slide":12,"text":""}

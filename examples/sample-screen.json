@@ -1,0 +1,36 @@
+{
+  "id": "sampleSearch",
+  "name": "Sample Search",
+  "route": "/sample/search",
+  "components": [
+    {
+      "id": "page",
+      "type": "QPage",
+      "props": {
+        "padding": true
+      },
+      "children": [
+        {
+          "id": "searchKeyword",
+          "type": "QInput",
+          "props": {
+            "label": "Search keyword",
+            "outlined": true
+          }
+        },
+        {
+          "id": "searchButton",
+          "type": "QBtn",
+          "props": {
+            "label": "Search",
+            "color": "primary"
+          },
+          "events": {
+            "click": "onSearch"
+          }
+        }
+      ]
+    }
+  ]
+}
+

@@ -1,0 +1,33 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "validate screen json",
+      "type": "shell",
+      "command": "npm run validate:screens",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "generate vue",
+      "type": "shell",
+      "command": "npm run generate:vue",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "generate json",
+      "type": "shell",
+      "command": "npm run generate:json",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "watch vue",
+      "type": "shell",
+      "command": "npm run watch:vue",
+      "isBackground": true,
+      "problemMatcher": []
+    }
+  ]
+}

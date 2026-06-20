@@ -1,0 +1,26 @@
+{
+  "name": "quasar-tool",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "VS Code based Quasar UI screen builder project.",
+  "scripts": {
+    "dev": "quasar dev --hostname 0.0.0.0 --port 9000",
+    "build": "quasar build",
+    "validate:screens": "node vscode-extension/generator/validate-screen-json.mjs",
+    "generate:json": "node vscode-extension/generator/generate-json.mjs",
+    "generate:vue": "node vscode-extension/generator/generate-vue.mjs",
+    "watch:vue": "node vscode-extension/generator/watch-vue.mjs"
+  },
+  "dependencies": {
+    "@quasar/extras": "^2.0.1",
+    "pinia": "^3.0.4",
+    "quasar": "^2.20.1",
+    "vue": "^3.5.38",
+    "vue-router": "^5.1.0"
+  },
+  "devDependencies": {
+    "@quasar/app-vite": "^3.0.0-rc.3",
+    "monaco-editor": "^0.55.1"
+  }
+}

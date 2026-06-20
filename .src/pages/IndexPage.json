@@ -1,0 +1,358 @@
+{
+  "schemaVersion": "0.1.0",
+  "tool": {
+    "name": "quasar-tool",
+    "artifactType": "page-definition",
+    "description": "Vue 파일에서 역변환된 UI TOOL 페이지 결과물 JSON"
+  },
+  "page": {
+    "id": "IndexPage",
+    "name": "IndexPage",
+    "route": "/",
+    "sourceVuePath": "src/pages/IndexPage.vue",
+    "targetVuePath": "src/pages/IndexPage.vue",
+    "framework": "quasar",
+    "component": "QPage"
+  },
+  "data": {
+    "stages": [
+      {
+        "title": "1단계",
+        "description": "UI화면편집기 결과물인 화면 JSON -> Vue 파일 생성기"
+      },
+      {
+        "title": "2단계",
+        "description": "컴포넌트 팔레트 + 속성 패널"
+      },
+      {
+        "title": "3단계",
+        "description": "드래그앤드롭 화면 배치"
+      },
+      {
+        "title": "4단계",
+        "description": "그리드, 팝업, 공통코드, API 자동연결"
+      },
+      {
+        "title": "5단계",
+        "description": "VS Code Extension 통합"
+      }
+    ],
+    "searchForm": {
+      "eduClsfCd": "",
+      "eduDclsfCd": "",
+      "requiredYn": "",
+      "closedYn": "",
+      "courseNm": ""
+    },
+    "eduClassOptions": [],
+    "eduDetailOptionsFiltered": [],
+    "search": {
+      "class1": null,
+      "class2": null,
+      "requiredYn": false,
+      "useYn": false,
+      "name": ""
+    },
+    "classOptions": []
+  },
+  "components": [
+    {
+      "id": "page01pov",
+      "type": "QPage",
+      "props": {
+        "padding": true
+      },
+      "children": [
+        {
+          "id": "QCard001",
+          "type": "QCard",
+          "props": {
+            "flat": true,
+            "bordered": true
+          },
+          "children": [
+            {
+              "id": "QCardSection001",
+              "type": "QCardSection",
+              "class": "q-pa-sm",
+              "children": [
+                {
+                  "id": "Div017",
+                  "type": "HtmlElement",
+                  "tag": "div",
+                  "class": "row q-col-gutter-sm",
+                  "children": [
+                    {
+                      "id": "Div014",
+                      "type": "HtmlElement",
+                      "tag": "div",
+                      "class": "col",
+                      "children": [
+                        {
+                          "id": "Div009",
+                          "type": "HtmlElement",
+                          "tag": "div",
+                          "class": "row",
+                          "children": [
+                            {
+                              "id": "Div002",
+                              "type": "HtmlElement",
+                              "tag": "div",
+                              "class": "col-2",
+                              "children": [
+                                {
+                                  "id": "Div001",
+                                  "type": "HtmlElement",
+                                  "tag": "div",
+                                  "class": "bg-grey-4 row items-center q-px-md full-height rounded-borders overflow-hidden",
+                                  "style": "border-radius: 4px",
+                                  "text": "조회분류",
+                                  "children": [
+                                    {
+                                      "id": "Span001",
+                                      "type": "HtmlElement",
+                                      "tag": "span",
+                                      "class": "text-negative q-ml-xs",
+                                      "text": "*"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "id": "Div003",
+                              "type": "HtmlElement",
+                              "tag": "div",
+                              "class": "col-2 bg-white q-pa-xs",
+                              "children": [
+                                {
+                                  "id": "QSelect001",
+                                  "type": "QSelect",
+                                  "props": {
+                                    "outlined": true,
+                                    "dense": true,
+                                    "bgColor": "white"
+                                  },
+                                  "models": {
+                                    "modelValue": "search.class1"
+                                  },
+                                  "dynamicProps": {
+                                    "options": "classOptions"
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "id": "Div004",
+                              "type": "HtmlElement",
+                              "tag": "div",
+                              "class": "col-2 bg-white q-pa-xs",
+                              "children": [
+                                {
+                                  "id": "QSelect002",
+                                  "type": "QSelect",
+                                  "props": {
+                                    "outlined": true,
+                                    "dense": true,
+                                    "bgColor": "white"
+                                  },
+                                  "models": {
+                                    "modelValue": "search.class2"
+                                  },
+                                  "dynamicProps": {
+                                    "options": "classOptions"
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "id": "Div006",
+                              "type": "HtmlElement",
+                              "tag": "div",
+                              "class": "col-2",
+                              "children": [
+                                {
+                                  "id": "Div005",
+                                  "type": "HtmlElement",
+                                  "tag": "div",
+                                  "class": "bg-grey-4 row items-center q-px-md full-height rounded-borders overflow-hidden",
+                                  "style": "border-radius: 4px",
+                                  "text": "조회구분"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "Div007",
+                              "type": "HtmlElement",
+                              "tag": "div",
+                              "class": "col-2 bg-white row items-center q-px-sm",
+                              "children": [
+                                {
+                                  "id": "QToggle001",
+                                  "type": "QToggle",
+                                  "props": {
+                                    "label": "필수",
+                                    "dense": true
+                                  },
+                                  "models": {
+                                    "modelValue": "search.requiredYn"
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "id": "Div008",
+                              "type": "HtmlElement",
+                              "tag": "div",
+                              "class": "col-2 bg-white row items-center q-px-sm",
+                              "children": [
+                                {
+                                  "id": "QToggle002",
+                                  "type": "QToggle",
+                                  "props": {
+                                    "label": "사용여부",
+                                    "dense": true
+                                  },
+                                  "models": {
+                                    "modelValue": "search.useYn"
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "id": "Div013",
+                          "type": "HtmlElement",
+                          "tag": "div",
+                          "class": "row",
+                          "children": [
+                            {
+                              "id": "Div011",
+                              "type": "HtmlElement",
+                              "tag": "div",
+                              "class": "col-2",
+                              "children": [
+                                {
+                                  "id": "Div010",
+                                  "type": "HtmlElement",
+                                  "tag": "div",
+                                  "class": "bg-grey-4 row items-center q-px-md full-height rounded-borders overflow-hidden",
+                                  "style": "border-radius: 4px",
+                                  "text": "조회명"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "Div012",
+                              "type": "HtmlElement",
+                              "tag": "div",
+                              "class": "col-10 bg-white q-pa-xs",
+                              "children": [
+                                {
+                                  "id": "QInput001",
+                                  "type": "QInput",
+                                  "props": {
+                                    "outlined": true,
+                                    "dense": true,
+                                    "bgColor": "white"
+                                  },
+                                  "models": {
+                                    "modelValue": "search.name"
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "id": "Div016",
+                      "type": "HtmlElement",
+                      "tag": "div",
+                      "class": "col-auto",
+                      "style": "min-width: 180px; display: flex; align-items: flex-end",
+                      "children": [
+                        {
+                          "id": "Div015",
+                          "type": "HtmlElement",
+                          "tag": "div",
+                          "class": "row no-wrap",
+                          "style": "width: 100%; height: 48px; align-items: center; justify-content: flex-end; gap: 8px; padding: 4px; background: white",
+                          "children": [
+                            {
+                              "id": "QBtn001",
+                              "type": "QBtn",
+                              "style": "min-width: 80px; height: 36px",
+                              "props": {
+                                "label": "초기화",
+                                "outline": true,
+                                "color": "grey-7"
+                              },
+                              "events": {
+                                "click": "resetSearch"
+                              }
+                            },
+                            {
+                              "id": "QBtn002",
+                              "type": "QBtn",
+                              "style": "min-width: 80px; height: 36px",
+                              "props": {
+                                "label": "검색",
+                                "color": "primary"
+                              },
+                              "events": {
+                                "click": "onSearch"
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "designer": {
+            "template": "courseSearchForm"
+          }
+        }
+      ]
+    }
+  ],
+  "generation": {
+    "scriptSetup": {
+      "dataExports": [
+        "stages",
+        "searchForm",
+        "eduClassOptions",
+        "eduDetailOptionsFiltered",
+        "search",
+        "classOptions"
+      ]
+    },
+    "notes": [
+      "이 JSON은 Vue 파일을 기준으로 역변환된 결과물이다.",
+      "복잡한 사용자 정의 JavaScript 표현식은 dynamicProps 또는 rawExpression 형태로 보존될 수 있다.",
+      "이 역변환기는 UI TOOL 생성기가 만든 Vue 파일을 우선 대상으로 한다."
+    ]
+  },
+  "script": {
+    "src": "IndexPage.js"
+  },
+  "datasets": [
+    {
+      "name": "defaultDataset",
+      "fields": [
+        {
+          "name": "stages",
+          "label": "stages",
+          "type": "object",
+          "required": false
+        }
+      ]
+    }
+  ]
+}

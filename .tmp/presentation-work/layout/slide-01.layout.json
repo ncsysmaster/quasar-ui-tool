@@ -1,0 +1,716 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/mx0vk0",
+    "id": "mx0vk0",
+    "slide": 1,
+    "layoutId": "2436ef30-b673-4a65-8a13-9b1a3433ff5c",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "641f6aa1-bb19-48e4-82b7-2b18978bf5c8",
+    "masterLayoutName": "Master",
+    "backgroundColor": "#20242A",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "bg1": "#FFFFFF",
+      "bg2": "#000000",
+      "tx1": "#1F1F1F",
+      "tx2": "#FFFFFF",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "typefaces": [
+      "Malgun Gothic"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "2436ef30-b673-4a65-8a13-9b1a3433ff5c",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "641f6aa1-bb19-48e4-82b7-2b18978bf5c8",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "641f6aa1-bb19-48e4-82b7-2b18978bf5c8",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/qxs72x4n",
+      "id": "1",
+      "bbox": [
+        62,
+        58,
+        470,
+        28
+      ],
+      "geometry": "rect",
+      "text": "QUASAR TOOL",
+      "textPreview": "QUASAR TOOL",
+      "resolvedFontSize": 13,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 13,
+        "typeface": "Malgun Gothic",
+        "color": "#72B7F2",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "QUASAR TOOL"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "QUASAR TOOL",
+          "resolvedTextStyle": {
+            "fontSize": 13,
+            "typeface": "Malgun Gothic",
+            "color": "#72B7F2",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "QUASAR TOOL",
+              "fontSize": 13,
+              "typeface": "Malgun Gothic",
+              "color": "#72B7F2",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/xobm58z2",
+      "id": "2",
+      "bbox": [
+        62,
+        104,
+        470,
+        150
+      ],
+      "geometry": "rect",
+      "text": "Screen 컴포넌트\n사용 가이드",
+      "textPreview": "Screen 컴포넌트 | 사용 가이드",
+      "resolvedFontSize": 52,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 52,
+        "typeface": "Malgun Gothic",
+        "color": "#FFFFFF",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Screen 컴포넌트"
+          },
+          {
+            "index": 2,
+            "text": "사용 가이드"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Screen 컴포넌트",
+          "resolvedTextStyle": {
+            "fontSize": 52,
+            "typeface": "Malgun Gothic",
+            "color": "#FFFFFF",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Screen 컴포넌트",
+              "fontSize": 52,
+              "typeface": "Malgun Gothic",
+              "color": "#FFFFFF",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "사용 가이드",
+          "resolvedTextStyle": {
+            "fontSize": 52,
+            "typeface": "Malgun Gothic",
+            "color": "#FFFFFF",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "사용 가이드",
+              "fontSize": 52,
+              "typeface": "Malgun Gothic",
+              "color": "#FFFFFF",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/83itgfml",
+      "id": "3",
+      "bbox": [
+        62,
+        268,
+        460,
+        90
+      ],
+      "geometry": "rect",
+      "text": "JSON 기반 Quasar/Vue 화면을 VS Code에서 설계하고\n실행 가능한 Vue 파일로 연결하는 방법",
+      "textPreview": "JSON 기반 Quasar/Vue 화면을 VS Code에서 설계하고 | 실행 가능한 Vue 파일로 연결하는 방법",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 18,
+        "typeface": "Malgun Gothic",
+        "color": "#C7D0D9",
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "JSON 기반 Quasar/Vue 화면을 VS Code에서 설계하고"
+          },
+          {
+            "index": 2,
+            "text": "실행 가능한 Vue 파일로 연결하는 방법"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "JSON 기반 Quasar/Vue 화면을 VS Code에서 설계하고",
+          "resolvedTextStyle": {
+            "fontSize": 18,
+            "typeface": "Malgun Gothic",
+            "color": "#C7D0D9"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "JSON 기반 Quasar/Vue 화면을 VS Code에서 설계하고",
+              "fontSize": 18,
+              "typeface": "Malgun Gothic",
+              "color": "#C7D0D9"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "실행 가능한 Vue 파일로 연결하는 방법",
+          "resolvedTextStyle": {
+            "fontSize": 18,
+            "typeface": "Malgun Gothic",
+            "color": "#C7D0D9"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "실행 가능한 Vue 파일로 연결하는 방법",
+              "fontSize": 18,
+              "typeface": "Malgun Gothic",
+              "color": "#C7D0D9"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/fu18jqh0",
+      "id": "4",
+      "bbox": [
+        62,
+        376,
+        106,
+        30
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#1976D2",
+      "lineWidth": 0
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/m94fu18j",
+      "id": "5",
+      "bbox": [
+        70,
+        376,
+        90,
+        30
+      ],
+      "geometry": "rect",
+      "text": "Screen",
+      "textPreview": "Screen",
+      "resolvedFontSize": 13,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 13,
+        "typeface": "Malgun Gothic",
+        "color": "#FFFFFF",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Screen"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Screen",
+          "resolvedTextStyle": {
+            "fontSize": 13,
+            "typeface": "Malgun Gothic",
+            "color": "#FFFFFF",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Screen",
+              "fontSize": 13,
+              "typeface": "Malgun Gothic",
+              "color": "#FFFFFF",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/x0nuxc3y",
+      "id": "6",
+      "bbox": [
+        180,
+        376,
+        106,
+        30
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#2D333B",
+      "lineWidth": 0
+    },
+    {
+      "order": 7,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/4fu18jqh",
+      "id": "7",
+      "bbox": [
+        188,
+        376,
+        90,
+        30
+      ],
+      "geometry": "rect",
+      "text": "Script",
+      "textPreview": "Script",
+      "resolvedFontSize": 13,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 13,
+        "typeface": "Malgun Gothic",
+        "color": "#D9E2EA",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Script"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Script",
+          "resolvedTextStyle": {
+            "fontSize": 13,
+            "typeface": "Malgun Gothic",
+            "color": "#D9E2EA",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Script",
+              "fontSize": 13,
+              "typeface": "Malgun Gothic",
+              "color": "#D9E2EA",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 8,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/f6dcbulw",
+      "id": "8",
+      "bbox": [
+        298,
+        376,
+        118,
+        30
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#2D333B",
+      "lineWidth": 0
+    },
+    {
+      "order": 9,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/mlkjm1cf",
+      "id": "9",
+      "bbox": [
+        306,
+        376,
+        102,
+        30
+      ],
+      "geometry": "rect",
+      "text": "DataSet",
+      "textPreview": "DataSet",
+      "resolvedFontSize": 13,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 13,
+        "typeface": "Malgun Gothic",
+        "color": "#D9E2EA",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "DataSet"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "DataSet",
+          "resolvedTextStyle": {
+            "fontSize": 13,
+            "typeface": "Malgun Gothic",
+            "color": "#D9E2EA",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "DataSet",
+              "fontSize": 13,
+              "typeface": "Malgun Gothic",
+              "color": "#D9E2EA",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 10,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/gbq1oryt",
+      "id": "10",
+      "bbox": [
+        555,
+        52,
+        670,
+        570
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#FFFFFF",
+      "lineColor": "#454C55",
+      "lineWidth": 1
+    },
+    {
+      "order": 11,
+      "kind": "image",
+      "scope": "slide",
+      "aid": "im/29gr2p8n",
+      "id": "11",
+      "bbox": [
+        575,
+        90,
+        630,
+        490
+      ],
+      "alt": "Form Search Grid가 열린 Screen 화면",
+      "contentType": "image/png",
+      "imageFit": "contain",
+      "asset": {
+        "assetId": "aec89812-83a0-4dbd-a6c7-994d31df6e93",
+        "contentType": "image/png",
+        "byteLength": 93508
+      }
+    },
+    {
+      "order": 12,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/y90je9cv",
+      "id": "12",
+      "bbox": [
+        62,
+        612,
+        400,
+        36
+      ],
+      "geometry": "rect",
+      "text": "설계 · 편집 · 생성",
+      "textPreview": "설계 · 편집 · 생성",
+      "resolvedFontSize": 16,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 16,
+        "typeface": "Malgun Gothic",
+        "color": "#8FA1B2",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "설계 · 편집 · 생성"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "설계 · 편집 · 생성",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "typeface": "Malgun Gothic",
+            "color": "#8FA1B2",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "설계 · 편집 · 생성",
+              "fontSize": 16,
+              "typeface": "Malgun Gothic",
+              "color": "#8FA1B2",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 13,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/nuxc3ylc",
+      "id": "13",
+      "bbox": [
+        1135,
+        660,
+        90,
+        20
+      ],
+      "geometry": "rect",
+      "text": "v0.1.0",
+      "textPreview": "v0.1.0",
+      "resolvedFontSize": 10,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 10,
+        "typeface": "Malgun Gothic",
+        "color": "#8FA1B2",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "middle",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "v0.1.0"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "v0.1.0",
+          "resolvedTextStyle": {
+            "fontSize": 10,
+            "typeface": "Malgun Gothic",
+            "color": "#8FA1B2",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "v0.1.0",
+              "fontSize": 10,
+              "typeface": "Malgun Gothic",
+              "color": "#8FA1B2",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    }
+  ],
+  "composeRuns": []
+}

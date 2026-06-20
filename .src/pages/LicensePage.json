@@ -1,0 +1,56 @@
+{
+  "schemaVersion": "0.1.0",
+  "tool": {
+    "name": "quasar-tool",
+    "artifactType": "page-definition",
+    "description": "Vue 파일에서 역변환된 UI TOOL 페이지 결과물 JSON"
+  },
+  "page": {
+    "id": "LicensePage",
+    "name": "LicensePage",
+    "route": "/LicensePage",
+    "sourceVuePath": "src/pages/LicensePage.vue",
+    "targetVuePath": "src/pages/LicensePage.vue",
+    "framework": "quasar",
+    "component": "QPage"
+  },
+  "data": {},
+  "components": [
+    {
+      "id": "page1",
+      "type": "QPage",
+      "props": {
+        "padding": true
+      },
+      "children": [
+        {
+          "id": "div1",
+          "type": "HtmlElement",
+          "tag": "div",
+          "class": "text-h5 text-weight-bold",
+          "text": "라이센트"
+        },
+        {
+          "id": "div2",
+          "type": "HtmlElement",
+          "tag": "div",
+          "class": "text-body1 text-grey-8 q-mt-md",
+          "text": "이 프로젝트의 라이센스와 오픈소스 사용 정책을 정리하는 영역입니다."
+        }
+      ]
+    }
+  ],
+  "generation": {
+    "scriptSetup": {
+      "dataExports": []
+    },
+    "notes": [
+      "이 JSON은 Vue 파일을 기준으로 역변환된 결과물이다.",
+      "복잡한 사용자 정의 JavaScript 표현식은 dynamicProps 또는 rawExpression 형태로 보존될 수 있다.",
+      "이 역변환기는 UI TOOL 생성기가 만든 Vue 파일을 우선 대상으로 한다."
+    ]
+  },
+  "script": {
+    "src": "LicensePage.js"
+  }
+}

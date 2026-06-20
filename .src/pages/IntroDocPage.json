@@ -1,0 +1,143 @@
+{
+  "schemaVersion": "0.1.0",
+  "tool": {
+    "name": "quasar-tool",
+    "artifactType": "page-definition",
+    "description": "Vue 파일에서 역변환된 UI TOOL 페이지 결과물 JSON"
+  },
+  "page": {
+    "id": "IntroDocPage",
+    "name": "IntroDocPage",
+    "route": "/IntroDocPage",
+    "sourceVuePath": "src/pages/IntroDocPage.vue",
+    "targetVuePath": "src/pages/IntroDocPage.vue",
+    "framework": "quasar",
+    "component": "QPage"
+  },
+  "data": {},
+  "components": [
+    {
+      "id": "page1",
+      "type": "QPage",
+      "props": {
+        "padding": true
+      },
+      "children": [
+        {
+          "id": "div1",
+          "type": "HtmlElement",
+          "tag": "div",
+          "class": "row q-col-gutter-lg",
+          "children": [
+            {
+              "id": "aside1",
+              "type": "HtmlElement",
+              "tag": "aside",
+              "class": "col-12 col-md-3",
+              "children": [
+                {
+                  "id": "list1",
+                  "type": "QList",
+                  "class": "bg-white",
+                  "props": {
+                    "bordered": true,
+                    "separator": true
+                  },
+                  "children": [
+                    {
+                      "id": "item1",
+                      "type": "QItem",
+                      "repeat": {
+                        "source": "docs",
+                        "itemName": "item",
+                        "key": "item.key"
+                      },
+                      "props": {
+                        "clickable": true,
+                        "activeClass": "bg-primary text-white"
+                      },
+                      "children": [
+                        {
+                          "id": "itemSection1",
+                          "type": "QItemSection",
+                          "textBinding": "item.label"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "section2",
+              "type": "HtmlElement",
+              "tag": "section",
+              "class": "col-12 col-md-9",
+              "children": [
+                {
+                  "id": "card1",
+                  "type": "QCard",
+                  "props": {
+                    "flat": true,
+                    "bordered": true
+                  },
+                  "children": [
+                    {
+                      "id": "cardSection1",
+                      "type": "QCardSection",
+                      "children": [
+                        {
+                          "id": "div1",
+                          "type": "HtmlElement",
+                          "tag": "div",
+                          "class": "text-h5 text-weight-bold",
+                          "textBinding": "currentDoc.label"
+                        },
+                        {
+                          "id": "div2",
+                          "type": "HtmlElement",
+                          "tag": "div",
+                          "class": "text-caption text-grey-7 q-mt-xs",
+                          "textBinding": "currentDoc.fileName"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "separator2",
+                      "type": "QSeparator"
+                    },
+                    {
+                      "id": "cardSection3",
+                      "type": "QCardSection",
+                      "children": [
+                        {
+                          "id": "div1",
+                          "type": "HtmlElement",
+                          "tag": "div",
+                          "class": "markdown-preview"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "generation": {
+    "scriptSetup": {
+      "dataExports": []
+    },
+    "notes": [
+      "이 JSON은 Vue 파일을 기준으로 역변환된 결과물이다.",
+      "복잡한 사용자 정의 JavaScript 표현식은 dynamicProps 또는 rawExpression 형태로 보존될 수 있다.",
+      "이 역변환기는 UI TOOL 생성기가 만든 Vue 파일을 우선 대상으로 한다."
+    ]
+  },
+  "script": {
+    "src": "IntroDocPage.js"
+  }
+}

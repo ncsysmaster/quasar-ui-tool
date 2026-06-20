@@ -1,0 +1,92 @@
+{
+  "name": "quasar-tool-vscode",
+  "displayName": "Quasar UI Tool",
+  "description": "VS Code editor integration for Quasar UI page JSON files.",
+  "version": "0.1.0",
+  "publisher": "local",
+  "files": [
+    "src/**",
+    "generator/**",
+    "media/**",
+    "README.md"
+  ],
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "dependencies": {
+    "@vue/compiler-dom": "^3.5.38",
+    "acorn": "^8.17.0",
+    "monaco-editor": "^0.55.1"
+  },
+  "activationEvents": [
+    "onCustomEditor:quasarTool.pageEditor",
+    "onCommand:quasarTool.openPageEditor",
+    "onView:quasarTool.paletteView",
+    "onView:quasarTool.propertiesView",
+    "onView:quasarTool.eventsView",
+    "onView:quasarTool.pageTreeView",
+    "onView:quasarTool.datasetView"
+  ],
+  "main": "./src/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "quasarTool.openPageEditor",
+        "title": "Quasar Tool: Open Page Editor"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "quasarTool",
+          "title": "Quasar Tool",
+          "icon": "media/quasar-tool.svg"
+        }
+      ]
+    },
+    "views": {
+      "quasarTool": [
+        {
+          "id": "quasarTool.paletteView",
+          "name": "Component Palette",
+          "type": "webview"
+        },
+        {
+          "id": "quasarTool.propertiesView",
+          "name": "Properties",
+          "type": "webview"
+        },
+        {
+          "id": "quasarTool.eventsView",
+          "name": "Events",
+          "type": "webview"
+        },
+        {
+          "id": "quasarTool.pageTreeView",
+          "name": "Page Tree",
+          "type": "webview"
+        },
+        {
+          "id": "quasarTool.datasetView",
+          "name": "DataSet",
+          "type": "webview"
+        }
+      ]
+    },
+    "customEditors": [
+      {
+        "viewType": "quasarTool.pageEditor",
+        "displayName": "Quasar UI Tool Editor",
+        "selector": [
+          {
+            "filenamePattern": "**/.src/pages/*.json"
+          }
+        ],
+        "priority": "default"
+      }
+    ]
+  }
+}

@@ -1,0 +1,1373 @@
+const vscode = require("vscode");
+const { mkdir, readFile, writeFile } = require("fs/promises");
+const { basename, dirname } = require("path");
+const { PALETTE } = require("./constants");
+const {
+  generateVueForDocument,
+  isPageJsonDocument,
+  isPageScriptDocument,
+  isPageSourceDocument,
+  getPageScriptPath,
+  replaceDocument,
+} = require("./generatorBridge");
+
+const {
+  coerceValue,
+  createComponentId,
+  createEmptyModel,
+  ensureDataset,
+  ensureRootPage,
+  findComponent,
+  firstSelectableId,
+  parseModel,
+  stringifyModel,
+} = require("./model");
+
+class PageEditorState {
+  constructor() {
+    this.document = null;
+    this.selectedId = "";
+    this.generateTimer = null;
+    this.changeEmitter = new vscode.EventEmitter();
+    this.onDidChange = this.changeEmitter.event;
+    this.editorTab = "screen";
+    this.scriptContent = "";
+    this.scriptNavigation = null;
+    this.scriptNavigationSequence = 0;
+    this.componentClipboard = null;
+  }
+
+  async setDocument(document) {
+    this.document = document;
+    await this.ensureExternalScript();
+    const model = this.getModel();
+    this.selectedId = this.selectedId || firstSelectableId(model.components);
+    this.fire();
+  }
+
+  onTextDocumentChanged(document) {
+    if (!this.document) return;
+
+    if (document.uri.toString() === this.document.uri.toString()) {
+      this.document = document;
+      this.fire();
+      return;
+    }
+
+    if (
+      isPageScriptDocument(document) &&
+      document.uri.fsPath.toLowerCase() === this.getScriptPath().toLowerCase()
+    ) {
+      this.scriptContent = document.getText();
+      this.fire();
+    }
+  }
+
+  async onScriptFileChanged(uri) {
+    if (!this.document || uri.fsPath.toLowerCase() !== this.getScriptPath().toLowerCase()) return;
+
+    try {
+      this.scriptContent = await readFile(uri.fsPath, "utf8");
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+      this.scriptContent = "";
+      await writeFile(uri.fsPath, "", "utf8");
+    }
+
+    this.fire();
+    this.scheduleGenerateVue({ uri });
+  }
+
+  getModel() {
+    if (!this.document) {
+      return createEmptyModel();
+    }
+
+    const model = parseModel(this.document.getText());
+    model.script ||= {};
+    model.script.src ||= basename(this.getScriptPath());
+    model.script.setup = this.scriptContent;
+    return model;
+  }
+
+  getScriptPath() {
+    return this.document ? getPageScriptPath(this.document.uri.fsPath) : "";
+  }
+
+  async ensureExternalScript() {
+    if (!this.document || !isPageJsonDocument(this.document)) return;
+
+    const model = parseModel(this.document.getText());
+    const scriptPath = this.getScriptPath();
+    const legacySetup = typeof model.script?.setup === "string" ? model.script.setup.trim() : "";
+
+    try {
+      this.scriptContent = await readFile(scriptPath, "utf8");
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+      await mkdir(dirname(scriptPath), { recursive: true });
+      this.scriptContent = legacySetup ? `${legacySetup}\n` : "";
+      await writeFile(scriptPath, this.scriptContent, "utf8");
+    }
+
+    const scriptFileName = basename(scriptPath);
+    if (model.script?.src !== scriptFileName || model.script?.setup !== undefined) {
+      model.script = { ...(model.script || {}), src: scriptFileName };
+      delete model.script.setup;
+      await replaceDocument(this.document, stringifyModel(model));
+    }
+  }
+
+  setEditorTab(tabName) {
+    const allowedTabs = new Set(["screen", "script", "dataset"]);
+    this.editorTab = allowedTabs.has(tabName) ? tabName : "screen";
+    this.fire();
+  }
+
+  requestScriptMethod(methodName) {
+    if (!methodName) return;
+    this.editorTab = "script";
+    this.scriptNavigation = {
+      methodName,
+      requestId: ++this.scriptNavigationSequence,
+    };
+    this.fire();
+  }
+
+  async updateModel(mutator) {
+    if (!this.document) {
+      vscode.window.showWarningMessage(
+        "Open a Quasar page JSON with Quasar UI Tool Editor first.",
+      );
+      return;
+    }
+
+    const model = this.getModel();
+    mutator(model);
+
+    await replaceDocument(this.document, stringifyModel(model));
+    this.scheduleGenerateVue(this.document);
+  }
+
+  // 콤퍼넌트를 추가 이벤트
+  async addComponent(paletteIndex, targetId, options = {}) {
+    const item = PALETTE[paletteIndex];
+    if (!item) return;
+    if (options.formGridCellOnly && !isFormGridDropPaletteItem(item)) return;
+    let setupCode = "";
+
+    await this.updateModel((model) => {
+      const component = item.template === "courseSearchForm"
+        ? createCourseSearchForm(model)
+        : createPaletteComponent(item);
+
+      if (item.type === "QPage" && !options.formGridCellOnly) {
+        model.components ||= [];
+        model.components.push(component);
+        this.selectedId = component.id;
+        return;
+      }
+
+      const root = ensureRootPage(model);
+
+      if (item.template === "courseSearchForm") {
+        ensureCourseSearchData(model);
+        setupCode = createCourseSearchScript(this.scriptContent);
+      }
+
+      let parent = root;
+
+      if (options.formGridCellOnly) {
+        const gridCell = findFormGridDropCell(model.components, targetId);
+        if (!gridCell) return;
+        parent = gridCell;
+      } else {
+        const selected = findComponent(
+          model.components,
+          targetId || this.selectedId,
+        );
+
+        if (selected && canHaveChildren(selected)) {
+          parent = selected;
+        }
+      }
+
+      parent.children ||= [];
+      parent.children.push(component);
+
+      this.selectedId = component.id;
+    });
+
+    if (setupCode) {
+      await this.updateScript(this.scriptContent + setupCode);
+    }
+  }
+
+  selectComponent(id) {
+    this.selectedId = id || "";
+    this.fire();
+  }
+
+  async updateSelectedProperty(name, value) {
+    await this.updateModel((model) => {
+      const component = findComponent(model.components, this.selectedId);
+      if (!component) return;
+
+      if (name === "id") {
+        component.id = value;
+        this.selectedId = value;
+      } else if (name === "tag") {
+        component.tag = value;
+      } else if (name === "text") {
+        if (component.type === "HtmlElement") {
+          component.text = value;
+        } else {
+          component.label = value;
+        }
+      } else if (name === "class") {
+        if (
+          component.type === "QBtn" ||
+          component.type === "QInput" ||
+          component.type === "QCard" ||
+          component.type === "QTable"
+        ) {
+          component.props ||= {};
+          component.props.class = value;
+        } else {
+          component.class = value;
+        }
+      } else if (name === "style") {
+        component.style = value;
+        if (component.props) {
+          delete component.props.style;
+          if (Object.keys(component.props).length === 0) delete component.props;
+        }
+      } else if (name.startsWith("style.")) {
+        const property = name.slice(6).trim();
+        if (!property) return;
+
+        component.style = String(value).trim()
+          ? setStyleDeclaration(component.style, property, String(value).trim())
+          : removeStyleDeclarations(component.style, [property]);
+        if (component.props) {
+          delete component.props.style;
+          if (Object.keys(component.props).length === 0) delete component.props;
+        }
+      } else if (name.startsWith("prop.")) {
+        component.props ||= {};
+        component.props[name.slice(5)] = coerceValue(value);
+      }
+    });
+  }
+
+  async removeSelectedComponent() {
+    await this.removeComponentById(this.selectedId);
+  }
+
+  copySelectedComponent() {
+    const component = findComponent(this.getModel().components, this.selectedId);
+    if (!component) return false;
+
+    this.componentClipboard = JSON.parse(JSON.stringify(component));
+    return true;
+  }
+
+  async cutSelectedComponent() {
+    if (!this.copySelectedComponent()) return;
+    await this.removeSelectedComponent();
+  }
+
+  async pasteComponent() {
+    if (!this.componentClipboard) return;
+
+    await this.updateModel((model) => {
+      const nextId = createSequentialIdFactory(model.components);
+      const pasted = cloneComponentTreeWithNewIds(
+        this.componentClipboard,
+        nextId,
+      );
+      const selected = findComponent(model.components, this.selectedId);
+
+      if (selected && canHaveChildren(selected)) {
+        selected.children ||= [];
+        selected.children.push(pasted);
+      } else {
+        const selectedInfo = findComponentWithParent(
+          model.components,
+          this.selectedId,
+        );
+
+        if (selectedInfo) {
+          selectedInfo.parent.splice(selectedInfo.index + 1, 0, pasted);
+        } else {
+          const root = ensureRootPage(model);
+          root.children ||= [];
+          root.children.push(pasted);
+        }
+      }
+
+      this.selectedId = pasted.id;
+    });
+  }
+
+  async updateComponentText(componentId, value) {
+    if (!componentId) return;
+
+    await this.updateModel((model) => {
+      const component = findComponent(model.components, componentId);
+      if (!component || component.type !== "HtmlElement") return;
+      component.text = String(value ?? "");
+    });
+  }
+
+  async removeComponentById(componentId) {
+    if (!componentId) return;
+
+    await this.updateModel((model) => {
+      const context = findComponentContext(model.components, componentId);
+      if (!context) return;
+
+      const parentId = context.parentComponent?.id || "";
+      context.parent.splice(context.index, 1);
+      this.selectedId = parentId || firstSelectableId(model.components);
+    });
+  }
+
+  async moveComponent(dragId, dropId, mode = "inside") {
+    if (!dragId || !dropId || dragId === dropId) return;
+
+    await this.updateModel((model) => {
+      let moved = false;
+
+      if (mode === "inside") {
+        moved = moveComponentInside(model.components, dragId, dropId);
+      } else {
+        moved = moveComponentInTree(model.components, dragId, dropId);
+      }
+
+      if (moved) {
+        this.selectedId = dragId;
+      }
+    });
+  }
+
+  async updateFormLayout(action, targetId) {
+    if (!targetId) return;
+
+    await this.updateModel((model) => {
+      const target = findComponentContext(model.components, targetId);
+      if (!target) return;
+
+      const nextId = createSequentialIdFactory(model.components);
+
+      if (action === "add-row" && isRowComponent(target.component)) {
+        const newRow = cloneComponentTreeWithNewIds(target.component, nextId);
+        target.parent.splice(target.index + 1, 0, newRow);
+        this.selectedId = newRow.id;
+        return;
+      }
+
+      if (action === "add-column" && isColumnComponent(target.component)) {
+        const newColumn = createEmptyLayoutColumn(
+          nextId,
+          target.component.class || "col-12 col-md-2",
+        );
+        target.parent.splice(target.index + 1, 0, newColumn);
+        this.selectedId = newColumn.id;
+        return;
+      }
+
+      if (action === "delete-row" && isRowComponent(target.component)) {
+        const parentId = target.parentComponent?.id || "";
+        target.parent.splice(target.index, 1);
+        this.selectedId = parentId || firstSelectableId(model.components);
+        return;
+      }
+
+      if (action === "delete-column" && isColumnComponent(target.component)) {
+        const parentId = target.parentComponent?.id || "";
+        target.parent.splice(target.index, 1);
+        this.selectedId = parentId || firstSelectableId(model.components);
+      }
+    });
+  }
+
+  async resizeFormLayout(componentId, resizeKind, rawValue) {
+    if (!componentId) return;
+
+    const value = Number(rawValue);
+    if (!Number.isFinite(value)) return;
+
+    await this.updateModel((model) => {
+      const component = findComponent(model.components, componentId);
+      if (!component) return;
+
+      if (resizeKind === "row" && isRowComponent(component)) {
+        component.style = setStyleDeclaration(
+          component.style,
+          "height",
+          `${Math.max(24, Math.round(value))}px`,
+        );
+        this.selectedId = componentId;
+        return;
+      }
+
+      if (resizeKind === "column" && isColumnComponent(component)) {
+        const percent = Math.max(2, Math.min(100, value));
+        const formatted = `${Math.round(percent * 100) / 100}%`;
+        component.style = setStyleDeclaration(
+          component.style,
+          "flex",
+          `0 0 ${formatted}`,
+        );
+        component.style = setStyleDeclaration(component.style, "width", formatted);
+        component.style = setStyleDeclaration(component.style, "max-width", formatted);
+        this.selectedId = componentId;
+      }
+    });
+  }
+
+  async splitFormCell(componentId, options = {}) {
+    if (!componentId || (!options.rowsEnabled && !options.columnsEnabled)) return;
+
+    const splitByRows = Boolean(options.rowsEnabled);
+    const splitCount = clampInteger(
+      splitByRows ? options.rowCount : options.columnCount,
+      1,
+      20,
+    );
+
+    await this.updateModel((model) => {
+      const context = findComponentContext(model.components, componentId);
+      const component = context?.component;
+      const row = context?.parentComponent;
+      if (!component || !row || !isColumnComponent(component) || !isRowComponent(row)) {
+        return;
+      }
+
+      const nextId = createSequentialIdFactory(model.components);
+      if (splitByRows) {
+        const existingRows = component.designer?.splitRows
+          ? (component.children || []).map((splitRow) =>
+              normalizeCellSplitRow(splitRow, nextId),
+            )
+          : [createCellSplitRow(nextId, component.children || [], component.text)];
+
+        while (existingRows.length < splitCount) {
+          existingRows.push(createCellSplitRow(nextId));
+        }
+        if (existingRows.length > splitCount) {
+          const retainedRows = existingRows.slice(0, splitCount);
+          const lastCell = getCellSplitContentCell(retainedRows.at(-1));
+          existingRows.slice(splitCount).forEach((removedRow) => {
+            const removedCell = getCellSplitContentCell(removedRow);
+            if (removedCell?.text) {
+              lastCell.text = [lastCell.text, removedCell.text].filter(Boolean).join(" ");
+            }
+            lastCell.children ||= [];
+            lastCell.children.push(...(removedCell?.children || []));
+          });
+          existingRows.length = 0;
+          existingRows.push(...retainedRows);
+        }
+
+        const baseHeight = Math.floor(100 / splitCount);
+        const heightRemainder = 100 % splitCount;
+        existingRows.forEach((splitRow, index) => {
+          const receivesRemainder = index >= splitCount - heightRemainder;
+          splitRow.style = setStyleDeclaration(
+            splitRow.style,
+            "height",
+            `${baseHeight + (receivesRemainder ? 1 : 0)}%`,
+          );
+        });
+
+        delete component.text;
+        component.children = existingRows;
+        component.style = removeStyleDeclarations(component.style, [
+          "display",
+          "flex-direction",
+        ]);
+        component.designer = { ...(component.designer || {}), splitRows: true };
+        this.selectedId = component.id;
+        return;
+      }
+
+      const selectedSpan = getPlainColumnSpan(component) || 12;
+      const appliedSplitCount = Math.max(1, Math.min(selectedSpan, splitCount));
+      const baseSpan = Math.floor(selectedSpan / appliedSplitCount);
+      const remainder = selectedSpan % appliedSplitCount;
+      const source = JSON.parse(JSON.stringify(component));
+      const splitCells = Array.from({ length: appliedSplitCount }, (_, index) => {
+        const cell = index === 0
+          ? component
+          : createEmptySplitSibling(source, nextId);
+        const span = baseSpan + (index < remainder ? 1 : 0);
+
+        cell.class = replacePlainColumnClass(cell.class, span);
+        cell.style = removeStyleDeclarations(cell.style, [
+          "grid-column",
+          "grid-row",
+          "width",
+          "max-width",
+          "min-width",
+          "flex",
+        ]);
+        cell.designer = { ...(cell.designer || {}), role: "splitCell" };
+        return cell;
+      });
+
+      if (row.designer?.splitGrid) {
+        row.style = removeStyleDeclarations(row.style, [
+          "display",
+          "grid-template-columns",
+          "grid-template-rows",
+        ]);
+        delete row.designer.splitGrid;
+        if (Object.keys(row.designer).length === 0) delete row.designer;
+
+        (row.children || []).forEach((cell) => {
+          if (cell === component) return;
+          cell.style = removeStyleDeclarations(cell.style, [
+            "grid-column",
+            "grid-row",
+            "width",
+            "max-width",
+            "min-width",
+            "flex",
+          ]);
+        });
+      }
+
+      context.parent.splice(context.index, 1, ...splitCells);
+      this.selectedId = component.id;
+    });
+  }
+
+  async updateScript(value) {
+    if (!this.document) return;
+
+    this.scriptContent = String(value ?? "");
+    const scriptPath = this.getScriptPath();
+    await mkdir(dirname(scriptPath), { recursive: true });
+    await writeFile(scriptPath, this.scriptContent, "utf8");
+    this.fire();
+    this.scheduleGenerateVue(this.document);
+  }
+
+  async addDatasetField() {
+    await this.updateModel((model) => {
+      const dataset = ensureDataset(model);
+      const next = dataset.fields.length + 1;
+
+      dataset.fields.push({
+        name: `field${next}`,
+        label: `Field ${next}`,
+        type: "string",
+        required: false,
+      });
+    });
+  }
+
+  async updateDatasetField(index, name, value) {
+    await this.updateModel((model) => {
+      const field = ensureDataset(model).fields[index];
+      if (!field) return;
+
+      field[name] =
+        name === "required" ? value === true || value === "true" : value;
+    });
+  }
+
+  async removeDatasetField(index) {
+    await this.updateModel((model) => {
+      ensureDataset(model).fields.splice(index, 1);
+    });
+  }
+
+  fire() {
+    this.changeEmitter.fire({
+      model: this.getModel(),
+      selectedId: this.selectedId,
+      hasDocument: Boolean(this.document),
+      editorTab: this.editorTab,
+    });
+  }
+
+  scheduleGenerateVue(document) {
+    if (!document || !isPageSourceDocument(document)) return;
+
+    clearTimeout(this.generateTimer);
+
+    this.generateTimer = setTimeout(() => {
+      generateVueForDocument(document);
+    }, 250);
+  }
+
+  async updateSelectedEvent(eventName, value) {
+    let shouldCreateHandler = false;
+
+    await this.updateModel((model) => {
+      const component = findComponent(model.components, this.selectedId);
+      if (!component) return;
+
+      component.events ||= {};
+
+      if (!value) {
+        delete component.events[eventName];
+        return;
+      }
+
+      component.events[eventName] = value;
+
+      shouldCreateHandler = !hasFunction(this.scriptContent, value);
+    });
+
+    if (shouldCreateHandler) {
+      await this.updateScript(this.scriptContent + createHandlerCode(value, eventName));
+    }
+  }
+
+  async openSelectedEventMethod(eventName, preferredName = "") {
+    const component = findComponent(this.getModel().components, this.selectedId);
+    if (!component) return;
+
+    const existingName = preferredName.trim() || component.events?.[eventName] || "";
+    const methodName = isMethodName(existingName)
+      ? existingName
+      : createEventHandlerName(eventName, component.id);
+
+    if (component.events?.[eventName] !== methodName || !hasFunction(this.scriptContent, methodName)) {
+      await this.updateSelectedEvent(eventName, methodName);
+    }
+
+    this.requestScriptMethod(methodName);
+  }
+
+  async openFirstComponentMethod(componentId) {
+    const component = findComponent(this.getModel().components, componentId);
+    if (!component) return;
+
+    this.selectedId = componentId;
+    const firstEvent = Object.entries(component.events || {})
+      .find(([, methodName]) => typeof methodName === "string" && methodName.trim());
+
+    if (!firstEvent) {
+      this.fire();
+      return;
+    }
+
+    await this.openSelectedEventMethod(firstEvent[0], firstEvent[1]);
+  }
+}
+
+function createPaletteComponent(item) {
+  const component = {
+    id: createComponentId(item.type),
+    type: item.type,
+    props: { ...(item.props || {}) },
+  };
+
+  if (item.tag) component.tag = item.tag;
+  if (item.class) component.class = item.class;
+  if (item.style !== undefined) component.style = item.style;
+  if (item.text) component.text = item.text;
+  if (
+    item.label &&
+    !item.text &&
+    item.type !== "QInput" &&
+    item.type !== "QPage" &&
+    item.type !== "HtmlElement"
+  ) {
+    component.label = item.label;
+  }
+
+  return component;
+}
+
+function createCourseSearchForm(model) {
+  const nextId = createSequentialIdFactory(model.components);
+  const make = (type, options = {}) => {
+    const component = { id: nextId(type, options.tag), type };
+    if (options.tag) component.tag = options.tag;
+    if (options.class) component.class = options.class;
+    if (options.style !== undefined) component.style = options.style;
+    if (options.text !== undefined) component.text = options.text;
+    if (options.props && Object.keys(options.props).length) {
+      const componentProps = { ...options.props };
+      if (component.style === undefined && componentProps.style !== undefined) {
+        component.style = componentProps.style;
+      }
+      delete componentProps.style;
+      if (Object.keys(componentProps).length) component.props = componentProps;
+    }
+    if (options.models) component.models = options.models;
+    if (options.dynamicProps) component.dynamicProps = options.dynamicProps;
+    if (options.events) component.events = options.events;
+    if (options.children) component.children = options.children;
+    return component;
+  };
+  const div = (className, options = {}) => make("HtmlElement", {
+    tag: "div",
+    class: className,
+    ...options,
+  });
+  const span = (className, text) => make("HtmlElement", {
+    tag: "span",
+    class: className,
+    text,
+  });
+  const labelClass = "bg-grey-4 row items-center q-px-md full-height rounded-borders overflow-hidden";
+  const roundedStyle = "border-radius: 4px";
+
+  const form = make("QCard", {
+    props: { flat: true, bordered: true },
+    children: [
+      make("QCardSection", {
+        class: "q-pa-sm",
+        children: [
+          div("row q-col-gutter-sm", {
+            children: [
+              div("col", {
+                children: [
+                  div("row", {
+                    children: [
+                      div("col-2", {
+                        children: [
+                          div(labelClass, {
+                            text: "조회분류",
+                            style: roundedStyle,
+                            children: [span("text-negative q-ml-xs", "*")],
+                          }),
+                        ],
+                      }),
+                      div("col-2 bg-white q-pa-xs", {
+                        children: [
+                          make("QSelect", {
+                            models: { modelValue: "search.class1" },
+                            dynamicProps: { options: "classOptions" },
+                            props: { outlined: true, dense: true, bgColor: "white" },
+                          }),
+                        ],
+                      }),
+                      div("col-2 bg-white q-pa-xs", {
+                        children: [
+                          make("QSelect", {
+                            models: { modelValue: "search.class2" },
+                            dynamicProps: { options: "classOptions" },
+                            props: { outlined: true, dense: true, bgColor: "white" },
+                          }),
+                        ],
+                      }),
+                      div("col-2", {
+                        children: [
+                          div(labelClass, {
+                            text: "조회구분",
+                            style: roundedStyle,
+                          }),
+                        ],
+                      }),
+                      div("col-2 bg-white row items-center q-px-sm", {
+                        children: [
+                          make("QToggle", {
+                            models: { modelValue: "search.requiredYn" },
+                            props: { label: "필수", dense: true },
+                          }),
+                        ],
+                      }),
+                      div("col-2 bg-white row items-center q-px-sm", {
+                        children: [
+                          make("QToggle", {
+                            models: { modelValue: "search.useYn" },
+                            props: { label: "사용여부", dense: true },
+                          }),
+                        ],
+                      }),
+                    ],
+                  }),
+                  div("row", {
+                    children: [
+                      div("col-2", {
+                        children: [
+                          div(labelClass, {
+                            text: "조회명",
+                            style: roundedStyle,
+                          }),
+                        ],
+                      }),
+                      div("col-10 bg-white q-pa-xs", {
+                        children: [
+                          make("QInput", {
+                            models: { modelValue: "search.name" },
+                            props: { outlined: true, dense: true, bgColor: "white" },
+                          }),
+                        ],
+                      }),
+                    ],
+                  }),
+                ],
+              }),
+              div("col-auto", {
+                style: "min-width: 180px; display: flex; align-items: flex-end",
+                children: [
+                  div("row no-wrap", {
+                    style: "width: 100%; height: 48px; align-items: center; justify-content: flex-end; gap: 8px; padding: 4px; background: white",
+                    children: [
+                      make("QBtn", {
+                        style: "min-width: 80px; height: 36px",
+                        props: {
+                          label: "초기화",
+                          outline: true,
+                          color: "grey-7",
+                        },
+                        events: { click: "resetSearch" },
+                      }),
+                      make("QBtn", {
+                        style: "min-width: 80px; height: 36px",
+                        props: {
+                          label: "검색",
+                          color: "primary",
+                        },
+                        events: { click: "onSearch" },
+                      }),
+                    ],
+                  }),
+                ],
+              }),
+            ],
+          }),
+        ],
+      }),
+    ],
+  });
+  form.designer = { template: "courseSearchForm" };
+  return form;
+}
+
+function createLegacyCourseSearchForm(model) {
+  const nextId = createSequentialIdFactory(model.components);
+  const make = (type, options = {}) => {
+    const component = { id: nextId(type, options.tag), type };
+    if (options.tag) component.tag = options.tag;
+    if (options.class) component.class = options.class;
+    if (options.props && Object.keys(options.props).length) component.props = options.props;
+    if (options.models) component.models = options.models;
+    if (options.dynamicProps) component.dynamicProps = options.dynamicProps;
+    if (options.events) component.events = options.events;
+    if (options.children) component.children = options.children;
+    return component;
+  };
+  const div = (className, children) => make("HtmlElement", {
+    tag: "div",
+    class: className,
+    children,
+  });
+
+  const form = make("QCard", {
+    class: "q-mb-md",
+    props: { flat: true, bordered: true },
+    children: [
+      make("QCardSection", {
+        children: [
+          div("row q-col-gutter-md items-end", [
+            div("col-12 col-md-2", [
+              make("QSelect", {
+                models: { modelValue: "searchForm.eduClsfCd" },
+                dynamicProps: { options: "eduClassOptions" },
+                props: {
+                  optionLabel: "label",
+                  optionValue: "value",
+                  emitValue: true,
+                  mapOptions: true,
+                  outlined: true,
+                  dense: true,
+                  label: "교육분류",
+                },
+                events: { "update:model-value": "onChangeEduClass" },
+              }),
+            ]),
+            div("col-12 col-md-2", [
+              make("QSelect", {
+                models: { modelValue: "searchForm.eduDclsfCd" },
+                dynamicProps: { options: "eduDetailOptionsFiltered" },
+                props: {
+                  optionLabel: "label",
+                  optionValue: "value",
+                  emitValue: true,
+                  mapOptions: true,
+                  outlined: true,
+                  dense: true,
+                  label: "분류상세",
+                },
+              }),
+            ]),
+            div("col-12 col-md-2", [
+              div("row items-center q-gutter-md search-toggle-wrap", [
+                make("QToggle", {
+                  models: { modelValue: "searchForm.requiredYn" },
+                  props: {
+                    trueValue: "Y",
+                    falseValue: "",
+                    label: "필수",
+                    color: "primary",
+                  },
+                }),
+                make("QToggle", {
+                  models: { modelValue: "searchForm.closedYn" },
+                  props: {
+                    trueValue: "Y",
+                    falseValue: "",
+                    label: "폐강",
+                    color: "grey-7",
+                  },
+                }),
+              ]),
+            ]),
+            div("col-12 col-md-4", [
+              make("QInput", {
+                models: { modelValue: "searchForm.courseNm" },
+                props: {
+                  outlined: true,
+                  dense: true,
+                  label: "교육과정명",
+                  clearable: true,
+                },
+                events: { "keyup.enter": "fetchCourseList" },
+              }),
+            ]),
+            div("col-12 col-md-2", [
+              div("row q-gutter-sm justify-end", [
+                make("QBtn", {
+                  props: { color: "primary", label: "검색" },
+                  events: { click: "fetchCourseList" },
+                }),
+                make("QBtn", {
+                  props: { flat: true, color: "grey-8", label: "초기화" },
+                  events: { click: "resetSearch" },
+                }),
+              ]),
+            ]),
+          ]),
+        ],
+      }),
+    ],
+  });
+  form.designer = { template: "courseSearchForm" };
+  return form;
+}
+
+function createSequentialIdFactory(components) {
+  const usedIds = new Set();
+  const counters = new Map();
+
+  const visit = (items) => (items || []).forEach((component) => {
+    if (component.id) usedIds.add(component.id);
+    visit(component.children);
+  });
+  visit(components);
+
+  return (type, tag) => {
+    const base = type === "HtmlElement"
+      ? `${String(tag || "div").charAt(0).toUpperCase()}${String(tag || "div").slice(1)}`
+      : type;
+    let number = counters.get(base) || 0;
+    let id;
+    do {
+      number += 1;
+      id = `${base}${String(number).padStart(3, "0")}`;
+    } while (usedIds.has(id));
+    counters.set(base, number);
+    usedIds.add(id);
+    return id;
+  };
+}
+
+function createEmptyLayoutColumn(nextId, className) {
+  return {
+    id: nextId("HtmlElement", "div"),
+    type: "HtmlElement",
+    tag: "div",
+    class: className,
+    children: [],
+  };
+}
+
+function cloneComponentTreeWithNewIds(component, nextId) {
+  const clone = JSON.parse(JSON.stringify(component));
+
+  const assignIds = (item) => {
+    item.id = nextId(item.type || "Component", item.tag);
+    if (Array.isArray(item.children)) item.children.forEach(assignIds);
+  };
+
+  assignIds(clone);
+  return clone;
+}
+
+function ensureCourseSearchData(model) {
+  model.data ||= {};
+  model.data.search ||= {
+    class1: null,
+    class2: null,
+    requiredYn: false,
+    useYn: false,
+    name: "",
+  };
+  model.data.classOptions ||= [];
+
+  model.generation ||= {};
+  model.generation.scriptSetup ||= {};
+  const exports = model.generation.scriptSetup.dataExports ||= [];
+  ["search", "classOptions"].forEach((name) => {
+    if (!exports.includes(name)) exports.push(name);
+  });
+}
+
+function createCourseSearchScript(existingScript) {
+  const definitions = [
+    ["onSearch", `function onSearch() {
+  console.log('onSearch', { ...search })
+}`],
+    ["resetSearch", `function resetSearch() {
+  Object.assign(search, {
+    class1: null,
+    class2: null,
+    requiredYn: false,
+    useYn: false,
+    name: ''
+  })
+}`],
+  ];
+  const missing = definitions
+    .filter(([name]) => !hasFunction(existingScript, name))
+    .map(([, code]) => code);
+
+  return missing.length ? `\n\n${missing.join("\n\n")}\n` : "";
+}
+
+function moveComponentInTree(components, dragId, dropId) {
+  const dragInfo = findComponentWithParent(components, dragId);
+  const dropInfo = findComponentWithParent(components, dropId);
+
+  if (!dragInfo || !dropInfo) return false;
+
+  if (isDescendant(dragInfo.component, dropId)) {
+    return false;
+  }
+
+  const [dragItem] = dragInfo.parent.splice(dragInfo.index, 1);
+
+  let dropIndex = dropInfo.index;
+
+  if (dragInfo.parent === dropInfo.parent && dragInfo.index < dropInfo.index) {
+    dropIndex -= 1;
+  }
+
+  dropInfo.parent.splice(dropIndex, 0, dragItem);
+
+  return true;
+}
+
+function findComponentWithParent(components, id, parent = components) {
+  if (!Array.isArray(components)) return null;
+
+  for (let i = 0; i < components.length; i++) {
+    const component = components[i];
+
+    if (component.id === id) {
+      return {
+        component,
+        parent,
+        index: i,
+      };
+    }
+
+    const childResult = findComponentWithParent(
+      component.children,
+      id,
+      component.children,
+    );
+
+    if (childResult) return childResult;
+  }
+
+  return null;
+}
+
+function findComponentContext(
+  components,
+  id,
+  parentComponent = null,
+  parent = components,
+) {
+  if (!Array.isArray(components)) return null;
+
+  for (let index = 0; index < components.length; index += 1) {
+    const component = components[index];
+    if (component.id === id) {
+      return { component, parentComponent, parent, index };
+    }
+
+    const childContext = findComponentContext(
+      component.children,
+      id,
+      component,
+      component.children,
+    );
+    if (childContext) return childContext;
+  }
+
+  return null;
+}
+
+function isDescendant(component, targetId) {
+  const children = component?.children || [];
+
+  for (const child of children) {
+    if (child.id === targetId) return true;
+    if (isDescendant(child, targetId)) return true;
+  }
+
+  return false;
+}
+
+function canHaveChildren(component) {
+  if (!component) return false;
+
+  if (component.type === "HtmlElement") {
+    return [
+      "div",
+      "section",
+      "article",
+      "main",
+      "aside",
+      "header",
+      "footer",
+    ].includes(component.tag || "div");
+  }
+
+  return [
+    "QPage",
+    "QCard",
+    "QCardSection",
+    "QLayout",
+    "QPageContainer",
+  ].includes(component.type);
+}
+
+function isFormGridDropPaletteItem(item) {
+  return item?.type === "QBtn" ||
+    item?.type === "QInput" ||
+    (item?.type === "HtmlElement" && ["Text", "Row", "Column"].includes(item.label));
+}
+
+function findFormGridDropCell(components, targetId) {
+  const path = findComponentPathById(components, targetId);
+  if (!path.some((component) => component?.designer?.template === "courseSearchForm")) {
+    return null;
+  }
+
+  return [...path].reverse().find((component) => {
+    if (component?.type !== "HtmlElement") return false;
+    const tokens = String(component.class || component.props?.class || "")
+      .split(/\s+/)
+      .filter(Boolean);
+    return component?.designer?.role === "splitCell" ||
+      tokens.some((token) => token === "col" || /^col-(?:auto|[1-9]|1[0-2])$/.test(token));
+  }) || null;
+}
+
+function findComponentPathById(components, id, ancestors = []) {
+  for (const component of components || []) {
+    const path = [...ancestors, component];
+    if (component.id === id) return path;
+    const childPath = findComponentPathById(component.children, id, path);
+    if (childPath.length) return childPath;
+  }
+  return [];
+}
+
+function isRowComponent(component) {
+  return component?.type === "HtmlElement" && hasClassToken(component, "row");
+}
+
+function isColumnComponent(component) {
+  return component?.type === "HtmlElement" && (
+    component.designer?.role === "splitCell" ||
+    getClassTokens(component).some((token) => token === "col" || /^col-/.test(token))
+  );
+}
+
+function hasClassToken(component, token) {
+  return getClassTokens(component).includes(token);
+}
+
+function getClassTokens(component) {
+  return String(component?.class || component?.props?.class || "")
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+function setStyleDeclaration(style, property, value) {
+  const propertyName = String(property).toLowerCase();
+  const declarations = String(style || "")
+    .split(";")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .filter((item) => {
+      const separator = item.indexOf(":");
+      if (separator < 0) return true;
+      return item.slice(0, separator).trim().toLowerCase() !== propertyName;
+    });
+
+  declarations.push(`${property}: ${value}`);
+  return declarations.join("; ");
+}
+
+function getPlainColumnSpan(component) {
+  const match = getClassTokens(component)
+    .map((token) => token.match(/^col-(\d+)$/))
+    .find(Boolean);
+  return match ? Math.max(1, Math.min(12, Number(match[1]))) : 0;
+}
+
+function replacePlainColumnClass(className, span) {
+  const nextClass = `col-${Math.max(1, Math.min(12, span))}`;
+  const tokens = String(className || "").split(/\s+/).filter(Boolean);
+  const index = tokens.findIndex((token) => /^col-\d+$/.test(token));
+  const flexibleIndex = tokens.indexOf("col");
+
+  if (index >= 0) {
+    tokens[index] = nextClass;
+  } else if (flexibleIndex >= 0) {
+    tokens[flexibleIndex] = nextClass;
+  } else {
+    tokens.unshift(nextClass);
+  }
+
+  return tokens.join(" ");
+}
+
+function removeStyleDeclarations(style, properties) {
+  const propertyNames = new Set(properties.map((property) => property.toLowerCase()));
+  return String(style || "")
+    .split(";")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .filter((item) => {
+      const separator = item.indexOf(":");
+      if (separator < 0) return true;
+      return !propertyNames.has(item.slice(0, separator).trim().toLowerCase());
+    })
+    .join("; ");
+}
+
+function createEmptySplitSibling(source, nextId) {
+  return {
+    id: nextId(source.type || "HtmlElement", source.tag),
+    type: source.type || "HtmlElement",
+    ...(source.tag ? { tag: source.tag } : {}),
+    ...(source.class ? { class: source.class } : {}),
+    ...(source.style ? { style: source.style } : {}),
+    designer: { ...(source.designer || {}), role: "splitCell" },
+    children: [],
+  };
+}
+
+function createCellSplitRow(nextId, children = [], text) {
+  return {
+    id: nextId("HtmlElement", "div"),
+    type: "HtmlElement",
+    tag: "div",
+    class: "row",
+    designer: { role: "cellSplitRow" },
+    children: [{
+      id: nextId("HtmlElement", "div"),
+      type: "HtmlElement",
+      tag: "div",
+      class: "col-12",
+      ...(text !== undefined ? { text } : {}),
+      children,
+    }],
+  };
+}
+
+function normalizeCellSplitRow(splitRow, nextId) {
+  const isRow = hasClassToken(splitRow, "row");
+  const contentCell = isRow && (splitRow.children || []).find((child) =>
+    isColumnComponent(child) && getPlainColumnSpan(child) === 12,
+  );
+  if (contentCell) return splitRow;
+
+  return createCellSplitRow(
+    nextId,
+    splitRow.children || [],
+    splitRow.text,
+  );
+}
+
+function getCellSplitContentCell(splitRow) {
+  return (splitRow?.children || []).find((child) =>
+    isColumnComponent(child) && getPlainColumnSpan(child) === 12,
+  );
+}
+
+function clampInteger(value, minimum, maximum) {
+  const number = Math.round(Number(value) || minimum);
+  return Math.max(minimum, Math.min(maximum, number));
+}
+
+function moveComponentInside(components, dragId, dropId) {
+  const dragInfo = findComponentWithParent(components, dragId);
+  const dropInfo = findComponentWithParent(components, dropId);
+
+  if (!dragInfo || !dropInfo) return false;
+  if (isDescendant(dragInfo.component, dropId)) return false;
+  if (!canHaveChildren(dropInfo.component)) return false;
+
+  const [dragItem] = dragInfo.parent.splice(dragInfo.index, 1);
+
+  dropInfo.component.children ||= [];
+  dropInfo.component.children.push(dragItem);
+
+  return true;
+}
+
+function hasFunction(script, functionName) {
+  const escapedName = String(functionName).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(
+    `function\\s+${escapedName}\\s*\\(|const\\s+${escapedName}\\s*=`,
+  );
+
+  return pattern.test(script || "");
+}
+
+function isMethodName(value) {
+  return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(value || "");
+}
+
+function createHandlerCode(functionName, eventName) {
+  return `
+
+function ${functionName}(payload) {
+  console.log('${eventName}', payload)
+}
+`;
+}
+
+function createEventHandlerName(eventName, componentId) {
+  const eventSuffix = String(eventName || "event")
+    .split(/[^A-Za-z0-9]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join("");
+  const safeId = String(componentId || "Component")
+    .replace(/[^A-Za-z0-9_$]/g, "_")
+    .replace(/^(?=\d)/, "_");
+
+  return `on${eventSuffix || "Event"}_${safeId}`;
+}
+
+module.exports = {
+  PageEditorState,
+};

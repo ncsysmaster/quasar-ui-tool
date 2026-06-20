@@ -1,0 +1,4 @@
+Mode: create; audience: Quasar Tool screen developers; slides: 12
+Palette: neutral #F3F6F8/#20242A (65%), blue #1976D2, teal #0F766E, orange #F97316 accent
+Typeface: Malgun Gothic; cover 52px, slide title 34px, body 15-20px, footer 9px
+Story: workflow > Screen > palette components > layout/split > panels > script/dataset > generation > quick start

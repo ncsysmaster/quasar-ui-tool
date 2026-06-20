@@ -1,0 +1,6 @@
+Visual QA
+Mechanical: 12 slides rendered; layout JSON and montage generated; PPTX exported.
+Deck-level: consistent 54px margins, title/footer system, screenshot provenance recorded.
+Slide-level: screenshot crops use contain; editable labels and diagrams remain native shapes.
+Issue ledger: no known blocker before visual inspection.
+Final decision: pass after individual review of all 12 rendered slides.

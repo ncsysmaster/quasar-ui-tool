@@ -1,0 +1,147 @@
+{
+  "schemaVersion": "0.1.0",
+  "tool": {
+    "name": "quasar-tool",
+    "artifactType": "page-definition",
+    "description": "Vue 파일에서 역변환된 UI TOOL 페이지 결과물 JSON"
+  },
+  "page": {
+    "id": "ExamplesPage",
+    "name": "ExamplesPage",
+    "route": "/ExamplesPage",
+    "sourceVuePath": "src/pages/ExamplesPage.vue",
+    "targetVuePath": "src/pages/ExamplesPage.vue",
+    "framework": "quasar",
+    "component": "QPage"
+  },
+  "data": {
+    "examples": [
+      {
+        "key": "dashboard",
+        "label": "기본 대시보드",
+        "description": "업무 현황과 주요 지표를 배치하는 기본 화면 예제입니다."
+      },
+      {
+        "key": "layout",
+        "label": "레이아웃",
+        "description": "행, 열, 카드, 영역 분할을 조합하는 화면 구조 예제입니다."
+      },
+      {
+        "key": "page",
+        "label": "페이지",
+        "description": "검색, 상세, 등록 화면의 페이지 패턴 예제입니다."
+      },
+      {
+        "key": "component",
+        "label": "콤포넌트",
+        "description": "Quasar 컴포넌트 팔레트와 속성 설정 예제입니다."
+      },
+      {
+        "key": "content",
+        "label": "콘텐츠",
+        "description": "텍스트, 배지, 리스트, 테이블 콘텐츠 배치 예제입니다."
+      },
+      {
+        "key": "form",
+        "label": "폼",
+        "description": "입력, 선택, 검증, 버튼 액션을 포함한 폼 예제입니다."
+      },
+      {
+        "key": "support",
+        "label": "지원",
+        "description": "공통코드, API 연결, 팝업 호출 지원 기능 예제입니다."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "page1",
+      "type": "QPage",
+      "props": {
+        "padding": true
+      },
+      "children": [
+        {
+          "id": "div1",
+          "type": "HtmlElement",
+          "tag": "div",
+          "class": "text-h5 text-weight-bold",
+          "textBinding": "currentExample.label"
+        },
+        {
+          "id": "div2",
+          "type": "HtmlElement",
+          "tag": "div",
+          "class": "text-body1 text-grey-8 q-mt-md",
+          "textBinding": "currentExample.description"
+        },
+        {
+          "id": "div3",
+          "type": "HtmlElement",
+          "tag": "div",
+          "class": "row q-col-gutter-md q-mt-md",
+          "children": [
+            {
+              "id": "div1",
+              "type": "HtmlElement",
+              "tag": "div",
+              "class": "col-12 col-sm-6 col-md-4",
+              "repeat": {
+                "source": "examples",
+                "itemName": "item",
+                "key": "item.key"
+              },
+              "children": [
+                {
+                  "id": "card1",
+                  "type": "QCard",
+                  "props": {
+                    "flat": true,
+                    "bordered": true
+                  },
+                  "children": [
+                    {
+                      "id": "cardSection1",
+                      "type": "QCardSection",
+                      "children": [
+                        {
+                          "id": "div1",
+                          "type": "HtmlElement",
+                          "tag": "div",
+                          "class": "text-subtitle1 text-weight-medium",
+                          "textBinding": "item.label"
+                        },
+                        {
+                          "id": "div2",
+                          "type": "HtmlElement",
+                          "tag": "div",
+                          "class": "text-caption text-grey-7 q-mt-xs",
+                          "textBinding": "item.description"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "generation": {
+    "scriptSetup": {
+      "dataExports": [
+        "examples"
+      ]
+    },
+    "notes": [
+      "이 JSON은 Vue 파일을 기준으로 역변환된 결과물이다.",
+      "복잡한 사용자 정의 JavaScript 표현식은 dynamicProps 또는 rawExpression 형태로 보존될 수 있다.",
+      "이 역변환기는 UI TOOL 생성기가 만든 Vue 파일을 우선 대상으로 한다."
+    ]
+  },
+  "script": {
+    "src": "ExamplesPage.js"
+  }
+}
