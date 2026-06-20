@@ -27,6 +27,7 @@ class PageEditorState {
   constructor() {
     this.document = null;
     this.selectedId = "";
+    this.selectedCellIds = [];
     this.generateTimer = null;
     this.changeEmitter = new vscode.EventEmitter();
     this.onDidChange = this.changeEmitter.event;
@@ -39,6 +40,7 @@ class PageEditorState {
 
   async setDocument(document) {
     this.document = document;
+    this.selectedCellIds = [];
     await this.ensureExternalScript();
     const model = this.getModel();
     this.selectedId = this.selectedId || firstSelectableId(model.components);
@@ -205,6 +207,47 @@ class PageEditorState {
 
   selectComponent(id) {
     this.selectedId = id || "";
+    this.selectedCellIds = [];
+    this.fire();
+  }
+
+  toggleGridCellSelection(componentId) {
+    const model = this.getModel();
+    const target = findComponentContext(model.components, componentId);
+
+    if (!isMergeableCellContext(target)) {
+      this.selectComponent(componentId);
+      return;
+    }
+
+    const selectionSeed = this.selectedCellIds.length > 0
+      ? this.selectedCellIds
+      : [this.selectedId];
+    const current = selectionSeed
+      .map((id) => findComponentContext(model.components, id))
+      .filter(isMergeableCellContext);
+    const existingIndex = current.findIndex((context) => context.component.id === componentId);
+    let nextContexts;
+
+    if (existingIndex >= 0) {
+      nextContexts = current.filter((_, index) => index !== existingIndex);
+    } else if (current.length === 0) {
+      nextContexts = [target];
+    } else {
+      const candidateIds = [...current.map((context) => context.component.id), componentId];
+      const candidate = getMergeCellSelection(model.components, candidateIds);
+      nextContexts = candidate ? candidate.contexts : [target];
+    }
+
+    if (nextContexts.length > 1) {
+      const remaining = getMergeCellSelection(
+        model.components,
+        nextContexts.map((context) => context.component.id),
+      );
+      nextContexts = remaining?.contexts || [];
+    }
+    this.selectedCellIds = nextContexts.map((context) => context.component.id);
+    this.selectedId = componentId;
     this.fire();
   }
 
@@ -477,6 +520,11 @@ class PageEditorState {
           const receivesRemainder = index >= splitCount - heightRemainder;
           splitRow.style = setStyleDeclaration(
             splitRow.style,
+            "width",
+            "100%",
+          );
+          splitRow.style = setStyleDeclaration(
+            splitRow.style,
             "height",
             `${baseHeight + (receivesRemainder ? 1 : 0)}%`,
           );
@@ -544,6 +592,67 @@ class PageEditorState {
     });
   }
 
+  async mergeSelectedFormCells(cellIds = this.selectedCellIds) {
+    const selectedIds = [...new Set(cellIds || [])];
+    const validation = getMergeCellSelection(this.getModel().components, selectedIds);
+
+    if (!validation) {
+      vscode.window.showWarningMessage(
+        "Quasar Tool: 같은 Row의 연속 셀 또는 같은 위치의 상하 셀을 2개 이상 선택해야 합니다.",
+      );
+      return;
+    }
+
+    if (validation.totalSpan > 12) {
+      vscode.window.showWarningMessage(
+        "Quasar Tool: 병합한 셀의 col 합계는 12를 초과할 수 없습니다.",
+      );
+      return;
+    }
+
+    await this.updateModel((model) => {
+      const current = getMergeCellSelection(model.components, selectedIds);
+      if (!current || current.totalSpan > 12) return;
+
+      if (current.orientation === "vertical") {
+        const mergedCell = mergeVerticalCellSelection(model, current);
+        if (!mergedCell) return;
+        this.selectedId = mergedCell.id;
+        this.selectedCellIds = [mergedCell.id];
+        return;
+      }
+
+      const [survivor, ...removed] = current.contexts;
+      const survivorComponent = survivor.component;
+      survivorComponent.children ||= [];
+
+      removed.forEach((context) => {
+        const component = context.component;
+        if (component.text !== undefined) {
+          survivorComponent.text = survivorComponent.text === undefined
+            ? component.text
+            : `${survivorComponent.text} ${component.text}`;
+        }
+        if (component.textBinding && !survivorComponent.textBinding) {
+          survivorComponent.textBinding = component.textBinding;
+        }
+        survivorComponent.children.push(...(component.children || []));
+      });
+
+      survivorComponent.class = replacePlainColumnClass(
+        survivorComponent.class,
+        current.totalSpan,
+      );
+
+      [...removed]
+        .sort((a, b) => b.index - a.index)
+        .forEach((context) => context.parent.splice(context.index, 1));
+
+      this.selectedId = survivorComponent.id;
+      this.selectedCellIds = [survivorComponent.id];
+    });
+  }
+
   async updateScript(value) {
     if (!this.document) return;
 
@@ -589,6 +698,7 @@ class PageEditorState {
     this.changeEmitter.fire({
       model: this.getModel(),
       selectedId: this.selectedId,
+      selectedCellIds: this.selectedCellIds,
       hasDocument: Boolean(this.document),
       editorTab: this.editorTab,
     });
@@ -1198,6 +1308,263 @@ function isColumnComponent(component) {
   );
 }
 
+function isMergeableCellContext(context) {
+  return Boolean(
+    context?.component &&
+    context?.parentComponent &&
+    isColumnComponent(context.component) &&
+    isRowComponent(context.parentComponent) &&
+    getPlainColumnSpan(context.component) > 0,
+  );
+}
+
+function getMergeCellSelection(components, cellIds) {
+  if (!Array.isArray(cellIds) || cellIds.length < 2) return null;
+
+  const contexts = cellIds
+    .map((id) => findComponentContext(components, id))
+    .filter(isMergeableCellContext);
+
+  if (contexts.length !== cellIds.length) return null;
+
+  const sameRow = contexts.every(
+    (context) => context.parentComponent === contexts[0].parentComponent,
+  );
+  if (sameRow) {
+    contexts.sort((a, b) => a.index - b.index);
+    const contiguous = contexts.every((context, index) =>
+      index === 0 || context.index === contexts[index - 1].index + 1,
+    );
+    if (!contiguous) return null;
+
+    return {
+      orientation: "horizontal",
+      contexts,
+      totalSpan: contexts.reduce(
+        (total, context) => total + getPlainColumnSpan(context.component),
+        0,
+      ),
+    };
+  }
+
+  const positions = contexts.map((context) => getVerticalCellPosition(components, context));
+  if (positions.some((position) => !position)) return null;
+
+  positions.sort((a, b) => a.rowContext.index - b.rowContext.index);
+  const first = positions[0];
+  const sameContainer = positions.every(
+    (position) => position.rowContext.parentComponent === first.rowContext.parentComponent,
+  );
+  const sameBounds = positions.every(
+    (position) => position.start === first.start && position.span === first.span,
+  );
+  const sameRowTotals = positions.every(
+    (position) => position.rowTotal === first.rowTotal,
+  );
+  const contiguousRows = positions.every((position, index) =>
+    index === 0 || position.rowContext.index === positions[index - 1].rowContext.index + 1,
+  );
+  if (!sameContainer || !sameBounds || !sameRowTotals || !contiguousRows) return null;
+
+  return {
+    orientation: "vertical",
+    contexts: positions.map((position) => position.cellContext),
+    positions,
+    start: first.start,
+    span: first.span,
+    totalSpan: first.span,
+  };
+}
+
+function getVerticalCellPosition(components, cellContext) {
+  if (!isMergeableCellContext(cellContext)) return null;
+
+  const row = cellContext.parentComponent;
+  const rowContext = findComponentContext(components, row.id);
+  if (!rowContext?.parentComponent) return null;
+
+  const spans = (row.children || []).map(getPlainColumnSpan);
+  if (spans.some((span) => span < 1)) return null;
+
+  return {
+    cellContext,
+    rowContext,
+    start: spans.slice(0, cellContext.index).reduce((total, span) => total + span, 0),
+    span: spans[cellContext.index],
+    rowTotal: spans.reduce((total, span) => total + span, 0),
+  };
+}
+
+function mergeVerticalCellSelection(model, selection) {
+  const positions = selection.positions || [];
+  if (positions.length < 2) return null;
+
+  const first = positions[0];
+  const rowParent = first.rowContext.parent;
+  const rowStartIndex = first.rowContext.index;
+  const rowTotal = first.rowTotal;
+  const rightSpan = rowTotal - selection.start - selection.span;
+  if (selection.start < 0 || rightSpan < 0 || rowTotal > 12) return null;
+
+  const nextId = createSequentialIdFactory(model.components);
+  const sourceRows = positions.map((position) => position.rowContext.component);
+  const mergedHeight = sourceRows.reduce(
+    (total, row) => total + (getPixelStyleValue(row.style, "height") || 48),
+    0,
+  );
+  const survivor = positions[0].cellContext.component;
+  const removedCells = positions.slice(1).map((position) => position.cellContext.component);
+  const hasRichContent = [survivor, ...removedCells].some(
+    (component) => (component.children || []).length > 0 || component.textBinding,
+  );
+
+  if (hasRichContent) {
+    survivor.children ||= [];
+    removedCells.forEach((component) => {
+      survivor.children.push(...(component.children || []));
+      if (component.text !== undefined) {
+        survivor.text = survivor.text === undefined
+          ? component.text
+          : `${survivor.text} ${component.text}`;
+      }
+      if (component.textBinding && !survivor.textBinding) {
+        survivor.textBinding = component.textBinding;
+      }
+    });
+  } else {
+    survivor.children = [];
+    delete survivor.text;
+    delete survivor.textBinding;
+  }
+
+  survivor.class = appendClassTokens(
+    replacePlainColumnClass(survivor.class, selection.span),
+    ["row", "items-center", "justify-center"],
+  );
+  survivor.style = setStyleDeclaration(
+    survivor.style,
+    "min-height",
+    `${mergedHeight}px`,
+  );
+  survivor.designer = {
+    ...(survivor.designer || {}),
+    role: "mergedCell",
+    mergeDirection: "vertical",
+    sourceRowCount: positions.length,
+  };
+
+  const outerChildren = [];
+  if (selection.start > 0) {
+    outerChildren.push(createVerticalMergeRegion(
+      nextId,
+      sourceRows,
+      0,
+      positions.map((position) => position.cellContext.index),
+      selection.start,
+      "left",
+    ));
+  }
+
+  outerChildren.push(survivor);
+
+  if (rightSpan > 0) {
+    outerChildren.push(createVerticalMergeRegion(
+      nextId,
+      sourceRows,
+      positions.map((position) => position.cellContext.index + 1),
+      sourceRows.map((row) => (row.children || []).length),
+      rightSpan,
+      "right",
+    ));
+  }
+
+  const mergedRow = {
+    id: nextId("HtmlElement", "div"),
+    type: "HtmlElement",
+    tag: "div",
+    class: sourceRows[0].class || "row",
+    style: `min-height: ${mergedHeight}px`,
+    designer: {
+      role: "verticalMergeRow",
+      sourceRowCount: positions.length,
+    },
+    children: outerChildren,
+  };
+
+  rowParent.splice(rowStartIndex, positions.length, mergedRow);
+  return survivor;
+}
+
+function createVerticalMergeRegion(
+  nextId,
+  sourceRows,
+  startIndices,
+  endIndices,
+  regionSpan,
+  side,
+) {
+  const nestedRows = sourceRows.map((row, rowIndex) => {
+    const cells = (row.children || []).slice(
+      Array.isArray(startIndices) ? startIndices[rowIndex] : startIndices,
+      Array.isArray(endIndices) ? endIndices[rowIndex] : endIndices,
+    );
+    normalizeRegionColumnSpans(cells, regionSpan);
+
+    return {
+      id: nextId("HtmlElement", "div"),
+      type: "HtmlElement",
+      tag: "div",
+      class: row.class || "row",
+      ...(row.style ? { style: row.style } : {}),
+      designer: { role: "verticalMergeSourceRow", side },
+      children: cells,
+    };
+  });
+
+  return {
+    id: nextId("HtmlElement", "div"),
+    type: "HtmlElement",
+    tag: "div",
+    class: `col-${regionSpan}`,
+    designer: { role: "verticalMergeRegion", side },
+    children: nestedRows,
+  };
+}
+
+function normalizeRegionColumnSpans(cells, originalTotal) {
+  if (!cells.length || originalTotal < 1) return;
+
+  let remaining = 12;
+  cells.forEach((cell, index) => {
+    const cellsLeft = cells.length - index - 1;
+    const span = index === cells.length - 1
+      ? remaining
+      : Math.max(
+          1,
+          Math.min(
+            remaining - cellsLeft,
+            Math.ceil(getPlainColumnSpan(cell) / originalTotal * 12),
+          ),
+        );
+    cell.class = replacePlainColumnClass(cell.class, span);
+    remaining -= span;
+  });
+}
+
+function appendClassTokens(className, tokens) {
+  const values = String(className || "").split(/\s+/).filter(Boolean);
+  tokens.forEach((token) => {
+    if (!values.includes(token)) values.push(token);
+  });
+  return values.join(" ");
+}
+
+function getPixelStyleValue(style, property) {
+  const pattern = new RegExp(`(?:^|;)\\s*${property}\\s*:\\s*(\\d+(?:\\.\\d+)?)px`, "i");
+  const match = String(style || "").match(pattern);
+  return match ? Number(match[1]) : 0;
+}
+
 function hasClassToken(component, token) {
   return getClassTokens(component).includes(token);
 }
@@ -1280,6 +1647,7 @@ function createCellSplitRow(nextId, children = [], text) {
     type: "HtmlElement",
     tag: "div",
     class: "row",
+    style: "width: 100%",
     designer: { role: "cellSplitRow" },
     children: [{
       id: nextId("HtmlElement", "div"),

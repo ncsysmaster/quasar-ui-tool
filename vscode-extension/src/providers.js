@@ -36,6 +36,7 @@ class PageEditorProvider {
         type: "state",
         model: this.state.getModel(),
         selectedId: this.state.selectedId,
+        selectedCellIds: this.state.selectedCellIds,
         activeTab: this.state.editorTab,
         scriptNavigation: this.state.scriptNavigation,
       });
@@ -55,6 +56,10 @@ class PageEditorProvider {
       if (message.type === "select") {
         console.log("[PageEditorProvider] select:", message.id);
         this.state.selectComponent(message.id);
+      }
+
+      if (message.type === "toggleGridCellSelection") {
+        this.state.toggleGridCellSelection(message.id);
       }
 
       if (message.type === "openFirstEventMethod") {
@@ -98,6 +103,10 @@ class PageEditorProvider {
           columnsEnabled: message.columnsEnabled,
           columnCount: message.columnCount,
         });
+      }
+
+      if (message.type === "mergeFormCells") {
+        await this.state.mergeSelectedFormCells(message.cellIds);
       }
 
       if (message.type === "deleteSelected") {
@@ -341,6 +350,7 @@ function postViewState(view, state) {
     type: "state",
     model: state.getModel(),
     selectedId: state.selectedId,
+    selectedCellIds: state.selectedCellIds,
     hasDocument: Boolean(state.document),
   });
 }

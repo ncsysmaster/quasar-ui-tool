@@ -222,46 +222,161 @@
                           ]
                         },
                         {
-                          "id": "Div013",
+                          "id": "Div027",
                           "type": "HtmlElement",
                           "tag": "div",
                           "class": "row",
+                          "style": "min-height: 96px",
+                          "designer": {
+                            "role": "verticalMergeRow",
+                            "sourceRowCount": 2
+                          },
                           "children": [
                             {
-                              "id": "Div011",
+                              "id": "Div026",
                               "type": "HtmlElement",
                               "tag": "div",
-                              "class": "col-2",
+                              "class": "col-6",
+                              "designer": {
+                                "role": "verticalMergeRegion",
+                                "side": "left"
+                              },
                               "children": [
                                 {
-                                  "id": "Div010",
+                                  "id": "Div021",
                                   "type": "HtmlElement",
                                   "tag": "div",
-                                  "class": "bg-grey-4 row items-center q-px-md full-height rounded-borders overflow-hidden",
-                                  "style": "border-radius: 4px",
-                                  "text": "조회명"
+                                  "class": "row",
+                                  "style": "min-height: 96px",
+                                  "designer": {
+                                    "role": "verticalMergeRow",
+                                    "sourceRowCount": 2
+                                  },
+                                  "children": [
+                                    {
+                                      "id": "Div011",
+                                      "type": "HtmlElement",
+                                      "tag": "div",
+                                      "class": "col-4 row items-center justify-center",
+                                      "children": [
+                                        {
+                                          "id": "Div028",
+                                          "type": "HtmlElement",
+                                          "tag": "div",
+                                          "class": "bg-grey-4 row items-center q-px-md full-height rounded-borders overflow-hidden",
+                                          "style": "border-radius: 4px; width: 100%",
+                                          "text": "조회분류",
+                                          "children": []
+                                        }
+                                      ],
+                                      "style": "min-height: 96px",
+                                      "designer": {
+                                        "role": "mergedCell",
+                                        "mergeDirection": "vertical",
+                                        "sourceRowCount": 2
+                                      }
+                                    },
+                                    {
+                                      "id": "Div019",
+                                      "type": "HtmlElement",
+                                      "tag": "div",
+                                      "class": "col-8",
+                                      "designer": {
+                                        "role": "verticalMergeRegion",
+                                        "side": "right"
+                                      },
+                                      "children": [
+                                        {
+                                          "id": "Div010",
+                                          "type": "HtmlElement",
+                                          "tag": "div",
+                                          "class": "row",
+                                          "designer": {
+                                            "role": "verticalMergeSourceRow",
+                                            "side": "right"
+                                          },
+                                          "children": [
+                                            {
+                                              "id": "Div012",
+                                              "type": "HtmlElement",
+                                              "tag": "div",
+                                              "class": "col-12 bg-white q-pa-xs",
+                                              "children": [
+                                                {
+                                                  "id": "QInput001",
+                                                  "type": "QInput",
+                                                  "props": {
+                                                    "outlined": true,
+                                                    "dense": true,
+                                                    "bgColor": "white"
+                                                  },
+                                                  "models": {
+                                                    "modelValue": "search.name"
+                                                  }
+                                                }
+                                              ],
+                                              "style": "",
+                                              "designer": {
+                                                "role": "splitCell"
+                                              }
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "id": "Div013",
+                                          "type": "HtmlElement",
+                                          "tag": "div",
+                                          "class": "row",
+                                          "designer": {
+                                            "role": "verticalMergeSourceRow",
+                                            "side": "right"
+                                          },
+                                          "children": [
+                                            {
+                                              "id": "Div022",
+                                              "type": "HtmlElement",
+                                              "tag": "div",
+                                              "class": "col-12 bg-white q-pa-xs",
+                                              "children": [
+                                                {
+                                                  "id": "QInput002",
+                                                  "type": "QInput",
+                                                  "props": {
+                                                    "outlined": true,
+                                                    "dense": true,
+                                                    "bgColor": "white"
+                                                  },
+                                                  "models": {
+                                                    "modelValue": "search.name"
+                                                  }
+                                                }
+                                              ],
+                                              "style": "",
+                                              "designer": {
+                                                "role": "splitCell"
+                                              }
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
                                 }
                               ]
                             },
                             {
-                              "id": "Div012",
+                              "id": "Div018",
                               "type": "HtmlElement",
                               "tag": "div",
-                              "class": "col-10 bg-white q-pa-xs",
-                              "children": [
-                                {
-                                  "id": "QInput001",
-                                  "type": "QInput",
-                                  "props": {
-                                    "outlined": true,
-                                    "dense": true,
-                                    "bgColor": "white"
-                                  },
-                                  "models": {
-                                    "modelValue": "search.name"
-                                  }
-                                }
-                              ]
+                              "class": "col-6 bg-white row items-center justify-center",
+                              "designer": {
+                                "role": "mergedCell",
+                                "mergeDirection": "vertical",
+                                "sourceRowCount": 2,
+                                "splitRows": true
+                              },
+                              "children": [],
+                              "style": "min-height: 96px"
                             }
                           ]
                         }
