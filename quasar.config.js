@@ -1,7 +1,7 @@
 import { defineConfig } from "@quasar/app-vite";
 
 export default defineConfig(() => ({
-  boot: [],
+  boot: ["pinia"],
   css: ["app.scss"],
   extras: ["material-icons"],
   build: {

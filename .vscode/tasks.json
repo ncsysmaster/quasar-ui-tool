@@ -23,6 +23,13 @@
       "problemMatcher": []
     },
     {
+      "label": "generate pinia",
+      "type": "shell",
+      "command": "npm run generate:pinia",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
       "label": "watch vue",
       "type": "shell",
       "command": "npm run watch:vue",

@@ -1,4 +1,5 @@
 const { getGridHtml, getGridScript, getGridStyles } = require("./gridView");
+const { NEUTRAL_TO_QUASAR } = require("./componentTypes");
 
 /* 편집창 화면 */
 function getEditorHtml(webview, runtimeUris) {
@@ -13,7 +14,10 @@ function getEditorHtml(webview, runtimeUris) {
     <div class="tabs">
       <button class="tab active" data-tab="screen">Screen</button>
       <button class="tab" data-tab="script">Script</button>
-      <button class="tab" data-tab="dataset">DataSet</button>
+      <button class="tab" data-tab="store">Store</button>
+      <button id="create-pinia-store" class="screen-tool-button tab-action-button hidden" type="button" title="Store 신규 추가" aria-label="Store 신규 추가">
+        <span class="material-icons" aria-hidden="true">add_box</span>
+      </button>
       <div id="screen-tools" class="screen-tools">
         <button id="toggle-canvas-grid" class="screen-tool-button" type="button" title="화면 격자 숨기기" aria-label="화면 격자 숨기기" aria-pressed="true">
           <span class="material-icons" aria-hidden="true">grid_on</span>
@@ -29,11 +33,13 @@ function getEditorHtml(webview, runtimeUris) {
     <script nonce="${nonce}" src="${runtimeUris.monacoLoader}"></script>
     <script nonce="${nonce}">
       const vscode = acquireVsCodeApi()
+      const componentTypeMap = ${JSON.stringify(NEUTRAL_TO_QUASAR)}
       const vueRuntime = window.Vue
       const quasarRuntime = window.Quasar || window.quasar
       let model = null
       let selectedId = ''
       let selectedCellIds = []
+      let piniaStores = []
       let activeTab = 'screen'
       let previewApp = null
       let previewState = null
@@ -73,6 +79,12 @@ function getEditorHtml(webview, runtimeUris) {
       })
 
       window.addEventListener('message', (event) => {
+        if (event.data.type === 'piniaStores') {
+          piniaStores = Array.isArray(event.data.stores) ? event.data.stores : []
+          if (activeTab === 'store') render()
+          return
+        }
+
         if (event.data.type !== 'state') return
 
         model = event.data.model
@@ -111,8 +123,15 @@ function getEditorHtml(webview, runtimeUris) {
           document.querySelectorAll('[data-tab]').forEach((tab) => tab.classList.toggle('active', tab === button))
           updateScreenTools()
           vscode.postMessage({ type: 'setEditorTab', tab: activeTab })
+          if (activeTab === 'store') {
+            vscode.postMessage({ type: 'requestPiniaStores' })
+          }
           render()
         })
+      })
+
+      document.getElementById('create-pinia-store').addEventListener('click', () => {
+        vscode.postMessage({ type: 'createPiniaStore' })
       })
 
       document.getElementById('toggle-grid-metrics').addEventListener('click', () => {
@@ -200,10 +219,9 @@ function getEditorHtml(webview, runtimeUris) {
 
         disposeScriptEditor()
 
-        if (activeTab === 'dataset') {
+        if (activeTab === 'store') {
           unmountPreview()
-          const dataset = getDataset()
-          content.innerHTML = '<div class="summary"><b>' + escapeHtml(dataset.name) + '</b><br><span>' + dataset.fields.length + ' fields</span></div>'
+          renderPiniaStores(content)
           return
         }
 
@@ -226,8 +244,10 @@ function getEditorHtml(webview, runtimeUris) {
         const canvasButton = document.getElementById('toggle-canvas-grid')
         const canvasIcon = canvasButton?.querySelector('.material-icons')
         const canvasLabel = showCanvasGrid ? '화면 격자 숨기기' : '화면 격자 표시하기'
+        const createStoreButton = document.getElementById('create-pinia-store')
 
         tools?.classList.toggle('hidden', activeTab !== 'screen')
+        createStoreButton?.classList.toggle('hidden', activeTab !== 'store')
         metricsButton?.classList.toggle('active', showGridMetrics)
         metricsButton?.setAttribute('aria-pressed', String(showGridMetrics))
         metricsButton?.setAttribute('aria-label', metricsLabel)
@@ -252,10 +272,10 @@ function getEditorHtml(webview, runtimeUris) {
         previewApp = vueRuntime.createApp({
           setup() {
             return () => vueRuntime.h(
-              resolveQuasarComponent('QLayout'),
+              resolveQuasarComponent('Layout'),
               { view: 'hHh Lpr fFf', container: true, class: 'qt-preview-layout' },
               () => vueRuntime.h(
-                resolveQuasarComponent('QPageContainer'),
+                resolveQuasarComponent('PageContainer'),
                 null,
                 () => renderComponents(previewState.model?.components || [], {})
               )
@@ -644,14 +664,11 @@ function getEditorHtml(webview, runtimeUris) {
         }
 
         props.onDragover = (event) => {
-          const paletteIndex = getPaletteDragIndex(event.dataTransfer)
-          const targetCellId = getFormGridDropCellId(component.id)
-
-          if (isPaletteDrag(event.dataTransfer) && targetCellId) {
+          if (isPaletteDrag(event.dataTransfer)) {
             event.preventDefault()
             event.stopPropagation()
             event.dataTransfer.dropEffect = 'copy'
-            setPaletteDropTarget(targetCellId)
+            setPaletteDropTarget(component.id)
             return
           }
 
@@ -660,7 +677,6 @@ function getEditorHtml(webview, runtimeUris) {
         }
 
         props.onDragleave = (event) => {
-          if (!getFormGridDropCellId(component.id)) return
           const nextTarget = event.relatedTarget
           if (nextTarget && event.currentTarget.contains(nextTarget)) return
           clearPaletteDropTarget()
@@ -671,16 +687,15 @@ function getEditorHtml(webview, runtimeUris) {
           event.stopPropagation()
 
           const paletteIndex = getPaletteDragIndex(event.dataTransfer)
-          const targetCellId = getFormGridDropCellId(component.id)
 
           if (paletteIndex >= 0) {
             clearPaletteDropTarget()
-            if (!targetCellId) return
 
             vscode.postMessage({
               type: 'dropPaletteComponent',
               index: paletteIndex,
-              targetId: targetCellId
+              targetId: component.id,
+              mode: componentCanHaveChildren(component) ? 'inside' : 'after'
             })
 
             return
@@ -724,7 +739,7 @@ function getEditorHtml(webview, runtimeUris) {
             return content
           }
 
-          // QCard, QPage, QCardSection 같은 Quasar 컴포넌트는 slot 함수 사용
+          // Card, Page, CardSection 같은 컨테이너 컴포넌트는 slot 함수 사용
           return () => content
         }
 
@@ -740,7 +755,8 @@ function getEditorHtml(webview, runtimeUris) {
       }
 
       function resolveQuasarComponent(type) {
-        return quasarRuntime[type] || type
+        const runtimeType = componentTypeMap[type] || type
+        return quasarRuntime[runtimeType] || runtimeType
       }
 
       function resolveValue(path, scope) {
@@ -782,6 +798,21 @@ function getEditorHtml(webview, runtimeUris) {
         return Number.isInteger(index) ? index : -1
       }
 
+      function componentCanHaveChildren(component) {
+        if (!component) return false
+
+        if (component.type === 'HtmlElement') {
+          const children = Array.isArray(component.children) ? component.children : []
+          if (component.text !== undefined && children.length === 0) return false
+
+          return ['div', 'section', 'article', 'main', 'aside', 'header', 'footer']
+            .includes(component.tag || 'div')
+        }
+
+        return ['Page', 'Card', 'CardSection', 'Layout', 'PageContainer']
+          .includes(component.type)
+      }
+
       function isPaletteDrag(dataTransfer) {
         if (!dataTransfer) return false
         const types = Array.from(dataTransfer.types || [])
@@ -813,6 +844,31 @@ function getEditorHtml(webview, runtimeUris) {
         return model.datasets?.[0] || { name: 'defaultDataset', fields: [] }
       }
 
+      function renderPiniaStores(content) {
+        if (piniaStores.length === 0) {
+          content.innerHTML = '<div class="empty">등록된 Pinia Store가 없습니다.</div>'
+          return
+        }
+
+        content.innerHTML = '<div class="store-list">' + piniaStores.map((store) =>
+          '<button class="store-item" type="button" data-store-path="' + escapeAttr(store.fsPath) + '">' +
+            '<span class="store-name">' + escapeHtml(store.constName || store.fileName) + '</span>' +
+            '<span class="store-id">defineStore: ' + escapeHtml(store.defineStoreId || '-') + '</span>' +
+            '<span class="store-path">' + escapeHtml(store.relativePath) + '</span>' +
+            '<span class="store-state">state: ' + escapeHtml((store.stateKeys || []).join(', ') || '-') + '</span>' +
+          '</button>'
+        ).join('') + '</div>'
+
+        content.querySelectorAll('[data-store-path]').forEach((button) => {
+          button.addEventListener('click', () => {
+            vscode.postMessage({
+              type: 'openPiniaStore',
+              fsPath: button.dataset.storePath
+            })
+          })
+        })
+      }
+
       function setupPaletteDrop() {
         const frame = document.querySelector('.runtime-preview-frame')
         if (!frame) return
@@ -821,6 +877,13 @@ function getEditorHtml(webview, runtimeUris) {
           if (!isPaletteDrag(event.dataTransfer)) return
           event.preventDefault()
           event.dataTransfer.dropEffect = 'copy'
+          frame.classList.add('qt-palette-frame-drop-target')
+        })
+
+        frame.addEventListener('dragleave', (event) => {
+          if (event.relatedTarget && frame.contains(event.relatedTarget)) return
+          frame.classList.remove('qt-palette-frame-drop-target')
+          clearPaletteDropTarget()
         })
 
         frame.addEventListener('drop', (event) => {
@@ -828,7 +891,17 @@ function getEditorHtml(webview, runtimeUris) {
 
           event.preventDefault()
           event.stopPropagation()
+          const paletteIndex = getPaletteDragIndex(event.dataTransfer)
+          frame.classList.remove('qt-palette-frame-drop-target')
           clearPaletteDropTarget()
+
+          if (paletteIndex < 0) return
+          vscode.postMessage({
+            type: 'dropPaletteComponent',
+            index: paletteIndex,
+            targetId: '',
+            mode: 'inside'
+          })
         })
       }      
 
@@ -917,8 +990,10 @@ function htmlShell(webview, nonce, title, body) {
     .screen-tool-button:hover { background: var(--vscode-toolbar-hoverBackground); }
     .screen-tool-button.active { color: var(--vscode-focusBorder); border-color: var(--vscode-focusBorder); background: var(--vscode-list-activeSelectionBackground); }
     .screen-tool-button .material-icons { font-size: 18px; line-height: 18px; }
+    .tab-action-button { margin: 2px 2px 5px 4px; align-self: center; }
     #content { min-height: calc(100vh - 42px); }
     .runtime-preview-frame { min-height: calc(100vh - 42px); overflow: auto; color: #000; background-color: #fafafa; }
+    .runtime-preview-frame.qt-palette-frame-drop-target { box-shadow: inset 0 0 0 3px rgba(33, 163, 102, 0.85); }
     .runtime-preview-frame.show-canvas-grid { background-image: linear-gradient(rgba(0,0,0,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.06) 1px, transparent 1px); background-size: 20px 20px, 20px 20px; }
     #quasar-preview { position: relative;  z-index: 1;  min-height: calc(100vh - 42px);  color: #000;  background: transparent;  font-family: Roboto, Arial, sans-serif;  font-size: 14px;  line-height: 1.5;    }    .qt-preview-layout { min-height: calc(100vh - 42px); }
     #quasar-preview .q-layout,
@@ -938,6 +1013,12 @@ function htmlShell(webview, nonce, title, body) {
     .primary { margin: 8px; padding: 6px 10px; border: 0; color: var(--vscode-button-foreground); background: var(--vscode-button-background); }
     .danger { margin-top: 6px; padding: 5px 8px; border: 1px solid var(--vscode-errorForeground); color: var(--vscode-errorForeground); background: transparent; }
     .dataset-row { display: grid; gap: 6px; padding: 8px; border-bottom: 1px solid var(--vscode-panel-border); }
+    .store-list { display: grid; align-content: start; }
+    .store-item { display: grid; grid-template-columns: minmax(160px, 0.7fr) minmax(140px, 0.6fr) minmax(220px, 1fr); gap: 4px 14px; width: 100%; min-height: 58px; padding: 9px 12px; align-items: center; border: 0; border-bottom: 1px solid var(--vscode-panel-border); color: var(--vscode-editor-foreground); background: transparent; text-align: left; }
+    .store-item:hover { background: var(--vscode-list-hoverBackground); }
+    .store-name { font-weight: 600; }
+    .store-id, .store-path, .store-state { overflow: hidden; color: var(--vscode-descriptionForeground); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+    .store-state { grid-column: 1 / -1; }
     .check { display: flex; gap: 6px; align-items: center; color: var(--vscode-descriptionForeground); }
     .check input { width: auto; min-height: auto; }
     .qt-html-element {outline: 1px dashed #bdbdbd; outline-offset: -1px; }

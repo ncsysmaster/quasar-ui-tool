@@ -223,7 +223,7 @@ function getFormLayoutContext(componentId) {
   const splitCell = isFormGridRow(selectedComponent) ? null : [...path].reverse().find(isLayoutColumn);
   const form = path.find((component) => component?.designer?.template === "courseSearchForm");
   const layoutContainer = form || [...path].reverse().find((component) =>
-    component?.type === "QCard" || component?.type === "QCardSection");
+    component?.type === "Card" || component?.type === "CardSection");
   let row = [...path].reverse().find(isLayoutRow);
   let column = [...path].reverse().find(isLayoutColumn);
   if (layoutContainer) {

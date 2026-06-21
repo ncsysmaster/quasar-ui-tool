@@ -12,7 +12,7 @@
     "sourceVuePath": "src/pages/ExamplesPage.vue",
     "targetVuePath": "src/pages/ExamplesPage.vue",
     "framework": "quasar",
-    "component": "QPage"
+    "component": "Page"
   },
   "data": {
     "examples": [
@@ -51,72 +51,313 @@
         "label": "지원",
         "description": "공통코드, API 연결, 팝업 호출 지원 기능 예제입니다."
       }
-    ]
+    ],
+    "search": {
+      "class1": null,
+      "class2": null,
+      "requiredYn": false,
+      "useYn": false,
+      "name": ""
+    },
+    "classOptions": []
   },
   "components": [
     {
-      "id": "page1",
-      "type": "QPage",
+      "id": "page4e4pf",
+      "type": "Page",
       "props": {
         "padding": true
       },
       "children": [
         {
-          "id": "div1",
-          "type": "HtmlElement",
-          "tag": "div",
-          "class": "text-h5 text-weight-bold",
-          "textBinding": "currentExample.label"
-        },
-        {
-          "id": "div2",
-          "type": "HtmlElement",
-          "tag": "div",
-          "class": "text-body1 text-grey-8 q-mt-md",
-          "textBinding": "currentExample.description"
-        },
-        {
-          "id": "div3",
-          "type": "HtmlElement",
-          "tag": "div",
-          "class": "row q-col-gutter-md q-mt-md",
+          "id": "QCard001",
+          "type": "Card",
+          "props": {
+            "flat": true,
+            "bordered": true
+          },
           "children": [
             {
-              "id": "div1",
-              "type": "HtmlElement",
-              "tag": "div",
-              "class": "col-12 col-sm-6 col-md-4",
-              "repeat": {
-                "source": "examples",
-                "itemName": "item",
-                "key": "item.key"
-              },
+              "id": "QCardSection001",
+              "type": "CardSection",
+              "class": "q-pa-sm",
               "children": [
                 {
-                  "id": "card1",
-                  "type": "QCard",
-                  "props": {
-                    "flat": true,
-                    "bordered": true
-                  },
+                  "id": "Div017",
+                  "type": "HtmlElement",
+                  "tag": "div",
+                  "class": "row q-col-gutter-sm",
                   "children": [
                     {
-                      "id": "cardSection1",
-                      "type": "QCardSection",
+                      "id": "Div014",
+                      "type": "HtmlElement",
+                      "tag": "div",
+                      "class": "col",
                       "children": [
                         {
-                          "id": "div1",
+                          "id": "Div009",
                           "type": "HtmlElement",
                           "tag": "div",
-                          "class": "text-subtitle1 text-weight-medium",
-                          "textBinding": "item.label"
+                          "class": "row",
+                          "children": [
+                            {
+                              "id": "Div002",
+                              "type": "HtmlElement",
+                              "tag": "div",
+                              "class": "col-2",
+                              "children": [
+                                {
+                                  "id": "Div001",
+                                  "type": "HtmlElement",
+                                  "tag": "div",
+                                  "class": "bg-grey-4 row items-center q-px-md full-height rounded-borders overflow-hidden",
+                                  "style": "border-radius: 4px",
+                                  "text": "조회분류",
+                                  "children": [
+                                    {
+                                      "id": "Span001",
+                                      "type": "HtmlElement",
+                                      "tag": "span",
+                                      "class": "text-negative q-ml-xs",
+                                      "text": "*"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "id": "Div003",
+                              "type": "HtmlElement",
+                              "tag": "div",
+                              "class": "col-2 bg-white q-pa-xs",
+                              "children": [
+                                {
+                                  "id": "QSelect001",
+                                  "type": "Select",
+                                  "props": {
+                                    "outlined": true,
+                                    "dense": true,
+                                    "bgColor": "white"
+                                  },
+                                  "models": {
+                                    "modelValue": "search.class1"
+                                  },
+                                  "dynamicProps": {
+                                    "options": "classOptions"
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "id": "Div004",
+                              "type": "HtmlElement",
+                              "tag": "div",
+                              "class": "col-2 bg-white q-pa-xs",
+                              "children": [
+                                {
+                                  "id": "QSelect002",
+                                  "type": "Select",
+                                  "props": {
+                                    "outlined": true,
+                                    "dense": true,
+                                    "bgColor": "white"
+                                  },
+                                  "models": {
+                                    "modelValue": "search.class2"
+                                  },
+                                  "dynamicProps": {
+                                    "options": "classOptions"
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "id": "Div006",
+                              "type": "HtmlElement",
+                              "tag": "div",
+                              "class": "col-2",
+                              "children": [
+                                {
+                                  "id": "Div005",
+                                  "type": "HtmlElement",
+                                  "tag": "div",
+                                  "class": "bg-grey-4 row items-center q-px-md full-height rounded-borders overflow-hidden",
+                                  "style": "border-radius: 4px",
+                                  "text": "조회구분"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "Div007",
+                              "type": "HtmlElement",
+                              "tag": "div",
+                              "class": "col-2 bg-white row items-center q-px-sm",
+                              "children": [
+                                {
+                                  "id": "QToggle001",
+                                  "type": "Toggle",
+                                  "props": {
+                                    "label": "필수",
+                                    "dense": true
+                                  },
+                                  "models": {
+                                    "modelValue": "search.requiredYn"
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "id": "Div008",
+                              "type": "HtmlElement",
+                              "tag": "div",
+                              "class": "col-2 bg-white row items-center q-px-sm",
+                              "children": [
+                                {
+                                  "id": "QToggle002",
+                                  "type": "Toggle",
+                                  "props": {
+                                    "label": "사용여부",
+                                    "dense": true
+                                  },
+                                  "models": {
+                                    "modelValue": "search.useYn"
+                                  }
+                                }
+                              ]
+                            }
+                          ]
                         },
                         {
-                          "id": "div2",
+                          "id": "Div013",
                           "type": "HtmlElement",
                           "tag": "div",
-                          "class": "text-caption text-grey-7 q-mt-xs",
-                          "textBinding": "item.description"
+                          "class": "row",
+                          "children": [
+                            {
+                              "id": "Div011",
+                              "type": "HtmlElement",
+                              "tag": "div",
+                              "class": "col-2",
+                              "children": [
+                                {
+                                  "id": "Div010",
+                                  "type": "HtmlElement",
+                                  "tag": "div",
+                                  "class": "bg-grey-4 row items-center q-px-md full-height rounded-borders overflow-hidden",
+                                  "style": "border-radius: 4px",
+                                  "text": "조회명"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "Div012",
+                              "type": "HtmlElement",
+                              "tag": "div",
+                              "class": "col-10 bg-white q-pa-xs",
+                              "children": [
+                                {
+                                  "id": "QInput001",
+                                  "type": "Input",
+                                  "props": {
+                                    "outlined": true,
+                                    "dense": true,
+                                    "bgColor": "white"
+                                  },
+                                  "models": {
+                                    "modelValue": "search.name"
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "id": "Div018",
+                          "type": "HtmlElement",
+                          "tag": "div",
+                          "class": "row",
+                          "children": [
+                            {
+                              "id": "Div019",
+                              "type": "HtmlElement",
+                              "tag": "div",
+                              "class": "col-2",
+                              "children": [
+                                {
+                                  "id": "Div020",
+                                  "type": "HtmlElement",
+                                  "tag": "div",
+                                  "class": "bg-grey-4 row items-center q-px-md full-height rounded-borders overflow-hidden",
+                                  "style": "border-radius: 4px",
+                                  "text": "조회명"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "Div021",
+                              "type": "HtmlElement",
+                              "tag": "div",
+                              "class": "col-10 bg-white q-pa-xs",
+                              "children": [
+                                {
+                                  "id": "QInput002",
+                                  "type": "Input",
+                                  "props": {
+                                    "outlined": true,
+                                    "dense": true,
+                                    "bgColor": "white"
+                                  },
+                                  "models": {
+                                    "modelValue": "search.name"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "style": "height: 48px"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "Div016",
+                      "type": "HtmlElement",
+                      "tag": "div",
+                      "class": "col-auto",
+                      "style": "min-width: 180px; display: flex; align-items: flex-end",
+                      "children": [
+                        {
+                          "id": "Div015",
+                          "type": "HtmlElement",
+                          "tag": "div",
+                          "class": "row no-wrap",
+                          "style": "width: 100%; height: 48px; align-items: center; justify-content: flex-end; gap: 8px; padding: 4px; background: white",
+                          "children": [
+                            {
+                              "id": "QBtn001",
+                              "type": "Button",
+                              "style": "min-width: 80px; height: 36px",
+                              "props": {
+                                "label": "초기화",
+                                "outline": true,
+                                "color": "grey-7"
+                              },
+                              "events": {
+                                "click": "resetSearch"
+                              }
+                            },
+                            {
+                              "id": "QBtn002",
+                              "type": "Button",
+                              "style": "min-width: 80px; height: 36px",
+                              "props": {
+                                "label": "검색",
+                                "color": "primary"
+                              },
+                              "events": {
+                                "click": "onSearch"
+                              }
+                            }
+                          ]
                         }
                       ]
                     }
@@ -124,7 +365,10 @@
                 }
               ]
             }
-          ]
+          ],
+          "designer": {
+            "template": "courseSearchForm"
+          }
         }
       ]
     }
@@ -132,7 +376,9 @@
   "generation": {
     "scriptSetup": {
       "dataExports": [
-        "examples"
+        "examples",
+        "search",
+        "classOptions"
       ]
     },
     "notes": [
@@ -143,5 +389,18 @@
   },
   "script": {
     "src": "ExamplesPage.js"
-  }
+  },
+  "datasets": [
+    {
+      "name": "defaultDataset",
+      "fields": [
+        {
+          "name": "examples",
+          "label": "examples",
+          "type": "object",
+          "required": false
+        }
+      ]
+    }
+  ]
 }

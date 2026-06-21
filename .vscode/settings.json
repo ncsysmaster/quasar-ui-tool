@@ -1,8 +1,8 @@
 {
   "editor.formatOnSave": true,
   "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "breadcrumbs.enabled": false,
   "files.eol": "\n",
   "files.encoding": "utf8",
   "typescript.tsdk": "node_modules/typescript/lib"
 }
-

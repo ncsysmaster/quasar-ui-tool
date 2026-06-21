@@ -24,6 +24,10 @@
   "activationEvents": [
     "onCustomEditor:quasarTool.pageEditor",
     "onCommand:quasarTool.openPageEditor",
+    "onCommand:quasarTool.watchVue",
+    "onCommand:quasarTool.createPiniaStore",
+    "onStartupFinished",
+    "workspaceContains:**/.src/store/**/*.json",
     "onView:quasarTool.paletteView",
     "onView:quasarTool.propertiesView",
     "onView:quasarTool.eventsView",
@@ -32,12 +36,52 @@
   ],
   "main": "./src/extension.js",
   "contributes": {
+    "configurationDefaults": {
+      "breadcrumbs.enabled": false
+    },
     "commands": [
       {
         "command": "quasarTool.openPageEditor",
         "title": "Quasar Tool: Open Page Editor"
+      },
+      {
+        "command": "quasarTool.watchVue",
+        "title": "Quasar Tool: Start Vue Watch",
+        "icon": "$(run)"
+      },
+      {
+        "command": "quasarTool.createPiniaStore",
+        "title": "Quasar Tool: Pinia 파일 생성",
+        "icon": "$(new-file)"
       }
     ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "quasarTool.watchVue"
+        },
+        {
+          "command": "quasarTool.createPiniaStore"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "quasarTool.watchVue",
+          "group": "quasarTool@1"
+        },
+        {
+          "command": "quasarTool.createPiniaStore",
+          "group": "quasarTool@2"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "quasarTool.watchVue",
+          "when": "activeCustomEditorId == quasarTool.pageEditor",
+          "group": "navigation@10"
+        }
+      ]
+    },
     "viewsContainers": {
       "activitybar": [
         {

@@ -12,13 +12,13 @@
     "sourceVuePath": "src/pages/IntroDocPage.vue",
     "targetVuePath": "src/pages/IntroDocPage.vue",
     "framework": "quasar",
-    "component": "QPage"
+    "component": "Page"
   },
   "data": {},
   "components": [
     {
       "id": "page1",
-      "type": "QPage",
+      "type": "Page",
       "props": {
         "padding": true
       },
@@ -37,7 +37,7 @@
               "children": [
                 {
                   "id": "list1",
-                  "type": "QList",
+                  "type": "List",
                   "class": "bg-white",
                   "props": {
                     "bordered": true,
@@ -46,7 +46,7 @@
                   "children": [
                     {
                       "id": "item1",
-                      "type": "QItem",
+                      "type": "ListItem",
                       "repeat": {
                         "source": "docs",
                         "itemName": "item",
@@ -59,7 +59,7 @@
                       "children": [
                         {
                           "id": "itemSection1",
-                          "type": "QItemSection",
+                          "type": "ListItemSection",
                           "textBinding": "item.label"
                         }
                       ]
@@ -76,7 +76,7 @@
               "children": [
                 {
                   "id": "card1",
-                  "type": "QCard",
+                  "type": "Card",
                   "props": {
                     "flat": true,
                     "bordered": true
@@ -84,7 +84,7 @@
                   "children": [
                     {
                       "id": "cardSection1",
-                      "type": "QCardSection",
+                      "type": "CardSection",
                       "children": [
                         {
                           "id": "div1",
@@ -104,11 +104,11 @@
                     },
                     {
                       "id": "separator2",
-                      "type": "QSeparator"
+                      "type": "Separator"
                     },
                     {
                       "id": "cardSection3",
-                      "type": "QCardSection",
+                      "type": "CardSection",
                       "children": [
                         {
                           "id": "div1",

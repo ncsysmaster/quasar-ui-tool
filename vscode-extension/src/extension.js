@@ -1,7 +1,7 @@
 const vscode = require("vscode");
 
 const { EDITOR_VIEW_TYPE, VIEW_IDS } = require("./constants");
-const { PageEditorState } = require("./state");
+const { PageEditorStateManager } = require("./stateManager");
 const {
   DatasetViewProvider,
   PageEditorProvider,
@@ -11,10 +11,14 @@ const {
   PropertiesViewProvider,
 } = require("./providers");
 const { getWebviewRoots } = require("./webviewResources");
+const { registerWatchVueCommand } = require("./watchVueCommand");
+const { registerPiniaStoreCommands } = require("./piniaStoreCommand");
 
 function activate(context) {
-  const state = new PageEditorState();
+  const state = new PageEditorStateManager();
   const webviewRoots = getWebviewRoots(context);
+  registerWatchVueCommand(context);
+  registerPiniaStoreCommands(context);
   const scriptWatcher = vscode.workspace.createFileSystemWatcher(
     "**/.src/pages/*.js",
   );

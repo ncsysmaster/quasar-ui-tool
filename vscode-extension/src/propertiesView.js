@@ -323,27 +323,27 @@ function getPropertiesHtml(webview, htmlShell, getNonce) {
     function getClassGroupsByComponent(component) {
         if (!component) return htmlElementClassGroups()
 
-        if (component.type === 'QBtn') {
+        if (component.type === 'Button') {
             return buttonClassGroups()
         }
 
-        if (component.type === 'QInput') {
+        if (component.type === 'Input') {
             return inputClassGroups()
         }
 
-        if (component.type === 'QCard') {
+        if (component.type === 'Card') {
             return cardClassGroups()
         }
 
-        if (component.type === 'QCardSection') {
+        if (component.type === 'CardSection') {
             return cardSectionClassGroups()
         }
 
-        if (component.type === 'QTable') {
+        if (component.type === 'Table') {
             return tableClassGroups()
         }
 
-        if (component.type === 'QPage') {
+        if (component.type === 'Page') {
             return pageClassGroups()
         }
 

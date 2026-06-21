@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "0.1.0",
+  "tool": {
+    "name": "quasar-tool",
+    "artifactType": "pinia-store-definition"
+  },
+  "store": {
+    "fileName": "exampleStore",
+    "defineStoreId": "example",
+    "constName": "useExampleStore",
+    "sourcePath": ".src/store/test/exampleStore.json",
+    "targetPath": "src/store/test/exampleStore.js"
+  },
+  "state": {
+    "rows": [],
+    "selectedRow": null,
+    "loading": false,
+    "error": null
+  },
+  "getters": [],
+  "actions": [],
+  "script": {
+    "src": "exampleStore.js"
+  }
+}

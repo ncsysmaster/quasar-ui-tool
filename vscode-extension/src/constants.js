@@ -10,7 +10,7 @@ const VIEW_IDS = {
 
 const PALETTE = [
   {
-    type: "QPage",
+    type: "Page",
     label: "Page",
     props: { padding: true },
   },
@@ -20,19 +20,19 @@ const PALETTE = [
     template: "courseSearchForm",
   },
   {
-    type: "QBtn",
+    type: "Button",
     label: "Button",
     props: { color: "primary", unelevated: true },
   },
   {
-    type: "QInput",
+    type: "Input",
     label: "Input",
     props: { outlined: true, dense: true, label: "Input" },
   },
-  { type: "QCard", label: "Card", props: { flat: true, bordered: true } },
-  { type: "QCardSection", label: "Card Section", props: {} },
+  { type: "Card", label: "Card", props: { flat: true, bordered: true } },
+  { type: "CardSection", label: "Card Section", props: {} },
   {
-    type: "QTable",
+    type: "Table",
     label: "Table",
     props: { flat: true, bordered: true, dense: true, rows: [], columns: [] },
   },

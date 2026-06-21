@@ -1,51 +1,109 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://quasar-tool.local/schemas/screen.schema.json",
-  "title": "Quasar Tool Screen Definition",
+  "$id": "https://ui-tool.local/schemas/screen.schema.json",
+  "title": "UI Tool Neutral Screen Definition",
   "type": "object",
-  "required": ["id", "name", "components"],
+  "required": ["schemaVersion", "tool", "page", "components"],
   "properties": {
-    "id": {
+    "schemaVersion": {
       "type": "string"
     },
-    "name": {
-      "type": "string"
+    "tool": {
+      "type": "object",
+      "required": ["name", "artifactType"],
+      "properties": {
+        "name": { "type": "string" },
+        "artifactType": { "const": "page-definition" },
+        "description": { "type": "string" }
+      },
+      "additionalProperties": true
     },
-    "route": {
-      "type": "string"
+    "page": {
+      "type": "object",
+      "required": ["id", "name", "component"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "route": { "type": "string" },
+        "framework": { "type": "string" },
+        "component": { "$ref": "#/$defs/componentType" },
+        "sourceVuePath": { "type": "string" },
+        "targetVuePath": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "data": {
+      "type": "object"
     },
     "components": {
       "type": "array",
       "items": {
         "$ref": "#/$defs/component"
       }
+    },
+    "script": {
+      "type": "object",
+      "properties": {
+        "src": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "datasets": {
+      "type": "array"
+    },
+    "generation": {
+      "type": "object"
     }
   },
+  "additionalProperties": true,
   "$defs": {
+    "componentType": {
+      "type": "string",
+      "enum": [
+        "Page",
+        "Layout",
+        "PageContainer",
+        "Button",
+        "Input",
+        "Select",
+        "Toggle",
+        "Card",
+        "CardSection",
+        "Table",
+        "List",
+        "ListItem",
+        "ListItemSection",
+        "Separator",
+        "HtmlElement",
+        "FormTemplate"
+      ]
+    },
     "component": {
       "type": "object",
       "required": ["id", "type"],
       "properties": {
-        "id": {
-          "type": "string"
-        },
-        "type": {
-          "type": "string"
-        },
-        "props": {
-          "type": "object"
-        },
-        "events": {
-          "type": "object"
-        },
+        "id": { "type": "string" },
+        "type": { "$ref": "#/$defs/componentType" },
+        "tag": { "type": "string" },
+        "class": { "type": "string" },
+        "style": { "type": "string" },
+        "label": { "type": "string" },
+        "text": {},
+        "textBinding": { "type": "string" },
+        "props": { "type": "object" },
+        "dynamicProps": { "type": "object" },
+        "models": { "type": "object" },
+        "events": { "type": "object" },
+        "repeat": { "type": "object" },
+        "designer": { "type": "object" },
         "children": {
           "type": "array",
           "items": {
             "$ref": "#/$defs/component"
           }
         }
-      }
+      },
+      "additionalProperties": true
     }
   }
 }
-

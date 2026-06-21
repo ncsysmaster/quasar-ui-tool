@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "0.1.0",
+  "tool": {
+    "name": "quasar-tool",
+    "artifactType": "pinia-store-definition"
+  },
+  "store": {
+    "fileName": "IndexPage",
+    "defineStoreId": "indexPage",
+    "constName": "useIndexPageStore",
+    "sourcePath": ".src/store/index/IndexPage.json",
+    "targetPath": "src/store/index/IndexPage.js"
+  },
+  "state": {
+    "rows": [],
+    "selectedRow": null,
+    "tableData2": [],
+    "loading": false,
+    "error": null
+  },
+  "getters": [],
+  "actions": [],
+  "script": {
+    "src": "IndexPage.js"
+  }
+}

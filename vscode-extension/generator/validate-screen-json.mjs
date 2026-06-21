@@ -1,5 +1,14 @@
 import { readdir, readFile } from 'node:fs/promises'
 import { extname, join, relative, resolve } from 'node:path'
+import { createRequire } from 'node:module'
+
+const require = createRequire(import.meta.url)
+const { NEUTRAL_TO_QUASAR } = require('../src/componentTypes.js')
+const neutralComponentTypes = new Set([
+  ...Object.keys(NEUTRAL_TO_QUASAR),
+  'HtmlElement',
+  'FormTemplate'
+])
 
 const workspaceRoot = process.cwd()
 const defaultInputDir = '.src/pages'
@@ -76,6 +85,9 @@ async function validateFile(inputPath) {
     if (!isNonEmptyString(definition.page.targetVuePath)) {
       errors.push('page.targetVuePath must be a non-empty string')
     }
+    if (!neutralComponentTypes.has(definition.page.component)) {
+      errors.push('page.component must use a neutral component type')
+    }
   }
 
   if (definition.components !== undefined && !Array.isArray(definition.components)) {
@@ -105,6 +117,9 @@ function validateComponent(component, path, errors) {
 
   if (!isNonEmptyString(component.id)) errors.push(`${path}.id must be a non-empty string`)
   if (!isNonEmptyString(component.type)) errors.push(`${path}.type must be a non-empty string`)
+  else if (!neutralComponentTypes.has(component.type)) {
+    errors.push(`${path}.type must use a neutral component type (received ${component.type})`)
+  }
 
   if (component.type === 'HtmlElement' && !isNonEmptyString(component.tag)) {
     errors.push(`${path}.tag must be a non-empty string for HtmlElement`)

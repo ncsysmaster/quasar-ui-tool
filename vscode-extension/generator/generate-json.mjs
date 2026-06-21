@@ -2,6 +2,10 @@ import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
 import { basename, dirname, extname, join, resolve } from 'node:path'
 import { parse as parseJavaScript } from 'acorn'
 import { parse as parseTemplate } from '@vue/compiler-dom'
+import { createRequire } from 'node:module'
+
+const require = createRequire(import.meta.url)
+const { toNeutralType } = require('../src/componentTypes.js')
 
 const workspaceRoot = process.cwd()
 const defaultInputDir = 'src/pages'
@@ -85,7 +89,7 @@ function generateJson(vueSource, inputPath) {
       sourceVuePath,
       targetVuePath,
       framework: 'quasar',
-      component: components[0]?.type || 'QPage'
+      component: components[0]?.type || 'Page'
     },
     data,
     components,
@@ -385,10 +389,11 @@ function getComponentType(tagName) {
     return 'HtmlElement'
   }
 
-  return tagName
+  const componentType = tagName
     .split('-')
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join('')
+  return toNeutralType(componentType)
 }
 
 function buildComponentId(tagName, siblingIndex) {

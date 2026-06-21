@@ -83,27 +83,27 @@ function getEventsHtml(webview, htmlShell, getNonce) {
       function getEventsByComponent(component) {
         if (!component) return []
 
-        if (component.type === 'QBtn') {
+        if (component.type === 'Button') {
           return ['click', 'dblclick', 'mouseover', 'mouseleave', 'focus', 'blur']
         }
 
-        if (component.type === 'QInput') {
+        if (component.type === 'Input') {
           return ['update:model-value', 'change', 'input', 'focus', 'blur', 'clear']
         }
 
-        if (component.type === 'QSelect') {
+        if (component.type === 'Select') {
           return ['update:model-value', 'filter', 'input-value', 'popup-show', 'popup-hide', 'focus', 'blur', 'clear']
         }
 
-        if (component.type === 'QToggle') {
+        if (component.type === 'Toggle') {
           return ['update:model-value', 'click', 'focus', 'blur']
         }
 
-        if (component.type === 'QTable') {
+        if (component.type === 'Table') {
           return ['row-click', 'row-dblclick', 'selection', 'request', 'update:pagination']
         }
 
-        if (component.type === 'QCard' || component.type === 'QCardSection') {
+        if (component.type === 'Card' || component.type === 'CardSection') {
           return ['click', 'dblclick', 'mouseover', 'mouseleave']
         }
 

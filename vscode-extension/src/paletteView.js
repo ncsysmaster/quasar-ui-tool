@@ -54,13 +54,13 @@ function getPaletteHtml(webview, htmlShell, getNonce) {
 }
 
 function getPaletteIcon(type, label) {
-  if (type === "QPage") return "▧";
+  if (type === "Page") return "▧";
   if (type === "FormTemplate") return "F";
-  if (type === "QBtn") return "🔘";
-  if (type === "QInput") return "⌨️";
-  if (type === "QCard") return "▢";
-  if (type === "QCardSection") return "▤";
-  if (type === "QTable") return "▦";
+  if (type === "Button") return "🔘";
+  if (type === "Input") return "⌨️";
+  if (type === "Card") return "▢";
+  if (type === "CardSection") return "▤";
+  if (type === "Table") return "▦";
 
   if (type === "HtmlElement" && label === "Text") return "T";
   if (type === "HtmlElement" && label === "Row") return "↔";

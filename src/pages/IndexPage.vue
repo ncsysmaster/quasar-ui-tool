@@ -27,27 +27,13 @@
                 <q-toggle v-model="search.useYn" label="사용여부" dense />
               </div>
             </div>
-            <div class="row" style="min-height: 96px">
-              <div class="col-6">
-                <div class="row" style="min-height: 96px">
-                  <div class="col-4 row items-center justify-center" style="min-height: 96px">
-                    <div class="bg-grey-4 row items-center q-px-md full-height rounded-borders overflow-hidden" style="border-radius: 4px; width: 100%">조회분류</div>
-                  </div>
-                  <div class="col-8">
-                    <div class="row">
-                      <div class="col-12 bg-white q-pa-xs">
-                        <q-input v-model="search.name" outlined dense bg-color="white" />
-                      </div>
-                    </div>
-                    <div class="row">
-                      <div class="col-12 bg-white q-pa-xs">
-                        <q-input v-model="search.name" outlined dense bg-color="white" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
+            <div class="row">
+              <div class="col-2">
+                <div class="bg-grey-4 row items-center q-px-md full-height rounded-borders overflow-hidden" style="border-radius: 4px">조회명</div>
               </div>
-              <div class="col-6 bg-white row items-center justify-center" style="min-height: 96px" />
+              <div class="col-10 bg-white q-pa-xs">
+                <q-input v-model="search.name" outlined dense bg-color="white" />
+              </div>
             </div>
           </div>
           <div class="col-auto" style="min-width: 180px; display: flex; align-items: flex-end">
@@ -85,18 +71,6 @@ const stages = [
     "description": "VS Code Extension 통합"
   }
 ]
-
-const searchForm = {
-  "eduClsfCd": "",
-  "eduDclsfCd": "",
-  "requiredYn": "",
-  "closedYn": "",
-  "courseNm": ""
-}
-
-const eduClassOptions = []
-
-const eduDetailOptionsFiltered = []
 
 const search = {
   "class1": null,

@@ -1,3 +1,5 @@
+const { toNeutralType } = require("./componentTypes");
+
 function parseModel(text) {
   try {
     return normalizeModel(JSON.parse(text || '{}'))
@@ -10,9 +12,11 @@ function normalizeModel(model) {
   const next = model && typeof model === 'object' ? model : createEmptyModel()
   next.schemaVersion ||= '0.1.0'
   next.tool ||= { name: 'quasar-tool', artifactType: 'page-definition' }
-  next.page ||= { id: 'Page', name: 'Page', framework: 'quasar', component: 'QPage' }
+  next.page ||= { id: 'Page', name: 'Page', framework: 'quasar', component: 'Page' }
+  next.page.component = toNeutralType(next.page.component || 'Page')
   next.data ||= {}
   next.components ||= []
+  migrateComponentTypes(next.components)
   migrateComponentStyles(next.components)
   next.script ||= { src: `${next.page.id || 'Page'}.js` }
   next.script.src ||= `${next.page.id || 'Page'}.js`
@@ -35,13 +39,20 @@ function migrateComponentStyles(components) {
   }
 }
 
+function migrateComponentTypes(components) {
+  for (const component of components || []) {
+    component.type = toNeutralType(component.type)
+    migrateComponentTypes(component.children)
+  }
+}
+
 function createEmptyModel() {
   return {
     schemaVersion: '0.1.0',
     tool: { name: 'quasar-tool', artifactType: 'page-definition' },
-    page: { id: 'Page', name: 'Page', framework: 'quasar', component: 'QPage' },
+    page: { id: 'Page', name: 'Page', framework: 'quasar', component: 'Page' },
     data: {},
-    components: [{ id: 'page1', type: 'QPage', props: { padding: true }, children: [] }],
+    components: [{ id: 'page1', type: 'Page', props: { padding: true }, children: [] }],
     script: { src: 'Page.js', setup: '' },
     datasets: [{ name: 'defaultDataset', fields: [] }]
   }
@@ -71,7 +82,7 @@ function inferDatasets(model) {
 
 function ensureRootPage(model) {
   if (!model.components.length) {
-    model.components.push({ id: 'page1', type: 'QPage', props: { padding: true }, children: [] })
+    model.components.push({ id: 'page1', type: 'Page', props: { padding: true }, children: [] })
   }
   return model.components[0]
 }

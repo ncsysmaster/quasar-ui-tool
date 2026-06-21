@@ -4,6 +4,7 @@ const { getEventsHtml } = require("./eventsView");
 const { getPaletteHtml } = require("./paletteView");
 const { getPageTreeHtml } = require("./pageTreeView");
 const { getPropertiesHtml } = require("./propertiesView");
+const { findProjectFolder, toProjectRelativePath } = require("./projectRoot");
 
 const {
   getDatasetHtml,
@@ -20,7 +21,9 @@ class PageEditorProvider {
   }
 
   async resolveCustomTextEditor(document, webviewPanel) {
-    await this.state.setDocument(document);
+    const editorState = await this.state.getOrCreate(document);
+    this.state.activate(editorState);
+    const projectFolder = findProjectFolder(document.uri);
 
     webviewPanel.webview.options = {
       enableScripts: true,
@@ -34,50 +37,97 @@ class PageEditorProvider {
     const postState = () => {
       webviewPanel.webview.postMessage({
         type: "state",
-        model: this.state.getModel(),
-        selectedId: this.state.selectedId,
-        selectedCellIds: this.state.selectedCellIds,
-        activeTab: this.state.editorTab,
-        scriptNavigation: this.state.scriptNavigation,
+        model: editorState.getModel(),
+        selectedId: editorState.selectedId,
+        selectedCellIds: editorState.selectedCellIds,
+        activeTab: editorState.editorTab,
+        scriptNavigation: editorState.scriptNavigation,
       });
     };
 
-    const subscription = this.state.onDidChange(postState);
-    webviewPanel.onDidDispose(() => subscription.dispose());
+    const postPiniaStores = async () => {
+      webviewPanel.webview.postMessage({
+        type: "piniaStores",
+        stores: await listPiniaStores(projectFolder, document),
+      });
+    };
+
+    const subscription = editorState.onDidChange(postState);
+    const piniaWatcher = vscode.workspace.createFileSystemWatcher(
+      new vscode.RelativePattern(
+        projectFolder.uri.fsPath,
+        ".src/store/**/*.json",
+      ),
+    );
+    const piniaSubscriptions = [
+      piniaWatcher.onDidCreate(postPiniaStores),
+      piniaWatcher.onDidChange(postPiniaStores),
+      piniaWatcher.onDidDelete(postPiniaStores),
+    ];
+    webviewPanel.onDidDispose(() => {
+      subscription.dispose();
+      piniaSubscriptions.forEach((item) => item.dispose());
+      piniaWatcher.dispose();
+      this.state.release(document.uri, editorState);
+    });
+    webviewPanel.onDidChangeViewState((event) => {
+      if (event.webviewPanel.active) this.state.activate(editorState);
+    });
 
     webviewPanel.webview.onDidReceiveMessage(async (message) => {
+      this.state.activate(editorState);
       console.log("[PageEditorProvider message]", message);
 
       if (message.type === "ready") {
         console.log("[PageEditorProvider] ready");
         postState();
+        await postPiniaStores();
       }
 
       if (message.type === "select") {
         console.log("[PageEditorProvider] select:", message.id);
-        this.state.selectComponent(message.id);
+        editorState.selectComponent(message.id);
       }
 
       if (message.type === "toggleGridCellSelection") {
-        this.state.toggleGridCellSelection(message.id);
+        editorState.toggleGridCellSelection(message.id);
       }
 
       if (message.type === "openFirstEventMethod") {
-        await this.state.openFirstComponentMethod(message.id);
+        await editorState.openFirstComponentMethod(message.id);
       }
 
       if (message.type === "setEditorTab") {
-        this.state.setEditorTab(message.tab);
+        editorState.setEditorTab(message.tab);
+      }
+
+      if (message.type === "requestPiniaStores") {
+        await postPiniaStores();
+      }
+
+      if (message.type === "createPiniaStore") {
+        await vscode.commands.executeCommand(
+          "quasarTool.createPiniaStore",
+          document.uri,
+        );
+        await postPiniaStores();
+      }
+
+      if (message.type === "openPiniaStore" && message.fsPath) {
+        const storeDocument = await vscode.workspace.openTextDocument(
+          vscode.Uri.file(message.fsPath),
+        );
+        await vscode.window.showTextDocument(storeDocument);
       }
 
       if (message.type === "updateScript") {
         console.log("[PageEditorProvider] updateScript");
-        await this.state.updateScript(message.value);
+        await editorState.updateScript(message.value);
       }
 
       if (message.type === "moveComponent") {
         console.log("[PageEditorProvider] moveComponent:", message);
-        await this.state.moveComponent(
+        await editorState.moveComponent(
           message.dragId,
           message.dropId,
           message.mode,
@@ -85,11 +135,11 @@ class PageEditorProvider {
       }
 
       if (message.type === "formLayoutAction") {
-        await this.state.updateFormLayout(message.action, message.targetId);
+        await editorState.updateFormLayout(message.action, message.targetId);
       }
 
       if (message.type === "resizeFormLayout") {
-        await this.state.resizeFormLayout(
+        await editorState.resizeFormLayout(
           message.id,
           message.resizeKind,
           message.value,
@@ -97,7 +147,7 @@ class PageEditorProvider {
       }
 
       if (message.type === "splitFormCell") {
-        await this.state.splitFormCell(message.targetId, {
+        await editorState.splitFormCell(message.targetId, {
           rowsEnabled: message.rowsEnabled,
           rowCount: message.rowCount,
           columnsEnabled: message.columnsEnabled,
@@ -106,12 +156,12 @@ class PageEditorProvider {
       }
 
       if (message.type === "mergeFormCells") {
-        await this.state.mergeSelectedFormCells(message.cellIds);
+        await editorState.mergeSelectedFormCells(message.cellIds);
       }
 
       if (message.type === "deleteSelected") {
         console.log("[PageEditorProvider] deleteSelected received");
-        await this.state.removeSelectedComponent();
+        await editorState.removeSelectedComponent();
       }
 
       if (message.type === "componentClipboard") {
@@ -125,16 +175,16 @@ class PageEditorProvider {
       }
 
       if (message.type === "updateComponentText") {
-        await this.state.updateComponentText(message.id, message.value);
+        await editorState.updateComponentText(message.id, message.value);
       }
 
       if (message.type === "updateProperty") {
-        await this.state.updateSelectedProperty(message.name, message.value);
+        await editorState.updateSelectedProperty(message.name, message.value);
       }
 
       if (message.type === "dropPaletteComponent") {
-        await this.state.addComponent(message.index, message.targetId, {
-          formGridCellOnly: true,
+        await editorState.addComponent(message.index, message.targetId, {
+          dropMode: message.mode || "inside",
         });
       }
     });
@@ -353,6 +403,72 @@ function postViewState(view, state) {
     selectedCellIds: state.selectedCellIds,
     hasDocument: Boolean(state.document),
   });
+}
+
+async function listPiniaStores(projectFolder, pageDocument) {
+  const uris = await findJsonFiles(
+    vscode.Uri.joinPath(projectFolder.uri, ".src", "store"),
+  );
+  const stores = [];
+
+  for (const uri of uris) {
+    try {
+      const raw = await vscode.workspace.fs.readFile(uri);
+      const definition = JSON.parse(new TextDecoder().decode(raw));
+      stores.push({
+        fsPath: uri.fsPath,
+        relativePath: toProjectRelativePath(projectFolder, uri),
+        fileName: definition.store?.fileName || uri.path.split("/").pop(),
+        defineStoreId: definition.store?.defineStoreId || "",
+        constName: definition.store?.constName || "",
+        ownerPage: definition.store?.ownerPage || "",
+        stateKeys: Object.keys(definition.state || {}),
+      });
+    } catch {
+      stores.push({
+        fsPath: uri.fsPath,
+        relativePath: toProjectRelativePath(projectFolder, uri),
+        fileName: uri.path.split("/").pop(),
+        defineStoreId: "invalid JSON",
+        constName: "",
+        ownerPage: "",
+        stateKeys: [],
+      });
+    }
+  }
+
+  const pageName = pageDocument?.uri?.fsPath
+    ? pageDocument.uri.fsPath.split(/[\\/]/).pop().replace(/\.json$/i, "")
+    : "";
+
+  return stores
+    .filter((store) =>
+      !pageName || store.ownerPage === pageName ||
+      (!store.ownerPage && store.fileName === pageName),
+    )
+    .sort((left, right) =>
+      left.relativePath.localeCompare(right.relativePath),
+    );
+}
+
+async function findJsonFiles(directoryUri) {
+  let entries;
+  try {
+    entries = await vscode.workspace.fs.readDirectory(directoryUri);
+  } catch {
+    return [];
+  }
+
+  const files = [];
+  for (const [name, fileType] of entries) {
+    const entryUri = vscode.Uri.joinPath(directoryUri, name);
+    if (fileType === vscode.FileType.Directory) {
+      files.push(...await findJsonFiles(entryUri));
+    } else if (fileType === vscode.FileType.File && name.toLowerCase().endsWith(".json")) {
+      files.push(entryUri);
+    }
+  }
+  return files;
 }
 
 module.exports = {

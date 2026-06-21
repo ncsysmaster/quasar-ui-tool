@@ -10,6 +10,7 @@
     "validate:screens": "node vscode-extension/generator/validate-screen-json.mjs",
     "generate:json": "node vscode-extension/generator/generate-json.mjs",
     "generate:vue": "node vscode-extension/generator/generate-vue.mjs",
+    "generate:pinia": "node vscode-extension/generator/generate-pinia.mjs",
     "watch:vue": "node vscode-extension/generator/watch-vue.mjs"
   },
   "dependencies": {

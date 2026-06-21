@@ -66,7 +66,11 @@ class PageEditorState {
   }
 
   async onScriptFileChanged(uri) {
-    if (!this.document || uri.fsPath.toLowerCase() !== this.getScriptPath().toLowerCase()) return;
+    if (
+      !this.document ||
+      uri.fsPath.toLowerCase() !== this.getScriptPath().toLowerCase()
+    )
+      return;
 
     try {
       this.scriptContent = await readFile(uri.fsPath, "utf8");
@@ -101,7 +105,8 @@ class PageEditorState {
 
     const model = parseModel(this.document.getText());
     const scriptPath = this.getScriptPath();
-    const legacySetup = typeof model.script?.setup === "string" ? model.script.setup.trim() : "";
+    const legacySetup =
+      typeof model.script?.setup === "string" ? model.script.setup.trim() : "";
 
     try {
       this.scriptContent = await readFile(scriptPath, "utf8");
@@ -113,7 +118,10 @@ class PageEditorState {
     }
 
     const scriptFileName = basename(scriptPath);
-    if (model.script?.src !== scriptFileName || model.script?.setup !== undefined) {
+    if (
+      model.script?.src !== scriptFileName ||
+      model.script?.setup !== undefined
+    ) {
       model.script = { ...(model.script || {}), src: scriptFileName };
       delete model.script.setup;
       await replaceDocument(this.document, stringifyModel(model));
@@ -121,7 +129,7 @@ class PageEditorState {
   }
 
   setEditorTab(tabName) {
-    const allowedTabs = new Set(["screen", "script", "dataset"]);
+    const allowedTabs = new Set(["screen", "script", "store"]);
     this.editorTab = allowedTabs.has(tabName) ? tabName : "screen";
     this.fire();
   }
@@ -159,11 +167,12 @@ class PageEditorState {
     let setupCode = "";
 
     await this.updateModel((model) => {
-      const component = item.template === "courseSearchForm"
-        ? createCourseSearchForm(model)
-        : createPaletteComponent(item);
+      const component =
+        item.template === "courseSearchForm"
+          ? createCourseSearchForm(model)
+          : createPaletteComponent(item);
 
-      if (item.type === "QPage" && !options.formGridCellOnly) {
+      if (item.type === "Page" && !options.formGridCellOnly) {
         model.components ||= [];
         model.components.push(component);
         this.selectedId = component.id;
@@ -189,7 +198,14 @@ class PageEditorState {
           targetId || this.selectedId,
         );
 
-        if (selected && canHaveChildren(selected)) {
+        if (selected && options.dropMode === "after") {
+          const target = findComponentWithParent(model.components, selected.id);
+          if (target) {
+            target.parent.splice(target.index + 1, 0, component);
+            this.selectedId = component.id;
+            return;
+          }
+        } else if (selected && canHaveChildren(selected)) {
           parent = selected;
         }
       }
@@ -220,13 +236,16 @@ class PageEditorState {
       return;
     }
 
-    const selectionSeed = this.selectedCellIds.length > 0
-      ? this.selectedCellIds
-      : [this.selectedId];
+    const selectionSeed =
+      this.selectedCellIds.length > 0
+        ? this.selectedCellIds
+        : [this.selectedId];
     const current = selectionSeed
       .map((id) => findComponentContext(model.components, id))
       .filter(isMergeableCellContext);
-    const existingIndex = current.findIndex((context) => context.component.id === componentId);
+    const existingIndex = current.findIndex(
+      (context) => context.component.id === componentId,
+    );
     let nextContexts;
 
     if (existingIndex >= 0) {
@@ -234,7 +253,10 @@ class PageEditorState {
     } else if (current.length === 0) {
       nextContexts = [target];
     } else {
-      const candidateIds = [...current.map((context) => context.component.id), componentId];
+      const candidateIds = [
+        ...current.map((context) => context.component.id),
+        componentId,
+      ];
       const candidate = getMergeCellSelection(model.components, candidateIds);
       nextContexts = candidate ? candidate.contexts : [target];
     }
@@ -269,10 +291,10 @@ class PageEditorState {
         }
       } else if (name === "class") {
         if (
-          component.type === "QBtn" ||
-          component.type === "QInput" ||
-          component.type === "QCard" ||
-          component.type === "QTable"
+          component.type === "Button" ||
+          component.type === "Input" ||
+          component.type === "Card" ||
+          component.type === "Table"
         ) {
           component.props ||= {};
           component.props.class = value;
@@ -308,7 +330,10 @@ class PageEditorState {
   }
 
   copySelectedComponent() {
-    const component = findComponent(this.getModel().components, this.selectedId);
+    const component = findComponent(
+      this.getModel().components,
+      this.selectedId,
+    );
     if (!component) return false;
 
     this.componentClipboard = JSON.parse(JSON.stringify(component));
@@ -463,15 +488,24 @@ class PageEditorState {
           "flex",
           `0 0 ${formatted}`,
         );
-        component.style = setStyleDeclaration(component.style, "width", formatted);
-        component.style = setStyleDeclaration(component.style, "max-width", formatted);
+        component.style = setStyleDeclaration(
+          component.style,
+          "width",
+          formatted,
+        );
+        component.style = setStyleDeclaration(
+          component.style,
+          "max-width",
+          formatted,
+        );
         this.selectedId = componentId;
       }
     });
   }
 
   async splitFormCell(componentId, options = {}) {
-    if (!componentId || (!options.rowsEnabled && !options.columnsEnabled)) return;
+    if (!componentId || (!options.rowsEnabled && !options.columnsEnabled))
+      return;
 
     const splitByRows = Boolean(options.rowsEnabled);
     const splitCount = clampInteger(
@@ -484,7 +518,12 @@ class PageEditorState {
       const context = findComponentContext(model.components, componentId);
       const component = context?.component;
       const row = context?.parentComponent;
-      if (!component || !row || !isColumnComponent(component) || !isRowComponent(row)) {
+      if (
+        !component ||
+        !row ||
+        !isColumnComponent(component) ||
+        !isRowComponent(row)
+      ) {
         return;
       }
 
@@ -494,7 +533,13 @@ class PageEditorState {
           ? (component.children || []).map((splitRow) =>
               normalizeCellSplitRow(splitRow, nextId),
             )
-          : [createCellSplitRow(nextId, component.children || [], component.text)];
+          : [
+              createCellSplitRow(
+                nextId,
+                component.children || [],
+                component.text,
+              ),
+            ];
 
         while (existingRows.length < splitCount) {
           existingRows.push(createCellSplitRow(nextId));
@@ -505,7 +550,9 @@ class PageEditorState {
           existingRows.slice(splitCount).forEach((removedRow) => {
             const removedCell = getCellSplitContentCell(removedRow);
             if (removedCell?.text) {
-              lastCell.text = [lastCell.text, removedCell.text].filter(Boolean).join(" ");
+              lastCell.text = [lastCell.text, removedCell.text]
+                .filter(Boolean)
+                .join(" ");
             }
             lastCell.children ||= [];
             lastCell.children.push(...(removedCell?.children || []));
@@ -518,11 +565,7 @@ class PageEditorState {
         const heightRemainder = 100 % splitCount;
         existingRows.forEach((splitRow, index) => {
           const receivesRemainder = index >= splitCount - heightRemainder;
-          splitRow.style = setStyleDeclaration(
-            splitRow.style,
-            "width",
-            "100%",
-          );
+          splitRow.style = setStyleDeclaration(splitRow.style, "width", "100%");
           splitRow.style = setStyleDeclaration(
             splitRow.style,
             "height",
@@ -546,24 +589,26 @@ class PageEditorState {
       const baseSpan = Math.floor(selectedSpan / appliedSplitCount);
       const remainder = selectedSpan % appliedSplitCount;
       const source = JSON.parse(JSON.stringify(component));
-      const splitCells = Array.from({ length: appliedSplitCount }, (_, index) => {
-        const cell = index === 0
-          ? component
-          : createEmptySplitSibling(source, nextId);
-        const span = baseSpan + (index < remainder ? 1 : 0);
+      const splitCells = Array.from(
+        { length: appliedSplitCount },
+        (_, index) => {
+          const cell =
+            index === 0 ? component : createEmptySplitSibling(source, nextId);
+          const span = baseSpan + (index < remainder ? 1 : 0);
 
-        cell.class = replacePlainColumnClass(cell.class, span);
-        cell.style = removeStyleDeclarations(cell.style, [
-          "grid-column",
-          "grid-row",
-          "width",
-          "max-width",
-          "min-width",
-          "flex",
-        ]);
-        cell.designer = { ...(cell.designer || {}), role: "splitCell" };
-        return cell;
-      });
+          cell.class = replacePlainColumnClass(cell.class, span);
+          cell.style = removeStyleDeclarations(cell.style, [
+            "grid-column",
+            "grid-row",
+            "width",
+            "max-width",
+            "min-width",
+            "flex",
+          ]);
+          cell.designer = { ...(cell.designer || {}), role: "splitCell" };
+          return cell;
+        },
+      );
 
       if (row.designer?.splitGrid) {
         row.style = removeStyleDeclarations(row.style, [
@@ -594,7 +639,10 @@ class PageEditorState {
 
   async mergeSelectedFormCells(cellIds = this.selectedCellIds) {
     const selectedIds = [...new Set(cellIds || [])];
-    const validation = getMergeCellSelection(this.getModel().components, selectedIds);
+    const validation = getMergeCellSelection(
+      this.getModel().components,
+      selectedIds,
+    );
 
     if (!validation) {
       vscode.window.showWarningMessage(
@@ -629,9 +677,10 @@ class PageEditorState {
       removed.forEach((context) => {
         const component = context.component;
         if (component.text !== undefined) {
-          survivorComponent.text = survivorComponent.text === undefined
-            ? component.text
-            : `${survivorComponent.text} ${component.text}`;
+          survivorComponent.text =
+            survivorComponent.text === undefined
+              ? component.text
+              : `${survivorComponent.text} ${component.text}`;
         }
         if (component.textBinding && !survivorComponent.textBinding) {
           survivorComponent.textBinding = component.textBinding;
@@ -734,20 +783,29 @@ class PageEditorState {
     });
 
     if (shouldCreateHandler) {
-      await this.updateScript(this.scriptContent + createHandlerCode(value, eventName));
+      await this.updateScript(
+        this.scriptContent + createHandlerCode(value, eventName),
+      );
     }
   }
 
   async openSelectedEventMethod(eventName, preferredName = "") {
-    const component = findComponent(this.getModel().components, this.selectedId);
+    const component = findComponent(
+      this.getModel().components,
+      this.selectedId,
+    );
     if (!component) return;
 
-    const existingName = preferredName.trim() || component.events?.[eventName] || "";
+    const existingName =
+      preferredName.trim() || component.events?.[eventName] || "";
     const methodName = isMethodName(existingName)
       ? existingName
       : createEventHandlerName(eventName, component.id);
 
-    if (component.events?.[eventName] !== methodName || !hasFunction(this.scriptContent, methodName)) {
+    if (
+      component.events?.[eventName] !== methodName ||
+      !hasFunction(this.scriptContent, methodName)
+    ) {
       await this.updateSelectedEvent(eventName, methodName);
     }
 
@@ -759,8 +817,9 @@ class PageEditorState {
     if (!component) return;
 
     this.selectedId = componentId;
-    const firstEvent = Object.entries(component.events || {})
-      .find(([, methodName]) => typeof methodName === "string" && methodName.trim());
+    const firstEvent = Object.entries(component.events || {}).find(
+      ([, methodName]) => typeof methodName === "string" && methodName.trim(),
+    );
 
     if (!firstEvent) {
       this.fire();
@@ -785,8 +844,8 @@ function createPaletteComponent(item) {
   if (
     item.label &&
     !item.text &&
-    item.type !== "QInput" &&
-    item.type !== "QPage" &&
+    item.type !== "Input" &&
+    item.type !== "Page" &&
     item.type !== "HtmlElement"
   ) {
     component.label = item.label;
@@ -817,23 +876,26 @@ function createCourseSearchForm(model) {
     if (options.children) component.children = options.children;
     return component;
   };
-  const div = (className, options = {}) => make("HtmlElement", {
-    tag: "div",
-    class: className,
-    ...options,
-  });
-  const span = (className, text) => make("HtmlElement", {
-    tag: "span",
-    class: className,
-    text,
-  });
-  const labelClass = "bg-grey-4 row items-center q-px-md full-height rounded-borders overflow-hidden";
+  const div = (className, options = {}) =>
+    make("HtmlElement", {
+      tag: "div",
+      class: className,
+      ...options,
+    });
+  const span = (className, text) =>
+    make("HtmlElement", {
+      tag: "span",
+      class: className,
+      text,
+    });
+  const labelClass =
+    "bg-grey-4 row items-center q-px-md full-height rounded-borders overflow-hidden";
   const roundedStyle = "border-radius: 4px";
 
-  const form = make("QCard", {
+  const form = make("Card", {
     props: { flat: true, bordered: true },
     children: [
-      make("QCardSection", {
+      make("CardSection", {
         class: "q-pa-sm",
         children: [
           div("row q-col-gutter-sm", {
@@ -853,19 +915,27 @@ function createCourseSearchForm(model) {
                       }),
                       div("col-2 bg-white q-pa-xs", {
                         children: [
-                          make("QSelect", {
+                          make("Select", {
                             models: { modelValue: "search.class1" },
                             dynamicProps: { options: "classOptions" },
-                            props: { outlined: true, dense: true, bgColor: "white" },
+                            props: {
+                              outlined: true,
+                              dense: true,
+                              bgColor: "white",
+                            },
                           }),
                         ],
                       }),
                       div("col-2 bg-white q-pa-xs", {
                         children: [
-                          make("QSelect", {
+                          make("Select", {
                             models: { modelValue: "search.class2" },
                             dynamicProps: { options: "classOptions" },
-                            props: { outlined: true, dense: true, bgColor: "white" },
+                            props: {
+                              outlined: true,
+                              dense: true,
+                              bgColor: "white",
+                            },
                           }),
                         ],
                       }),
@@ -879,7 +949,7 @@ function createCourseSearchForm(model) {
                       }),
                       div("col-2 bg-white row items-center q-px-sm", {
                         children: [
-                          make("QToggle", {
+                          make("Toggle", {
                             models: { modelValue: "search.requiredYn" },
                             props: { label: "필수", dense: true },
                           }),
@@ -887,7 +957,7 @@ function createCourseSearchForm(model) {
                       }),
                       div("col-2 bg-white row items-center q-px-sm", {
                         children: [
-                          make("QToggle", {
+                          make("Toggle", {
                             models: { modelValue: "search.useYn" },
                             props: { label: "사용여부", dense: true },
                           }),
@@ -907,9 +977,13 @@ function createCourseSearchForm(model) {
                       }),
                       div("col-10 bg-white q-pa-xs", {
                         children: [
-                          make("QInput", {
+                          make("Input", {
                             models: { modelValue: "search.name" },
-                            props: { outlined: true, dense: true, bgColor: "white" },
+                            props: {
+                              outlined: true,
+                              dense: true,
+                              bgColor: "white",
+                            },
                           }),
                         ],
                       }),
@@ -921,9 +995,10 @@ function createCourseSearchForm(model) {
                 style: "min-width: 180px; display: flex; align-items: flex-end",
                 children: [
                   div("row no-wrap", {
-                    style: "width: 100%; height: 48px; align-items: center; justify-content: flex-end; gap: 8px; padding: 4px; background: white",
+                    style:
+                      "width: 100%; height: 48px; align-items: center; justify-content: flex-end; gap: 8px; padding: 4px; background: white",
                     children: [
-                      make("QBtn", {
+                      make("Button", {
                         style: "min-width: 80px; height: 36px",
                         props: {
                           label: "초기화",
@@ -932,7 +1007,7 @@ function createCourseSearchForm(model) {
                         },
                         events: { click: "resetSearch" },
                       }),
-                      make("QBtn", {
+                      make("Button", {
                         style: "min-width: 80px; height: 36px",
                         props: {
                           label: "검색",
@@ -960,30 +1035,32 @@ function createLegacyCourseSearchForm(model) {
     const component = { id: nextId(type, options.tag), type };
     if (options.tag) component.tag = options.tag;
     if (options.class) component.class = options.class;
-    if (options.props && Object.keys(options.props).length) component.props = options.props;
+    if (options.props && Object.keys(options.props).length)
+      component.props = options.props;
     if (options.models) component.models = options.models;
     if (options.dynamicProps) component.dynamicProps = options.dynamicProps;
     if (options.events) component.events = options.events;
     if (options.children) component.children = options.children;
     return component;
   };
-  const div = (className, children) => make("HtmlElement", {
-    tag: "div",
-    class: className,
-    children,
-  });
+  const div = (className, children) =>
+    make("HtmlElement", {
+      tag: "div",
+      class: className,
+      children,
+    });
 
-  const form = make("QCard", {
+  const form = make("Card", {
     class: "q-mb-md",
     props: { flat: true, bordered: true },
     children: [
-      make("QCardSection", {
+      make("CardSection", {
         children: [
           div("row q-col-gutter-md items-end", [
             div("col-12 col-md-2", [
-              make("QSelect", {
-                models: { modelValue: "searchForm.eduClsfCd" },
-                dynamicProps: { options: "eduClassOptions" },
+              make("Select", {
+                models: { modelValue: "searchForm.clsfCd" },
+                dynamicProps: { options: "classOptions" },
                 props: {
                   optionLabel: "label",
                   optionValue: "value",
@@ -993,13 +1070,13 @@ function createLegacyCourseSearchForm(model) {
                   dense: true,
                   label: "교육분류",
                 },
-                events: { "update:model-value": "onChangeEduClass" },
+                events: { "update:model-value": "onChangeClass" },
               }),
             ]),
             div("col-12 col-md-2", [
-              make("QSelect", {
-                models: { modelValue: "searchForm.eduDclsfCd" },
-                dynamicProps: { options: "eduDetailOptionsFiltered" },
+              make("Select", {
+                models: { modelValue: "searchForm.dclsfCd" },
+                dynamicProps: { options: "detailOptionsFiltered" },
                 props: {
                   optionLabel: "label",
                   optionValue: "value",
@@ -1013,7 +1090,7 @@ function createLegacyCourseSearchForm(model) {
             ]),
             div("col-12 col-md-2", [
               div("row items-center q-gutter-md search-toggle-wrap", [
-                make("QToggle", {
+                make("Toggle", {
                   models: { modelValue: "searchForm.requiredYn" },
                   props: {
                     trueValue: "Y",
@@ -1022,19 +1099,19 @@ function createLegacyCourseSearchForm(model) {
                     color: "primary",
                   },
                 }),
-                make("QToggle", {
+                make("Toggle", {
                   models: { modelValue: "searchForm.closedYn" },
                   props: {
                     trueValue: "Y",
                     falseValue: "",
-                    label: "폐강",
+                    label: "사용여부",
                     color: "grey-7",
                   },
                 }),
               ]),
             ]),
             div("col-12 col-md-4", [
-              make("QInput", {
+              make("Input", {
                 models: { modelValue: "searchForm.courseNm" },
                 props: {
                   outlined: true,
@@ -1047,11 +1124,11 @@ function createLegacyCourseSearchForm(model) {
             ]),
             div("col-12 col-md-2", [
               div("row q-gutter-sm justify-end", [
-                make("QBtn", {
+                make("Button", {
                   props: { color: "primary", label: "검색" },
                   events: { click: "fetchCourseList" },
                 }),
-                make("QBtn", {
+                make("Button", {
                   props: { flat: true, color: "grey-8", label: "초기화" },
                   events: { click: "resetSearch" },
                 }),
@@ -1070,16 +1147,20 @@ function createSequentialIdFactory(components) {
   const usedIds = new Set();
   const counters = new Map();
 
-  const visit = (items) => (items || []).forEach((component) => {
-    if (component.id) usedIds.add(component.id);
-    visit(component.children);
-  });
+  const visit = (items) =>
+    (items || []).forEach((component) => {
+      if (component.id) usedIds.add(component.id);
+      visit(component.children);
+    });
   visit(components);
 
   return (type, tag) => {
-    const base = type === "HtmlElement"
-      ? `${String(tag || "div").charAt(0).toUpperCase()}${String(tag || "div").slice(1)}`
-      : type;
+    const base =
+      type === "HtmlElement"
+        ? `${String(tag || "div")
+            .charAt(0)
+            .toUpperCase()}${String(tag || "div").slice(1)}`
+        : type;
     let number = counters.get(base) || 0;
     let id;
     do {
@@ -1127,7 +1208,7 @@ function ensureCourseSearchData(model) {
 
   model.generation ||= {};
   model.generation.scriptSetup ||= {};
-  const exports = model.generation.scriptSetup.dataExports ||= [];
+  const exports = (model.generation.scriptSetup.dataExports ||= []);
   ["search", "classOptions"].forEach((name) => {
     if (!exports.includes(name)) exports.push(name);
   });
@@ -1135,10 +1216,15 @@ function ensureCourseSearchData(model) {
 
 function createCourseSearchScript(existingScript) {
   const definitions = [
-    ["onSearch", `function onSearch() {
+    [
+      "onSearch",
+      `function onSearch() {
   console.log('onSearch', { ...search })
-}`],
-    ["resetSearch", `function resetSearch() {
+}`,
+    ],
+    [
+      "resetSearch",
+      `function resetSearch() {
   Object.assign(search, {
     class1: null,
     class2: null,
@@ -1146,7 +1232,8 @@ function createCourseSearchScript(existingScript) {
     useYn: false,
     name: ''
   })
-}`],
+}`,
+    ],
   ];
   const missing = definitions
     .filter(([name]) => !hasFunction(existingScript, name))
@@ -1257,34 +1344,48 @@ function canHaveChildren(component) {
   }
 
   return [
-    "QPage",
-    "QCard",
-    "QCardSection",
-    "QLayout",
-    "QPageContainer",
+    "Page",
+    "Card",
+    "CardSection",
+    "Layout",
+    "PageContainer",
   ].includes(component.type);
 }
 
 function isFormGridDropPaletteItem(item) {
-  return item?.type === "QBtn" ||
-    item?.type === "QInput" ||
-    (item?.type === "HtmlElement" && ["Text", "Row", "Column"].includes(item.label));
+  return (
+    item?.type === "Button" ||
+    item?.type === "Input" ||
+    (item?.type === "HtmlElement" &&
+      ["Text", "Row", "Column"].includes(item.label))
+  );
 }
 
 function findFormGridDropCell(components, targetId) {
   const path = findComponentPathById(components, targetId);
-  if (!path.some((component) => component?.designer?.template === "courseSearchForm")) {
+  if (
+    !path.some(
+      (component) => component?.designer?.template === "courseSearchForm",
+    )
+  ) {
     return null;
   }
 
-  return [...path].reverse().find((component) => {
-    if (component?.type !== "HtmlElement") return false;
-    const tokens = String(component.class || component.props?.class || "")
-      .split(/\s+/)
-      .filter(Boolean);
-    return component?.designer?.role === "splitCell" ||
-      tokens.some((token) => token === "col" || /^col-(?:auto|[1-9]|1[0-2])$/.test(token));
-  }) || null;
+  return (
+    [...path].reverse().find((component) => {
+      if (component?.type !== "HtmlElement") return false;
+      const tokens = String(component.class || component.props?.class || "")
+        .split(/\s+/)
+        .filter(Boolean);
+      return (
+        component?.designer?.role === "splitCell" ||
+        tokens.some(
+          (token) =>
+            token === "col" || /^col-(?:auto|[1-9]|1[0-2])$/.test(token),
+        )
+      );
+    }) || null
+  );
 }
 
 function findComponentPathById(components, id, ancestors = []) {
@@ -1302,9 +1403,12 @@ function isRowComponent(component) {
 }
 
 function isColumnComponent(component) {
-  return component?.type === "HtmlElement" && (
-    component.designer?.role === "splitCell" ||
-    getClassTokens(component).some((token) => token === "col" || /^col-/.test(token))
+  return (
+    component?.type === "HtmlElement" &&
+    (component.designer?.role === "splitCell" ||
+      getClassTokens(component).some(
+        (token) => token === "col" || /^col-/.test(token),
+      ))
   );
 }
 
@@ -1332,8 +1436,9 @@ function getMergeCellSelection(components, cellIds) {
   );
   if (sameRow) {
     contexts.sort((a, b) => a.index - b.index);
-    const contiguous = contexts.every((context, index) =>
-      index === 0 || context.index === contexts[index - 1].index + 1,
+    const contiguous = contexts.every(
+      (context, index) =>
+        index === 0 || context.index === contexts[index - 1].index + 1,
     );
     if (!contiguous) return null;
 
@@ -1347,24 +1452,31 @@ function getMergeCellSelection(components, cellIds) {
     };
   }
 
-  const positions = contexts.map((context) => getVerticalCellPosition(components, context));
+  const positions = contexts.map((context) =>
+    getVerticalCellPosition(components, context),
+  );
   if (positions.some((position) => !position)) return null;
 
   positions.sort((a, b) => a.rowContext.index - b.rowContext.index);
   const first = positions[0];
   const sameContainer = positions.every(
-    (position) => position.rowContext.parentComponent === first.rowContext.parentComponent,
+    (position) =>
+      position.rowContext.parentComponent === first.rowContext.parentComponent,
   );
   const sameBounds = positions.every(
-    (position) => position.start === first.start && position.span === first.span,
+    (position) =>
+      position.start === first.start && position.span === first.span,
   );
   const sameRowTotals = positions.every(
     (position) => position.rowTotal === first.rowTotal,
   );
-  const contiguousRows = positions.every((position, index) =>
-    index === 0 || position.rowContext.index === positions[index - 1].rowContext.index + 1,
+  const contiguousRows = positions.every(
+    (position, index) =>
+      index === 0 ||
+      position.rowContext.index === positions[index - 1].rowContext.index + 1,
   );
-  if (!sameContainer || !sameBounds || !sameRowTotals || !contiguousRows) return null;
+  if (!sameContainer || !sameBounds || !sameRowTotals || !contiguousRows)
+    return null;
 
   return {
     orientation: "vertical",
@@ -1389,7 +1501,9 @@ function getVerticalCellPosition(components, cellContext) {
   return {
     cellContext,
     rowContext,
-    start: spans.slice(0, cellContext.index).reduce((total, span) => total + span, 0),
+    start: spans
+      .slice(0, cellContext.index)
+      .reduce((total, span) => total + span, 0),
     span: spans[cellContext.index],
     rowTotal: spans.reduce((total, span) => total + span, 0),
   };
@@ -1413,9 +1527,12 @@ function mergeVerticalCellSelection(model, selection) {
     0,
   );
   const survivor = positions[0].cellContext.component;
-  const removedCells = positions.slice(1).map((position) => position.cellContext.component);
+  const removedCells = positions
+    .slice(1)
+    .map((position) => position.cellContext.component);
   const hasRichContent = [survivor, ...removedCells].some(
-    (component) => (component.children || []).length > 0 || component.textBinding,
+    (component) =>
+      (component.children || []).length > 0 || component.textBinding,
   );
 
   if (hasRichContent) {
@@ -1423,9 +1540,10 @@ function mergeVerticalCellSelection(model, selection) {
     removedCells.forEach((component) => {
       survivor.children.push(...(component.children || []));
       if (component.text !== undefined) {
-        survivor.text = survivor.text === undefined
-          ? component.text
-          : `${survivor.text} ${component.text}`;
+        survivor.text =
+          survivor.text === undefined
+            ? component.text
+            : `${survivor.text} ${component.text}`;
       }
       if (component.textBinding && !survivor.textBinding) {
         survivor.textBinding = component.textBinding;
@@ -1455,27 +1573,31 @@ function mergeVerticalCellSelection(model, selection) {
 
   const outerChildren = [];
   if (selection.start > 0) {
-    outerChildren.push(createVerticalMergeRegion(
-      nextId,
-      sourceRows,
-      0,
-      positions.map((position) => position.cellContext.index),
-      selection.start,
-      "left",
-    ));
+    outerChildren.push(
+      createVerticalMergeRegion(
+        nextId,
+        sourceRows,
+        0,
+        positions.map((position) => position.cellContext.index),
+        selection.start,
+        "left",
+      ),
+    );
   }
 
   outerChildren.push(survivor);
 
   if (rightSpan > 0) {
-    outerChildren.push(createVerticalMergeRegion(
-      nextId,
-      sourceRows,
-      positions.map((position) => position.cellContext.index + 1),
-      sourceRows.map((row) => (row.children || []).length),
-      rightSpan,
-      "right",
-    ));
+    outerChildren.push(
+      createVerticalMergeRegion(
+        nextId,
+        sourceRows,
+        positions.map((position) => position.cellContext.index + 1),
+        sourceRows.map((row) => (row.children || []).length),
+        rightSpan,
+        "right",
+      ),
+    );
   }
 
   const mergedRow = {
@@ -1537,22 +1659,25 @@ function normalizeRegionColumnSpans(cells, originalTotal) {
   let remaining = 12;
   cells.forEach((cell, index) => {
     const cellsLeft = cells.length - index - 1;
-    const span = index === cells.length - 1
-      ? remaining
-      : Math.max(
-          1,
-          Math.min(
-            remaining - cellsLeft,
-            Math.ceil(getPlainColumnSpan(cell) / originalTotal * 12),
-          ),
-        );
+    const span =
+      index === cells.length - 1
+        ? remaining
+        : Math.max(
+            1,
+            Math.min(
+              remaining - cellsLeft,
+              Math.ceil((getPlainColumnSpan(cell) / originalTotal) * 12),
+            ),
+          );
     cell.class = replacePlainColumnClass(cell.class, span);
     remaining -= span;
   });
 }
 
 function appendClassTokens(className, tokens) {
-  const values = String(className || "").split(/\s+/).filter(Boolean);
+  const values = String(className || "")
+    .split(/\s+/)
+    .filter(Boolean);
   tokens.forEach((token) => {
     if (!values.includes(token)) values.push(token);
   });
@@ -1560,7 +1685,10 @@ function appendClassTokens(className, tokens) {
 }
 
 function getPixelStyleValue(style, property) {
-  const pattern = new RegExp(`(?:^|;)\\s*${property}\\s*:\\s*(\\d+(?:\\.\\d+)?)px`, "i");
+  const pattern = new RegExp(
+    `(?:^|;)\\s*${property}\\s*:\\s*(\\d+(?:\\.\\d+)?)px`,
+    "i",
+  );
   const match = String(style || "").match(pattern);
   return match ? Number(match[1]) : 0;
 }
@@ -1600,7 +1728,9 @@ function getPlainColumnSpan(component) {
 
 function replacePlainColumnClass(className, span) {
   const nextClass = `col-${Math.max(1, Math.min(12, span))}`;
-  const tokens = String(className || "").split(/\s+/).filter(Boolean);
+  const tokens = String(className || "")
+    .split(/\s+/)
+    .filter(Boolean);
   const index = tokens.findIndex((token) => /^col-\d+$/.test(token));
   const flexibleIndex = tokens.indexOf("col");
 
@@ -1616,7 +1746,9 @@ function replacePlainColumnClass(className, span) {
 }
 
 function removeStyleDeclarations(style, properties) {
-  const propertyNames = new Set(properties.map((property) => property.toLowerCase()));
+  const propertyNames = new Set(
+    properties.map((property) => property.toLowerCase()),
+  );
   return String(style || "")
     .split(";")
     .map((item) => item.trim())
@@ -1649,34 +1781,34 @@ function createCellSplitRow(nextId, children = [], text) {
     class: "row",
     style: "width: 100%",
     designer: { role: "cellSplitRow" },
-    children: [{
-      id: nextId("HtmlElement", "div"),
-      type: "HtmlElement",
-      tag: "div",
-      class: "col-12",
-      ...(text !== undefined ? { text } : {}),
-      children,
-    }],
+    children: [
+      {
+        id: nextId("HtmlElement", "div"),
+        type: "HtmlElement",
+        tag: "div",
+        class: "col-12",
+        ...(text !== undefined ? { text } : {}),
+        children,
+      },
+    ],
   };
 }
 
 function normalizeCellSplitRow(splitRow, nextId) {
   const isRow = hasClassToken(splitRow, "row");
-  const contentCell = isRow && (splitRow.children || []).find((child) =>
-    isColumnComponent(child) && getPlainColumnSpan(child) === 12,
-  );
+  const contentCell =
+    isRow &&
+    (splitRow.children || []).find(
+      (child) => isColumnComponent(child) && getPlainColumnSpan(child) === 12,
+    );
   if (contentCell) return splitRow;
 
-  return createCellSplitRow(
-    nextId,
-    splitRow.children || [],
-    splitRow.text,
-  );
+  return createCellSplitRow(nextId, splitRow.children || [], splitRow.text);
 }
 
 function getCellSplitContentCell(splitRow) {
-  return (splitRow?.children || []).find((child) =>
-    isColumnComponent(child) && getPlainColumnSpan(child) === 12,
+  return (splitRow?.children || []).find(
+    (child) => isColumnComponent(child) && getPlainColumnSpan(child) === 12,
   );
 }
 
@@ -1702,7 +1834,10 @@ function moveComponentInside(components, dragId, dropId) {
 }
 
 function hasFunction(script, functionName) {
-  const escapedName = String(functionName).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const escapedName = String(functionName).replace(
+    /[.*+?^${}()|[\]\\]/g,
+    "\\$&",
+  );
   const pattern = new RegExp(
     `function\\s+${escapedName}\\s*\\(|const\\s+${escapedName}\\s*=`,
   );

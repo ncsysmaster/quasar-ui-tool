@@ -1,5 +1,9 @@
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
 import { basename, dirname, extname, join, resolve } from 'node:path'
+import { createRequire } from 'node:module'
+
+const require = createRequire(import.meta.url)
+const { toQuasarType } = require('../src/componentTypes.js')
 
 const workspaceRoot = process.cwd()
 const defaultInputDir = '.src/pages'
@@ -148,7 +152,7 @@ function getTagName(component) {
     return component.tag || 'div'
   }
 
-  return pascalToKebab(component.type)
+  return pascalToKebab(toQuasarType(component.type))
 }
 
 function renderAttributes(component) {

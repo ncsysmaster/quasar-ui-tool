@@ -12,13 +12,13 @@
     "sourceVuePath": "src/pages/GuidePage.vue",
     "targetVuePath": "src/pages/GuidePage.vue",
     "framework": "quasar",
-    "component": "QPage"
+    "component": "Page"
   },
   "data": {},
   "components": [
     {
       "id": "page1",
-      "type": "QPage",
+      "type": "Page",
       "props": {
         "padding": true
       },

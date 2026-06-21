@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "0.1.0",
+  "tool": {
+    "name": "quasar-tool",
+    "artifactType": "pinia-store-definition"
+  },
+  "store": {
+    "fileName": "inStore",
+    "defineStoreId": "in",
+    "constName": "useInStore",
+    "sourcePath": ".src/store/in/inStore.json",
+    "targetPath": "src/store/in/inStore.js"
+  },
+  "state": {
+    "rows": [],
+    "selectedRow": null,
+    "loading": false,
+    "error": null
+  },
+  "getters": [],
+  "actions": []
+}
