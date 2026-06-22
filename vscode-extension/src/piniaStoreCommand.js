@@ -198,12 +198,132 @@ async function savePiniaStoreDefinition(fsPath, definition, pageUri) {
   }
 }
 
-async function linkStoreToPage(pageUri, definition) {
+async function importPiniaStoreIntoPage(pageUri) {
+  const projectFolder = findProjectFolder(pageUri);
+  if (!projectFolder) {
+    throw new Error("Quasar 프로젝트 폴더를 찾을 수 없습니다.");
+  }
+
+  const selected = await vscode.window.showOpenDialog({
+    title: "기존 Store 파일 연결",
+    defaultUri: vscode.Uri.joinPath(projectFolder.uri, ...SOURCE_ROOT),
+    openLabel: "Store 연결",
+    canSelectFiles: true,
+    canSelectFolders: false,
+    canSelectMany: false,
+    filters: { "Pinia Store JSON": ["json"] },
+  });
+  const sourceUri = selected?.[0];
+  if (!sourceUri) return null;
+  if (!isPiniaDefinition(sourceUri, projectFolder)) {
+    throw new Error(".src/store 폴더 안의 Store JSON 파일을 선택하세요.");
+  }
+
+  const raw = await vscode.workspace.fs.readFile(sourceUri);
+  const definition = JSON.parse(new TextDecoder().decode(raw));
+  const generator = await loadPiniaGenerator();
+  generator.assertPiniaDefinition(definition);
+
+  definition.store.sourcePath = toProjectRelativePath(
+    projectFolder,
+    sourceUri,
+  );
+  const targetPath = resolvePiniaTargetPath(
+    projectFolder,
+    sourceUri,
+    definition,
+  );
+  definition.store.targetPath = toProjectRelativePath(
+    projectFolder,
+    vscode.Uri.file(targetPath),
+  );
+  definition.store.importPath = stripJavaScriptExtension(
+    definition.store.targetPath,
+  );
+
+  await linkStoreToPage(pageUri, definition);
+  return { sourceUri, definition };
+}
+
+async function savePiniaStoreSettings(fsPath, definition, pageUri) {
+  const oldSourceUri = vscode.Uri.file(fsPath);
+  const projectFolder = findProjectFolder(oldSourceUri);
+  if (!projectFolder || !isPiniaDefinition(oldSourceUri, projectFolder)) {
+    throw new Error("Store JSON path must be inside .src/store");
+  }
+
+  const oldRaw = await vscode.workspace.fs.readFile(oldSourceUri);
+  const oldDefinition = JSON.parse(new TextDecoder().decode(oldRaw));
+  const oldSourcePath = oldDefinition.store?.sourcePath ||
+    toProjectRelativePath(projectFolder, oldSourceUri);
+  const oldTargetPath = resolvePiniaTargetPath(
+    projectFolder,
+    oldSourceUri,
+    oldDefinition,
+  );
+  const fileName = stripExtension(String(definition.store?.fileName || "").trim());
+  const validationError = validateFileName(fileName) ||
+    validateIdentifier(definition.store?.constName) ||
+    validateStoreId(definition.store?.defineStoreId) ||
+    validateIdentifier(definition.store?.importName);
+  if (validationError) throw new Error(validationError);
+
+  const newSourceUri = vscode.Uri.joinPath(
+    vscode.Uri.file(dirname(oldSourceUri.fsPath)),
+    `${fileName}.json`,
+  );
+  if (newSourceUri.fsPath !== oldSourceUri.fsPath && await exists(newSourceUri)) {
+    throw new Error(`${fileName}.json 파일이 이미 존재합니다.`);
+  }
+
+  const newTargetPath = resolvePiniaTargetPath(projectFolder, newSourceUri);
+  if (newTargetPath !== oldTargetPath && await exists(vscode.Uri.file(newTargetPath))) {
+    throw new Error(`${fileName}.js 파일이 이미 존재합니다.`);
+  }
+
+  definition.store.fileName = fileName;
+  definition.store.sourcePath = toProjectRelativePath(projectFolder, newSourceUri);
+  definition.store.targetPath = toProjectRelativePath(
+    projectFolder,
+    vscode.Uri.file(newTargetPath),
+  );
+  definition.store.importPath = stripJavaScriptExtension(
+    definition.store.targetPath,
+  );
+
+  const generator = await loadPiniaGenerator();
+  generator.assertPiniaDefinition(definition);
+  if (pageUri && definition.store.ownerPage) {
+    await linkStoreToPage(pageUri, definition, oldSourcePath);
+  }
+
+  await vscode.workspace.fs.createDirectory(vscode.Uri.file(dirname(newTargetPath)));
+  await vscode.workspace.fs.writeFile(
+    newSourceUri,
+    new TextEncoder().encode(`${JSON.stringify(definition, null, 2)}\n`),
+  );
+  await vscode.workspace.fs.writeFile(
+    vscode.Uri.file(newTargetPath),
+    new TextEncoder().encode(generator.generatePiniaSource(definition)),
+  );
+
+  if (newSourceUri.fsPath !== oldSourceUri.fsPath) {
+    await vscode.workspace.fs.delete(oldSourceUri);
+  }
+  if (newTargetPath !== oldTargetPath && await exists(vscode.Uri.file(oldTargetPath))) {
+    await vscode.workspace.fs.delete(vscode.Uri.file(oldTargetPath));
+  }
+  return { sourceUri: newSourceUri, targetUri: vscode.Uri.file(newTargetPath) };
+}
+
+async function linkStoreToPage(pageUri, definition, previousSourcePath = "") {
   const pageDocument = await vscode.workspace.openTextDocument(pageUri);
   const pageDefinition = JSON.parse(pageDocument.getText());
+  const originalDefinitionJson = JSON.stringify(pageDefinition);
   const imports = Array.isArray(pageDefinition.imports) ? pageDefinition.imports : [];
   const existingIndex = imports.findIndex((item) =>
     item.sourcePath === definition.store.sourcePath ||
+    (previousSourcePath && item.sourcePath === previousSourcePath) ||
     (item.type === "store" && item.name === definition.store.constName),
   );
   const legacyStores = Array.isArray(pageDefinition.stores) ? pageDefinition.stores : [];
@@ -238,7 +358,9 @@ async function linkStoreToPage(pageUri, definition) {
   else imports.push(storeImport);
   pageDefinition.imports = imports;
 
-  await replaceDocument(pageDocument, `${JSON.stringify(pageDefinition, null, 2)}\n`);
+  const nextSource = `${JSON.stringify(pageDefinition, null, 2)}\n`;
+  if (JSON.stringify(pageDefinition) === originalDefinitionJson) return;
+  await replaceDocument(pageDocument, nextSource);
   await pageDocument.save();
   generateVueForDocument(pageDocument);
 }
@@ -407,4 +529,9 @@ function getOwnerPage(uri) {
   return basename(uri.fsPath, extname(uri.fsPath));
 }
 
-module.exports = { registerPiniaStoreCommands, savePiniaStoreDefinition };
+module.exports = {
+  importPiniaStoreIntoPage,
+  registerPiniaStoreCommands,
+  savePiniaStoreDefinition,
+  savePiniaStoreSettings,
+};

@@ -1,5 +1,9 @@
 const { getGridHtml, getGridScript, getGridStyles } = require("./gridView");
 const { getStoreHtml, getStoreScript, getStoreStyles } = require("./storeView");
+const {
+  getScreenStoreStateScript,
+  getScreenStoreStateStyles,
+} = require("./screenStoreStateView");
 const { NEUTRAL_TO_QUASAR } = require("./componentTypes");
 /* 편집창 화면 */
 function getEditorHtml(webview, runtimeUris) {
@@ -17,6 +21,9 @@ function getEditorHtml(webview, runtimeUris) {
       <button class="tab" data-tab="store">Store</button>
       <button id="create-pinia-store" class="screen-tool-button tab-action-button hidden" type="button" title="Store 신규 추가" aria-label="Store 신규 추가">
         <span class="material-icons" aria-hidden="true">add_box</span>
+      </button>
+      <button id="import-pinia-store" class="screen-tool-button tab-action-button hidden" type="button" title="기존 Store 파일 연결" aria-label="기존 Store 파일 연결">
+        <span class="material-icons" aria-hidden="true">folder_open</span>
       </button>
       <div id="screen-tools" class="screen-tools">
         <button id="toggle-canvas-grid" class="screen-tool-button" type="button" title="화면 격자 숨기기" aria-label="화면 격자 숨기기" aria-pressed="true">
@@ -43,6 +50,7 @@ function getEditorHtml(webview, runtimeUris) {
       let piniaStores = []
       let activePiniaStorePath = ''
       let selectedStoreStatePath = []
+      const collapsedStoreStatePaths = new Set()
       let selectedStoreMember = null
       let storeSaveTimer = null
       let activeTab = 'screen'
@@ -52,6 +60,10 @@ function getEditorHtml(webview, runtimeUris) {
       let scriptEditorModel = null
       let scriptSaveTimer = null
       let scriptRenderToken = 0
+      let storeMemberEditor = null
+      let storeMemberEditorModel = null
+      let storeMemberEditorRenderToken = 0
+      let storeDeleteConfirmationResolve = null
       let pendingScriptMethod = ''
       let lastScriptNavigationRequest = 0
       let showGridMetrics = vscode.getState()?.showGridMetrics !== false
@@ -85,13 +97,29 @@ function getEditorHtml(webview, runtimeUris) {
 
       window.addEventListener('message', (event) => {
         if (event.data.type === 'piniaStores') {
-          piniaStores = Array.isArray(event.data.stores) ? event.data.stores : []
+          const incomingStores = Array.isArray(event.data.stores) ? event.data.stores : []
+          const storeEditorHasFocus = activeTab === 'store' && Boolean(
+            document.activeElement?.closest?.('.store-editor-layout, .store-file-tabs')
+          )
+          const activeStoreBeingEdited = activeTab === 'store' && (
+            storeMemberEditor || storeEditorHasFocus
+          )
+            ? piniaStores.find((store) => store.fsPath === activePiniaStorePath)
+            : null
+          piniaStores = activeStoreBeingEdited && incomingStores.some(
+            (store) => store.fsPath === activePiniaStorePath
+          )
+            ? incomingStores.map((store) =>
+                store.fsPath === activePiniaStorePath ? activeStoreBeingEdited : store
+              )
+            : incomingStores
           if (!piniaStores.some((store) => store.fsPath === activePiniaStorePath)) {
             activePiniaStorePath = piniaStores[0]?.fsPath || ''
             selectedStoreStatePath = []
             selectedStoreMember = null
           }
-          if (activeTab === 'store') render()
+          if (activeTab === 'store' && !activeStoreBeingEdited) render()
+          if (activeTab === 'screen') renderScreenStoreStatePanel()
           return
         }
 
@@ -132,6 +160,8 @@ function getEditorHtml(webview, runtimeUris) {
           return
         }
 
+        if (activeTab === 'store') return
+
         render()
       })
 
@@ -151,8 +181,12 @@ function getEditorHtml(webview, runtimeUris) {
       document.getElementById('create-pinia-store').addEventListener('click', () => {
         showPiniaStoreDialog()
       })
+      document.getElementById('import-pinia-store').addEventListener('click', () => {
+        vscode.postMessage({ type: 'importPiniaStore' })
+      })
 
       setupPiniaStoreDialog()
+      setupStoreDeleteDialog()
 
       document.getElementById('toggle-grid-metrics').addEventListener('click', () => {
         showGridMetrics = !showGridMetrics
@@ -226,12 +260,14 @@ function getEditorHtml(webview, runtimeUris) {
         const content = document.getElementById('content')
         if (!model) {
           unmountPreview()
+          disposeStoreMemberEditor()
           content.innerHTML = '<div class="empty">Open a page JSON file.</div>'
           return
         }
 
         if (activeTab === 'script') {
           unmountPreview()
+          disposeStoreMemberEditor()
           content.innerHTML = '<div id="script-editor" class="script-editor" role="application" aria-label="JavaScript editor"></div>'
           mountScriptEditor(model.script?.setup || '')
           return
@@ -245,11 +281,13 @@ function getEditorHtml(webview, runtimeUris) {
           return
         }
 
+        disposeStoreMemberEditor()
         unmountPreview()
 
-        content.innerHTML = '<div class="runtime-preview-frame' + (showCanvasGrid ? ' show-canvas-grid' : '') + '"><div id="quasar-preview"></div></div>' +
+        content.innerHTML = '<div class="screen-editor-workspace"><div class="screen-editor-canvas"><div class="runtime-preview-frame' + (showCanvasGrid ? ' show-canvas-grid' : '') + '"><div id="quasar-preview"></div></div></div><aside id="screen-store-state-panel" class="screen-store-state-panel" aria-label="Store State"></aside></div>' +
           ${JSON.stringify(getGridHtml())}
         mountPreview()
+        renderScreenStoreStatePanel()
 
         setupPaletteDrop()
         setupFormContextMenu()
@@ -265,9 +303,11 @@ function getEditorHtml(webview, runtimeUris) {
         const canvasIcon = canvasButton?.querySelector('.material-icons')
         const canvasLabel = showCanvasGrid ? '화면 격자 숨기기' : '화면 격자 표시하기'
         const createStoreButton = document.getElementById('create-pinia-store')
+        const importStoreButton = document.getElementById('import-pinia-store')
 
         tools?.classList.toggle('hidden', activeTab !== 'screen')
         createStoreButton?.classList.toggle('hidden', activeTab !== 'store')
+        importStoreButton?.classList.toggle('hidden', activeTab !== 'store')
         metricsButton?.classList.toggle('active', showGridMetrics)
         metricsButton?.setAttribute('aria-pressed', String(showGridMetrics))
         metricsButton?.setAttribute('aria-label', metricsLabel)
@@ -684,6 +724,14 @@ function getEditorHtml(webview, runtimeUris) {
         }
 
         props.onDragover = (event) => {
+          if (isStoreStateDrag(event.dataTransfer)) {
+            event.preventDefault()
+            event.stopPropagation()
+            event.dataTransfer.dropEffect = 'copy'
+            event.currentTarget.classList.add('qt-store-binding-drop-target')
+            return
+          }
+
           if (isPaletteDrag(event.dataTransfer)) {
             event.preventDefault()
             event.stopPropagation()
@@ -699,12 +747,27 @@ function getEditorHtml(webview, runtimeUris) {
         props.onDragleave = (event) => {
           const nextTarget = event.relatedTarget
           if (nextTarget && event.currentTarget.contains(nextTarget)) return
+          event.currentTarget.classList.remove('qt-store-binding-drop-target')
           clearPaletteDropTarget()
         }
 
         props.onDrop = (event) => {
           event.preventDefault()
           event.stopPropagation()
+
+          const storeBinding = getStoreStateBinding(event.dataTransfer)
+          if (storeBinding) {
+            event.currentTarget.classList.remove('qt-store-binding-drop-target')
+            clearPaletteDropTarget()
+            vscode.postMessage({
+              type: 'bindStoreState',
+              id: component.id,
+              expression: storeBinding.expression,
+              storePath: storeBinding.fsPath || '',
+              statePath: storeBinding.path || []
+            })
+            return
+          }
 
           const paletteIndex = getPaletteDragIndex(event.dataTransfer)
 
@@ -864,6 +927,7 @@ function getEditorHtml(webview, runtimeUris) {
         return model.datasets?.[0] || { name: 'defaultDataset', fields: [] }
       }
 
+      ${getScreenStoreStateScript()}
       ${getStoreScript()}
 
       function setupPaletteDrop() {
@@ -1017,6 +1081,7 @@ function htmlShell(webview, nonce, title, body) {
     .store-id, .store-path, .store-state { overflow: hidden; color: var(--vscode-descriptionForeground); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
     .store-state { grid-column: 1 / -1; }
     ${getStoreStyles()}
+    ${getScreenStoreStateStyles()}
     .check { display: flex; gap: 6px; align-items: center; color: var(--vscode-descriptionForeground); }
     .check input { width: auto; min-height: auto; }
     .qt-html-element {outline: 1px dashed #bdbdbd; outline-offset: -1px; }

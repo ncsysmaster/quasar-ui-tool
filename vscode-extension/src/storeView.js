@@ -1,3 +1,8 @@
+const {
+  storeMemberEditorFunctions,
+} = require("./storeMemberEditorView");
+const { storeLayoutFunctions } = require("./storeLayoutView");
+
 function getStoreHtml() {
   return `<div id="pinia-store-dialog" class="designer-dialog-backdrop hidden">
   <div class="designer-dialog pinia-store-dialog" role="dialog" aria-modal="true" aria-labelledby="pinia-store-dialog-title">
@@ -33,6 +38,22 @@ function getStoreHtml() {
       <button class="primary" type="button" data-store-dialog-submit>생성</button>
     </div>
   </div>
+</div>
+<div id="store-delete-dialog" class="designer-dialog-backdrop hidden">
+  <div class="designer-dialog store-delete-dialog" role="alertdialog" aria-modal="true" aria-labelledby="store-delete-dialog-title" aria-describedby="store-delete-dialog-message">
+    <div class="designer-dialog-header">
+      <strong id="store-delete-dialog-title">삭제 확인</strong>
+      <button class="designer-dialog-close" type="button" data-store-delete-cancel aria-label="닫기">×</button>
+    </div>
+    <div class="designer-dialog-body">
+      <p id="store-delete-dialog-message" class="store-delete-message"></p>
+      <p class="store-delete-warning">삭제한 내용은 되돌릴 수 없습니다.</p>
+    </div>
+    <div class="designer-dialog-actions">
+      <button type="button" data-store-delete-cancel>취소</button>
+      <button class="primary store-delete-confirm" type="button" data-store-delete-confirm>삭제</button>
+    </div>
+  </div>
 </div>`;
 }
 
@@ -40,13 +61,21 @@ function getStoreScript() {
   return [
     renderPiniaStores,
     getActivePiniaStore,
-    storeTextField,
     renderStoreStateTree,
     renderStoreMembers,
     renderStoreDetail,
     setupStoreEditorEvents,
+    ...storeMemberEditorFunctions,
+    setupStoreDeleteDialog,
+    confirmStoreDeletion,
+    resolveStoreDeleteConfirmation,
+    addStoreStateField,
+    showStoreStateContextMenu,
+    hideStoreStateContextMenu,
+    ...storeLayoutFunctions,
     updateStoreStateRow,
     getStoreStateContainer,
+    getStoreStateValue,
     scheduleStoreSave,
     storeValueType,
     storeValueText,
@@ -54,10 +83,12 @@ function getStoreScript() {
     storeBodySummary,
     setupPiniaStoreDialog,
     showPiniaStoreDialog,
+    showPiniaStoreSettingsDialog,
     hidePiniaStoreDialog,
     submitPiniaStoreDialog,
     validatePiniaStoreDialog,
     setPiniaStoreDialogError,
+    getStoreSubpath,
     stripStoreExtension,
     defaultStoreId,
     defaultStoreConstName,
@@ -68,6 +99,7 @@ function getStoreScript() {
 }
 
 function renderPiniaStores(content) {
+  disposeStoreMemberEditor();
   if (piniaStores.length === 0) {
     content.innerHTML =
       '<div class="empty">등록된 Pinia Store가 없습니다.</div>';
@@ -88,7 +120,9 @@ function renderPiniaStores(content) {
     piniaStores
       .map(
         (item) =>
-          '<button type="button" role="tab" class="store-file-tab' +
+          '<div class="store-file-tab-wrap' +
+          (item.fsPath === store.fsPath ? " active" : "") +
+          '"><button type="button" role="tab" class="store-file-tab' +
           (item.fsPath === store.fsPath ? " active" : "") +
           '" data-store-tab="' +
           escapeAttr(item.fsPath) +
@@ -96,35 +130,30 @@ function renderPiniaStores(content) {
           (item.fsPath === store.fsPath) +
           '">' +
           escapeHtml(item.tabName || item.constName || item.fileName) +
-          "</button>",
+          "</button>" +
+          (item.fsPath === store.fsPath
+            ? '<button type="button" class="store-file-settings" data-store-settings title="Store 파일 설정" aria-label="Store 파일 설정"><span class="material-icons" aria-hidden="true">settings</span></button>'
+            : "") +
+          "</div>",
       )
       .join("") +
     "</div>" +
     '<div class="store-editor-layout"><section class="store-editor-sidebar">' +
-    '<div class="store-section"><h3>Pinia Store</h3>' +
-    storeTextField("Store Name", "constName", definition.store.constName) +
-    storeTextField(
-      "Store ID (defineStore)",
-      "defineStoreId",
-      definition.store.defineStoreId,
-    ) +
-    storeTextField(
-      "Import 명",
-      "importName",
-      definition.store.importName || store.tabName || "",
-    ) +
-    "</div>" +
     '<div class="store-section"><div class="store-section-title"><h3>State</h3><button type="button" data-add-state>+ 추가</button></div>' +
     '<div class="store-state-tree">' +
     renderStoreStateTree(definition.state || {}, []) +
     "</div></div>" +
     renderStoreMembers("getters", definition.getters || [], "Getters") +
     renderStoreMembers("actions", definition.actions || [], "Actions") +
-    '</section><section class="store-editor-detail">' +
+    '</section><div class="store-panel-splitter" role="separator" aria-label="Store 패널 너비 조절" aria-orientation="vertical" tabindex="0"></div>' +
+    '<section class="store-editor-detail">' +
     renderStoreDetail(definition) +
-    "</section></div>";
+    '</section></div><div class="store-state-context-menu hidden" role="menu"><button type="button" data-context-add-state role="menuitem">+ 자식 필드 추가</button></div>';
 
   setupStoreEditorEvents(content, store);
+  if (selectedStoreMember) mountStoreMemberEditor(store);
+  setupStoreStateTableResize(content);
+  setupStorePanelSplitter(content);
 }
 
 function getActivePiniaStore() {
@@ -134,61 +163,83 @@ function getActivePiniaStore() {
   );
 }
 
-function storeTextField(label, field, value) {
-  return (
-    '<label class="store-meta-field"><span>' +
-    label +
-    "</span>" +
-    '<input data-store-meta="' +
-    field +
-    '" value="' +
-    escapeAttr(value || "") +
-    '"></label>'
-  );
-}
-
 function renderStoreStateTree(value, path, nested = false) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return "";
   const nodes = Object.entries(value)
     .map(([name, child]) => {
       const childPath = [...path, name];
+      const pathKey = JSON.stringify(childPath);
       const selected =
-        JSON.stringify(childPath) === JSON.stringify(selectedStoreStatePath);
-      const expandable =
+        pathKey === JSON.stringify(selectedStoreStatePath);
+      const isObject =
         child && typeof child === "object" && !Array.isArray(child);
+      const hasChildren = isObject && Object.keys(child).length > 0;
+      const collapsed = hasChildren && collapsedStoreStatePaths.has(pathKey);
+      const toggle = hasChildren
+        ? '<button type="button" class="store-state-toggle ' +
+          (collapsed ? "collapsed" : "expanded") +
+          '" data-state-toggle="' +
+          encodeURIComponent(pathKey) +
+          '" title="' +
+          (collapsed ? "펼치기" : "접기") +
+          '" aria-label="' +
+          (collapsed ? "펼치기" : "접기") +
+          '"></button>'
+        : '<span class="store-state-toggle-spacer"></span>';
       const row =
-        '<button type="button" class="store-state-row' +
+        '<div class="store-state-row' +
         (selected ? " selected" : "") +
-        '" data-state-path="' +
+        '" role="treeitem" tabindex="0"' +
+        ' data-state-path="' +
         encodeURIComponent(JSON.stringify(childPath)) +
-        '" data-state-object="' +
-        expandable +
-        '">' +
-        "<span>" +
+        '"><span class="store-state-main">' +
+        toggle +
+        '<span class="store-state-name">' +
         escapeHtml(name) +
         "</span><small>- " +
         storeValueType(child) +
-        "</small></button>";
-      if (!expandable)
-        return (
-          '<div class="store-state-node store-state-leaf">' + row + "</div>"
-        );
+        "</small></span></div>";
       return (
-        '<details class="store-state-node store-state-branch" open><summary>' +
+        '<div class="store-state-node">' +
         row +
-        "</summary>" +
-        '<div class="store-state-children">' +
-        renderStoreStateTree(child, childPath, true) +
-        "</div></details>"
+        (hasChildren && !collapsed
+          ? '<div class="store-state-children" role="group">' +
+            renderStoreStateTree(child, childPath, true) +
+            "</div>"
+          : "") +
+        "</div>"
       );
     })
     .join("");
   if (nested) return nodes;
+  const rootPathKey = JSON.stringify([]);
+  const rootSelected =
+    rootPathKey === JSON.stringify(selectedStoreStatePath);
+  const rootHasChildren = Object.keys(value).length > 0;
+  const rootCollapsed =
+    rootHasChildren && collapsedStoreStatePaths.has(rootPathKey);
   return (
-    '<details class="store-state-root" open><summary><span class="store-state-root-label">State</span></summary>' +
-    '<div class="store-state-children">' +
-    nodes +
-    "</div></details>"
+    '<div class="store-state-node store-state-root"><div class="store-state-row store-state-root-row' +
+    (rootSelected ? " selected" : "") +
+    '" role="treeitem" tabindex="0" data-state-path="' +
+    encodeURIComponent(rootPathKey) +
+    '"><span class="store-state-main">' +
+    (rootHasChildren
+      ? '<button type="button" class="store-state-toggle ' +
+        (rootCollapsed ? "collapsed" : "expanded") +
+        '" data-state-toggle="' +
+        encodeURIComponent(rootPathKey) +
+        '" title="' +
+        (rootCollapsed ? "펼치기" : "접기") +
+        '" aria-label="' +
+        (rootCollapsed ? "펼치기" : "접기") +
+        '"></button>'
+      : '<span class="store-state-toggle-spacer"></span>') +
+    '<span class="store-state-name">State</span></span></div>' +
+    (rootHasChildren && !rootCollapsed
+      ? '<div class="store-state-children" role="group">' + nodes + "</div>"
+      : "") +
+    "</div>"
   );
 }
 
@@ -218,6 +269,9 @@ function renderStoreMembers(kind, members, title) {
             '<input data-member-field="summary" value="' +
             escapeAttr(storeBodySummary(member.body)) +
             '" aria-label="Return 식">' +
+            '<button type="button" class="store-edit" data-edit-member="getters" data-member-index="' +
+            index +
+            '" title="Getter 편집" aria-label="Getter 편집"><span class="material-icons" aria-hidden="true">edit</span></button>' +
             '<button type="button" class="store-delete" data-remove-member="getters" data-member-index="' +
             index +
             '">×</button></div>'
@@ -238,6 +292,9 @@ function renderStoreMembers(kind, members, title) {
           '<input data-member-field="description" value="' +
           escapeAttr(member.description || "") +
           '" aria-label="참고사항">' +
+          '<button type="button" class="store-edit" data-edit-member="actions" data-member-index="' +
+          index +
+          '" title="Action 편집" aria-label="Action 편집"><span class="material-icons" aria-hidden="true">edit</span></button>' +
           '<button type="button" class="store-delete" data-remove-member="actions" data-member-index="' +
           index +
           '">×</button></div>'
@@ -260,26 +317,46 @@ function renderStoreDetail(definition) {
         '<label>Parameters<input data-member-params value="' +
         escapeAttr((member.params || []).join(", ")) +
         '" placeholder="예: rows, options"></label>' +
-        '<textarea data-member-body spellcheck="false">' +
-        escapeHtml(member.body || "") +
-        "</textarea></div>"
+        '<div id="store-member-editor" class="store-member-editor" role="application" aria-label="' +
+        escapeAttr(
+          (selectedStoreMember.kind === "getters" ? "Getter" : "Action") +
+            " JavaScript editor",
+        ) +
+        '"></div></div>'
       );
     }
   }
-  const container = getStoreStateContainer(
-    definition.state || {},
-    selectedStoreStatePath,
-  );
+  const state = definition.state || {};
+  const selectedValue = getStoreStateValue(state, selectedStoreStatePath);
+  const selectedIsObject =
+    selectedValue &&
+    typeof selectedValue === "object" &&
+    !Array.isArray(selectedValue);
+  const containerPath =
+    selectedStoreStatePath.length > 0 && !selectedIsObject
+      ? selectedStoreStatePath.slice(0, -1)
+      : selectedStoreStatePath;
+  const container = getStoreStateContainer(state, containerPath);
+  const entries =
+    selectedStoreStatePath.length > 0 && !selectedIsObject
+      ? [[selectedStoreStatePath.at(-1), selectedValue]]
+      : Object.entries(container || {});
   const notes = definition.designer?.stateNotes || {};
   return (
     '<div class="store-state-detail"><div class="store-detail-heading">State</div><button type="button" class="store-detail-add" data-add-state>+ 추가</button>' +
-    '<div class="store-state-table"><div class="store-state-table-head"><span>이름</span><span>타입</span><span>초기값</span><span>참고사항</span><span>삭제</span></div>' +
-    Object.entries(container)
+    '<div class="store-state-table"><div class="store-state-table-head">' +
+    '<span>이름<button type="button" class="store-state-column-resizer" data-state-column-resize="0" role="separator" aria-label="이름 컬럼 너비 조절" tabindex="0"></button></span>' +
+    '<span>타입<button type="button" class="store-state-column-resizer" data-state-column-resize="1" role="separator" aria-label="타입 컬럼 너비 조절" tabindex="0"></button></span>' +
+    '<span>초기값<button type="button" class="store-state-column-resizer" data-state-column-resize="2" role="separator" aria-label="초기값 컬럼 너비 조절" tabindex="0"></button></span>' +
+    '<span>참고사항</span><span>삭제</span></div>' +
+    entries
       .map(([name, value]) => {
-        const pathKey = [...selectedStoreStatePath, name].join(".");
+        const pathKey = [...containerPath, name].join(".");
         return (
           '<div class="store-state-table-row" data-state-name="' +
           escapeAttr(name) +
+          '" data-state-container-path="' +
+          encodeURIComponent(JSON.stringify(containerPath)) +
           '">' +
           '<input data-state-field="name" value="' +
           escapeAttr(name) +
@@ -304,6 +381,8 @@ function renderStoreDetail(definition) {
           '">' +
           '<button type="button" class="store-delete" data-remove-state="' +
           escapeAttr(name) +
+          '" data-state-container-path="' +
+          encodeURIComponent(JSON.stringify(containerPath)) +
           '">×</button></div>'
         );
       })
@@ -318,40 +397,67 @@ function setupStoreEditorEvents(content, store) {
     button.addEventListener("click", () => {
       activePiniaStorePath = button.dataset.storeTab;
       selectedStoreStatePath = [];
+      collapsedStoreStatePaths.clear();
       selectedStoreMember = null;
       render();
     }),
   );
-  content.querySelectorAll("[data-store-meta]").forEach((input) =>
-    input.addEventListener("change", () => {
-      definition.store[input.dataset.storeMeta] = input.value.trim();
-      scheduleStoreSave(store);
-    }),
-  );
+  content
+    .querySelector("[data-store-settings]")
+    ?.addEventListener("click", showPiniaStoreSettingsDialog);
   content.querySelectorAll("[data-state-path]").forEach((button) =>
     button.addEventListener("click", (event) => {
       event.stopPropagation();
       const path = JSON.parse(decodeURIComponent(button.dataset.statePath));
-      selectedStoreStatePath =
-        button.dataset.stateObject === "true" ? path : path.slice(0, -1);
+      selectedStoreStatePath = path;
       selectedStoreMember = null;
       render();
     }),
   );
-  content.querySelectorAll("[data-add-state]").forEach((button) =>
-    button.addEventListener("click", () => {
-      const container = getStoreStateContainer(
-        definition.state,
-        selectedStoreStatePath,
+  content.querySelectorAll("[data-state-path]").forEach((row) =>
+    row.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      selectedStoreStatePath = JSON.parse(
+        decodeURIComponent(row.dataset.statePath),
       );
-      let index = 1;
-      while (Object.prototype.hasOwnProperty.call(container, "state" + index))
-        index += 1;
-      container["state" + index] = null;
-      scheduleStoreSave(store);
+      selectedStoreMember = null;
       render();
     }),
   );
+  content.querySelectorAll("[data-state-toggle]").forEach((toggle) =>
+    toggle.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const pathKey = decodeURIComponent(toggle.dataset.stateToggle);
+      if (collapsedStoreStatePaths.has(pathKey))
+        collapsedStoreStatePaths.delete(pathKey);
+      else collapsedStoreStatePaths.add(pathKey);
+      render();
+    }),
+  );
+  content.querySelectorAll("[data-state-path]").forEach((button) =>
+    button.addEventListener("contextmenu", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      selectedStoreStatePath = JSON.parse(
+        decodeURIComponent(button.dataset.statePath),
+      );
+      selectedStoreMember = null;
+      const clientX = event.clientX;
+      const clientY = event.clientY;
+      render();
+      requestAnimationFrame(() =>
+        showStoreStateContextMenu(content, clientX, clientY),
+      );
+    }),
+  );
+  content.querySelectorAll("[data-add-state]").forEach((button) =>
+    button.addEventListener("click", () => addStoreStateField(store)),
+  );
+  content
+    .querySelector("[data-context-add-state]")
+    ?.addEventListener("click", () => addStoreStateField(store));
   content
     .querySelectorAll(".store-state-table-row")
     .forEach((row) =>
@@ -362,12 +468,18 @@ function setupStoreEditorEvents(content, store) {
             updateStoreStateRow(store, row),
           ),
         ),
-    );
+  );
   content.querySelectorAll("[data-remove-state]").forEach((button) =>
-    button.addEventListener("click", () => {
-      delete getStoreStateContainer(definition.state, selectedStoreStatePath)[
-        button.dataset.removeState
+    button.addEventListener("click", async () => {
+      const containerPath = JSON.parse(
+        decodeURIComponent(button.dataset.stateContainerPath),
+      );
+      const fieldName = button.dataset.removeState;
+      if (!(await confirmStoreDeletion("State 필드", fieldName))) return;
+      delete getStoreStateContainer(definition.state, containerPath)[
+        fieldName
       ];
+      selectedStoreStatePath = containerPath;
       scheduleStoreSave(store);
       render();
     }),
@@ -397,13 +509,26 @@ function setupStoreEditorEvents(content, store) {
   );
   content.querySelectorAll("[data-member-kind]").forEach((row) =>
     row.addEventListener("click", (event) => {
-      if (event.target.closest("[data-remove-member]")) return;
+      if (event.target.closest("[data-remove-member], [data-edit-member]"))
+        return;
       selectedStoreMember = {
         kind: row.dataset.memberKind,
         index: Number(row.dataset.memberIndex),
       };
       selectedStoreStatePath = [];
       if (!event.target.closest("input, label")) render();
+    }),
+  );
+  content.querySelectorAll("[data-edit-member]").forEach((button) =>
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      selectedStoreMember = {
+        kind: button.dataset.editMember,
+        index: Number(button.dataset.memberIndex),
+      };
+      selectedStoreStatePath = [];
+      render();
     }),
   );
   content.querySelectorAll("[data-member-field]").forEach((input) =>
@@ -424,11 +549,13 @@ function setupStoreEditorEvents(content, store) {
     }),
   );
   content.querySelectorAll("[data-remove-member]").forEach((button) =>
-    button.addEventListener("click", () => {
-      definition[button.dataset.removeMember].splice(
-        Number(button.dataset.memberIndex),
-        1,
-      );
+    button.addEventListener("click", async () => {
+      const kind = button.dataset.removeMember;
+      const index = Number(button.dataset.memberIndex);
+      const member = definition[kind]?.[index];
+      const label = kind === "getters" ? "Getter" : "Action";
+      if (!(await confirmStoreDeletion(label, member?.name || ""))) return;
+      definition[kind].splice(index, 1);
       selectedStoreMember = null;
       scheduleStoreSave(store);
       render();
@@ -443,23 +570,104 @@ function setupStoreEditorEvents(content, store) {
           .map((value) => value.trim())
           .filter(Boolean);
       scheduleStoreSave(store);
+      render();
     });
-  content
-    .querySelector("[data-member-body]")
-    ?.addEventListener("change", (event) => {
-      definition[selectedStoreMember.kind][selectedStoreMember.index].body =
-        event.target.value;
-      scheduleStoreSave(store);
-    });
+  content.onclick = (event) => {
+    if (!event.target.closest(".store-state-context-menu"))
+      hideStoreStateContextMenu(content);
+  };
+}
+
+function setupStoreDeleteDialog() {
+  const dialog = document.getElementById("store-delete-dialog");
+  if (!dialog) return;
+  dialog.querySelectorAll("[data-store-delete-cancel]").forEach((button) =>
+    button.addEventListener("click", () =>
+      resolveStoreDeleteConfirmation(false),
+    ),
+  );
+  dialog
+    .querySelector("[data-store-delete-confirm]")
+    ?.addEventListener("click", () => resolveStoreDeleteConfirmation(true));
+  dialog.addEventListener("pointerdown", (event) => {
+    if (event.target === dialog) resolveStoreDeleteConfirmation(false);
+  });
+  dialog.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    event.preventDefault();
+    resolveStoreDeleteConfirmation(false);
+  });
+}
+
+function confirmStoreDeletion(type, name) {
+  const dialog = document.getElementById("store-delete-dialog");
+  if (!dialog) return Promise.resolve(false);
+  if (storeDeleteConfirmationResolve)
+    resolveStoreDeleteConfirmation(false);
+  const target = name ? type + ' "' + name + '"' : type;
+  dialog.querySelector("#store-delete-dialog-message").textContent =
+    target + "을 삭제하시겠습니까?";
+  dialog.classList.remove("hidden");
+  dialog.querySelector("[data-store-delete-confirm]")?.focus();
+  return new Promise((resolve) => {
+    storeDeleteConfirmationResolve = resolve;
+  });
+}
+
+function resolveStoreDeleteConfirmation(confirmed) {
+  const resolve = storeDeleteConfirmationResolve;
+  storeDeleteConfirmationResolve = null;
+  document.getElementById("store-delete-dialog")?.classList.add("hidden");
+  resolve?.(Boolean(confirmed));
+}
+
+function addStoreStateField(store) {
+  const state = store.definition.state || (store.definition.state = {});
+  let container = getStoreStateValue(state, selectedStoreStatePath);
+  if (!container || typeof container !== "object" || Array.isArray(container)) {
+    const parentPath = selectedStoreStatePath.slice(0, -1);
+    const fieldName = selectedStoreStatePath.at(-1);
+    const parent = getStoreStateContainer(state, parentPath);
+    parent[fieldName] = {};
+    container = parent[fieldName];
+  }
+  let index = 1;
+  while (Object.prototype.hasOwnProperty.call(container, "state" + index))
+    index += 1;
+  container["state" + index] = null;
+  selectedStoreMember = null;
+  hideStoreStateContextMenu(document.getElementById("content"));
+  scheduleStoreSave(store);
+  render();
+}
+
+function showStoreStateContextMenu(content, clientX, clientY) {
+  const menu = content.querySelector(".store-state-context-menu");
+  if (!menu) return;
+  menu.classList.remove("hidden");
+  const bounds = menu.getBoundingClientRect();
+  menu.style.left = Math.max(4, Math.min(clientX, innerWidth - bounds.width - 4)) + "px";
+  menu.style.top = Math.max(4, Math.min(clientY, innerHeight - bounds.height - 4)) + "px";
+  menu.querySelector("button")?.focus();
+}
+
+function hideStoreStateContextMenu(content) {
+  content?.querySelector(".store-state-context-menu")?.classList.add("hidden");
 }
 
 function updateStoreStateRow(store, row) {
   const definition = store.definition;
+  const containerPath = JSON.parse(
+    decodeURIComponent(row.dataset.stateContainerPath || "%5B%5D"),
+  );
   const container = getStoreStateContainer(
     definition.state,
-    selectedStoreStatePath,
+    containerPath,
   );
   const oldName = row.dataset.stateName;
+  const selectedRowWasOpen =
+    selectedStoreStatePath.length === containerPath.length + 1 &&
+    selectedStoreStatePath.at(-1) === oldName;
   const name = row.querySelector('[data-state-field="name"]').value.trim();
   if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name)) return;
   const type = row.querySelector('[data-state-field="type"]').value;
@@ -479,14 +687,34 @@ function updateStoreStateRow(store, row) {
   } else container[name] = value;
   definition.designer ||= {};
   definition.designer.stateNotes ||= {};
-  definition.designer.stateNotes[[...selectedStoreStatePath, name].join(".")] =
+  definition.designer.stateNotes[[...containerPath, name].join(".")] =
     row.querySelector('[data-state-field="note"]').value;
+  selectedStoreStatePath = selectedRowWasOpen
+    ? [...containerPath, name]
+    : containerPath;
   scheduleStoreSave(store);
   render();
 }
 
 function getStoreStateContainer(state, path) {
-  return path.reduce((value, key) => value?.[key], state) || state;
+  const value = getStoreStateValue(state, path);
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value
+    : state;
+}
+
+function getStoreStateValue(state, path) {
+  let value = state;
+  for (const key of path) {
+    if (
+      !value ||
+      typeof value !== "object" ||
+      !Object.prototype.hasOwnProperty.call(value, key)
+    )
+      return undefined;
+    value = value[key];
+  }
+  return value;
 }
 
 function scheduleStoreSave(store) {
@@ -518,7 +746,13 @@ function parseStoreValue(type, value) {
   if (type === "number") return Number(value) || 0;
   if (type === "boolean") return String(value).toLowerCase() === "true";
   try {
-    return JSON.parse(value || (type === "array" ? "[]" : "{}"));
+    const parsed = JSON.parse(value || (type === "array" ? "[]" : "{}"));
+    if (type === "array") return Array.isArray(parsed) ? parsed : [];
+    if (type === "object")
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+        ? parsed
+        : {};
+    return parsed;
   } catch {
     return type === "array" ? [] : {};
   }
@@ -536,6 +770,7 @@ function setupPiniaStoreDialog() {
   const fileNameInput = dialog.querySelector("[data-store-file-name]");
 
   fileNameInput.addEventListener("input", () => {
+    if (dialog.dataset.mode === "edit") return;
     const fileName = stripStoreExtension(fileNameInput.value.trim());
     dialog.querySelector("[data-store-const-name]").value =
       defaultStoreConstName(fileName);
@@ -569,7 +804,14 @@ function showPiniaStoreDialog() {
   if (!dialog) return;
   const pageName = model?.page?.id || model?.page?.name || "exampleStore";
   const fileName = stripStoreExtension(pageName);
-  dialog.querySelector("[data-store-path]").value = "";
+  dialog.dataset.mode = "create";
+  dialog.dataset.sourcePath = "";
+  document.getElementById("pinia-store-dialog-title").textContent =
+    "Store 신규 추가";
+  dialog.querySelector("[data-store-dialog-submit]").textContent = "생성";
+  const pathInput = dialog.querySelector("[data-store-path]");
+  pathInput.value = "";
+  pathInput.disabled = false;
   dialog.querySelector("[data-store-file-name]").value = fileName;
   dialog.querySelector("[data-store-const-name]").value =
     defaultStoreConstName(fileName);
@@ -579,6 +821,34 @@ function showPiniaStoreDialog() {
   setPiniaStoreDialogError("");
   dialog.classList.remove("hidden");
   dialog.querySelector("[data-store-path]").focus();
+}
+
+function showPiniaStoreSettingsDialog() {
+  const dialog = document.getElementById("pinia-store-dialog");
+  const store = getActivePiniaStore();
+  if (!dialog || !store?.definition?.store) return;
+  const settings = store.definition.store;
+  dialog.dataset.mode = "edit";
+  dialog.dataset.fsPath = store.fsPath;
+  dialog.dataset.sourcePath = settings.sourcePath || "";
+  document.getElementById("pinia-store-dialog-title").textContent =
+    "Store 파일 설정";
+  dialog.querySelector("[data-store-dialog-submit]").textContent = "저장";
+  const pathInput = dialog.querySelector("[data-store-path]");
+  pathInput.value = getStoreSubpath(settings.sourcePath);
+  pathInput.disabled = true;
+  dialog.querySelector("[data-store-file-name]").value =
+    settings.fileName || "";
+  dialog.querySelector("[data-store-const-name]").value =
+    settings.constName || "";
+  dialog.querySelector("[data-store-id]").value =
+    settings.defineStoreId || "";
+  dialog.querySelector("[data-store-import-name]").value =
+    settings.importName || store.tabName || "";
+  setPiniaStoreDialogError("");
+  dialog.classList.remove("hidden");
+  dialog.querySelector("[data-store-file-name]").focus();
+  dialog.querySelector("[data-store-file-name]").select();
 }
 
 function hidePiniaStoreDialog() {
@@ -597,9 +867,28 @@ function submitPiniaStoreDialog() {
     defineStoreId: dialog.querySelector("[data-store-id]").value.trim(),
     importName: dialog.querySelector("[data-store-import-name]").value.trim(),
   };
-  const error = validatePiniaStoreDialog(options);
+  const error = validatePiniaStoreDialog(
+    options,
+    dialog.dataset.mode === "edit" ? dialog.dataset.sourcePath : "",
+  );
   if (error) {
     setPiniaStoreDialogError(error);
+    return;
+  }
+
+  if (dialog.dataset.mode === "edit") {
+    const store = getActivePiniaStore();
+    const definition = JSON.parse(JSON.stringify(store.definition));
+    definition.store.fileName = options.fileName;
+    definition.store.constName = options.constName;
+    definition.store.defineStoreId = options.defineStoreId;
+    definition.store.importName = options.importName;
+    hidePiniaStoreDialog();
+    vscode.postMessage({
+      type: "updatePiniaStoreSettings",
+      fsPath: dialog.dataset.fsPath,
+      definition,
+    });
     return;
   }
 
@@ -607,7 +896,7 @@ function submitPiniaStoreDialog() {
   vscode.postMessage({ type: "createPiniaStore", options });
 }
 
-function validatePiniaStoreDialog(options) {
+function validatePiniaStoreDialog(options, currentSourcePath = "") {
   const normalizedPath = options.storePath
     .split(String.fromCharCode(92))
     .join("/")
@@ -632,7 +921,9 @@ function validatePiniaStoreDialog(options) {
     return "Import 명은 JavaScript 식별자 형식이어야 합니다.";
   if (
     (model?.imports || []).some(
-      (item) => item.variableName === options.importName,
+      (item) =>
+        item.variableName === options.importName &&
+        item.sourcePath !== currentSourcePath,
     )
   )
     return "이미 사용 중인 Import 명입니다.";
@@ -644,6 +935,15 @@ function setPiniaStoreDialogError(message) {
   if (!error) return;
   error.textContent = message;
   error.classList.toggle("hidden", !message);
+}
+
+function getStoreSubpath(sourcePath) {
+  const relativePath = String(sourcePath || "")
+    .replace(/\\/g, "/")
+    .replace(/^\.src\/store\/?/i, "");
+  const parts = relativePath.split("/").filter(Boolean);
+  parts.pop();
+  return parts.join("/");
 }
 
 function stripStoreExtension(value) {
@@ -683,54 +983,81 @@ function defaultStoreImportName(fileName, pageModel) {
 
 function getStoreStyles() {
   return `.store-file-tabs { display: flex; min-height: 40px; padding: 5px 10px 0; align-items: end; overflow-x: auto; border-bottom: 1px solid var(--vscode-panel-border); background: var(--vscode-sideBar-background); }
-.store-file-tab { flex: 0 0 auto; min-width: 110px; min-height: 34px; padding: 6px 14px; border: 1px solid transparent; border-bottom: 0; color: var(--vscode-descriptionForeground); background: transparent; }
+.store-file-tab-wrap { display: inline-flex; flex: 0 0 auto; align-items: center; min-height: 34px; border: 1px solid transparent; border-bottom: 0; }
+.store-file-tab-wrap.active { border-color: var(--vscode-panel-border); background: var(--vscode-editor-background); }
+.store-file-tab { flex: 0 0 auto; min-width: 110px; min-height: 33px; padding: 6px 10px 6px 14px; border: 0; color: var(--vscode-descriptionForeground); background: transparent; }
 .store-file-tab:hover { background: var(--vscode-list-hoverBackground); }
-.store-file-tab.active { color: var(--vscode-editor-foreground); border-color: var(--vscode-panel-border); background: var(--vscode-editor-background); }
-.store-editor-layout { display: grid; grid-template-columns: minmax(340px, 42%) minmax(420px, 1fr); min-height: calc(100vh - 80px); }
-.store-editor-sidebar { padding: 8px; overflow: auto; border-right: 1px solid var(--vscode-panel-border); }
-.store-editor-detail { position: relative; padding: 14px; overflow: auto; }
-.store-section { margin-bottom: 10px; border: 1px solid var(--vscode-panel-border); border-radius: 5px; overflow: hidden; }
-.store-section h3 { margin: 0; padding: 8px 10px; border-left: 4px solid var(--vscode-focusBorder); font-size: 14px; font-weight: 600; }
-.store-section-title { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--vscode-panel-border); }
-.store-section-title button, .store-detail-add { min-height: 26px; margin-right: 7px; padding: 3px 9px; border: 0; border-radius: 3px; color: var(--vscode-button-foreground); background: var(--vscode-button-background); }
-.store-meta-field { display: grid; grid-template-columns: 100px 1fr; gap: 8px; padding: 5px 9px; align-items: center; }
-.store-meta-field span { color: var(--vscode-descriptionForeground); }
-.store-state-tree { min-height: 92px; padding: 7px 8px 10px; overflow: hidden; }
-.store-state-tree details > summary { display: flex; min-height: 26px; align-items: center; list-style: none; cursor: pointer; }
-.store-state-tree details > summary::-webkit-details-marker { display: none; }
-.store-state-tree details > summary::before { content: "+"; display: inline-flex; flex: 0 0 18px; width: 18px; align-items: center; justify-content: center; color: var(--vscode-icon-foreground); font-family: var(--vscode-editor-font-family, monospace); }
-.store-state-tree details[open] > summary::before { content: "−"; }
-.store-state-root-label { padding: 3px 4px; color: var(--vscode-editor-foreground); font-weight: 600; }
+.store-file-tab.active { color: var(--vscode-editor-foreground); }
+.store-file-settings { display: inline-flex; width: 30px; min-height: 33px; padding: 0; align-items: center; justify-content: center; border: 0; color: var(--vscode-icon-foreground); background: transparent; }
+.store-file-settings:hover { color: var(--vscode-button-foreground); background: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground)); }
+.store-file-settings .material-icons { font-size: 17px; }
+.store-editor-layout { --store-sidebar-width: 42%; display: grid; grid-template-columns: minmax(300px, var(--store-sidebar-width)) 7px minmax(360px, 1fr); min-height: calc(100vh - 80px); }
+.store-editor-sidebar { min-width: 0; padding: 6px; overflow: auto; }
+.store-panel-splitter { position: relative; z-index: 5; width: 7px; min-height: 100%; cursor: col-resize; touch-action: none; background: var(--vscode-panel-border); outline: none; }
+.store-panel-splitter::after { content: ""; position: absolute; top: 0; bottom: 0; left: 2px; width: 3px; background: transparent; transition: background-color 100ms ease; }
+.store-panel-splitter:hover::after, .store-panel-splitter:focus::after, body.store-panel-resizing .store-panel-splitter::after { background: var(--vscode-focusBorder); }
+body.store-panel-resizing, body.store-panel-resizing * { cursor: col-resize !important; user-select: none !important; }
+.store-editor-detail { position: relative; padding: 10px; overflow: auto; }
+.store-section { margin-bottom: 4px; border: 1px solid var(--vscode-panel-border); border-radius: 4px; overflow: hidden; }
+.store-section h3 { margin: 0; padding: 3px 7px; border-left: 3px solid var(--vscode-focusBorder); font-size: 12px; font-weight: 600; line-height: 18px; }
+.store-section-title { display: flex; min-height: 28px; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--vscode-panel-border); }
+.store-section-title button, .store-detail-add { min-height: 22px; margin-right: 5px; padding: 1px 7px; border: 0; border-radius: 3px; color: var(--vscode-button-foreground); background: var(--vscode-button-background); font-size: 12px; line-height: 18px; }
+.store-state-tree { min-height: 0; padding: 2px 5px 4px; overflow: hidden; }
 .store-state-node { position: relative; }
-.store-state-row { display: flex; flex: 1; min-width: 0; min-height: 25px; gap: 7px; padding: 3px 6px; align-items: center; justify-content: flex-start; border: 0; color: var(--vscode-editor-foreground); background: transparent; text-align: left; }
-.store-state-row:hover, .store-state-row.selected { background: var(--vscode-list-hoverBackground); }
-.store-state-row.selected { outline: 1px solid var(--vscode-focusBorder); }
+.store-state-row { position: relative; z-index: 2; display: flex; width: 100%; min-width: 0; min-height: 24px; padding: 2px 5px 2px 1px; align-items: center; border: 0; color: var(--vscode-editor-foreground); background: transparent; line-height: 18px; cursor: pointer; user-select: none; }
+.store-state-row:hover { background: var(--vscode-list-hoverBackground); }
+.store-state-row.selected { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; background: var(--vscode-list-activeSelectionBackground, var(--vscode-list-hoverBackground)); color: var(--vscode-list-activeSelectionForeground, var(--vscode-editor-foreground)); }
+.store-state-main { display: inline-flex; min-width: 0; gap: 4px; align-items: center; }
+.store-state-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.store-state-root-row .store-state-name { font-weight: 600; }
 .store-state-row small { color: var(--vscode-descriptionForeground); font-size: 11px; }
-.store-state-children { position: relative; margin-left: 9px; padding-left: 16px; border-left: 1px solid var(--vscode-tree-indentGuidesStroke, var(--vscode-panel-border)); }
-.store-state-children > .store-state-node::before { content: ""; position: absolute; left: -16px; top: 13px; width: 15px; border-top: 1px solid var(--vscode-tree-indentGuidesStroke, var(--vscode-panel-border)); }
-.store-state-branch > summary { position: relative; margin-left: -1px; }
-.store-state-leaf { min-height: 26px; }
-.store-member-list { padding: 6px; }
-.store-member-row { display: grid; grid-template-columns: minmax(100px, .8fr) minmax(130px, 1.4fr) 28px; gap: 5px; padding: 4px; border: 1px solid transparent; }
-.store-member-row.action { grid-template-columns: minmax(90px, .8fr) 72px minmax(100px, 1fr) 28px; }
+.store-state-toggle, .store-state-toggle-spacer { display: inline-flex; flex: 0 0 16px; width: 16px; height: 16px; padding: 0; align-items: center; justify-content: center; border: 0; color: var(--vscode-icon-foreground); background: transparent; }
+.store-state-toggle::before { content: ""; width: 5px; height: 5px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform-origin: center; }
+.store-state-toggle.expanded::before { transform: translateY(-1px) rotate(45deg); }
+.store-state-toggle.collapsed::before { transform: translateX(-1px) rotate(-45deg); }
+.store-state-toggle:hover { color: var(--vscode-foreground); background: var(--vscode-toolbar-hoverBackground); }
+.store-state-children { position: relative; margin-left: 14px; padding-left: 12px; border-left: 1px solid var(--vscode-tree-indentGuidesStroke, var(--vscode-panel-border)); }
+.store-state-children > .store-state-node::before { content: ""; position: absolute; z-index: 1; left: -12px; top: 12px; width: 12px; border-top: 1px solid var(--vscode-tree-indentGuidesStroke, var(--vscode-panel-border)); }
+.store-state-children > .store-state-node:last-child::after { content: ""; position: absolute; z-index: 1; left: -13px; top: 13px; bottom: 0; width: 2px; background: var(--vscode-editor-background); }
+.store-member-list { padding: 1px; }
+.store-member-list:empty { display: none; }
+.store-member-row { display: grid; grid-template-columns: minmax(100px, .8fr) minmax(130px, 1.4fr) 26px 26px; gap: 3px; padding: 2px; border: 1px solid transparent; }
+.store-member-row.action { grid-template-columns: minmax(90px, .8fr) 68px minmax(100px, 1fr) 26px 26px; }
+.store-member-row input { min-height: 24px; padding: 2px 5px; }
 .store-member-row.selected { border-color: var(--vscode-focusBorder); background: var(--vscode-list-activeSelectionBackground); }
+.store-state-context-menu { position: fixed; z-index: 1000; min-width: 150px; padding: 3px; border: 1px solid var(--vscode-menu-border, var(--vscode-panel-border)); border-radius: 3px; background: var(--vscode-menu-background, var(--vscode-editorWidget-background)); box-shadow: 0 4px 14px rgba(0, 0, 0, .35); }
+.store-state-context-menu button { width: 100%; min-height: 26px; padding: 3px 8px; border: 0; color: var(--vscode-menu-foreground, var(--vscode-editor-foreground)); background: transparent; text-align: left; }
+.store-state-context-menu button:hover, .store-state-context-menu button:focus { color: var(--vscode-menu-selectionForeground, var(--vscode-list-activeSelectionForeground)); background: var(--vscode-menu-selectionBackground, var(--vscode-list-activeSelectionBackground)); outline: none; }
 .store-async { display: flex; gap: 4px; align-items: center; justify-content: center; color: var(--vscode-descriptionForeground); }
 .store-async input { width: auto; min-height: auto; }
-.store-delete { width: 28px; min-height: 28px; padding: 0; border: 1px solid transparent; color: var(--vscode-errorForeground); background: transparent; font-size: 18px; }
+.store-edit { display: inline-flex; width: 26px; min-height: 24px; padding: 0; align-items: center; justify-content: center; border: 1px solid transparent; color: var(--vscode-icon-foreground); background: transparent; }
+.store-edit:hover, .store-edit:focus { border-color: var(--vscode-focusBorder); color: var(--vscode-foreground); background: var(--vscode-toolbar-hoverBackground); outline: none; }
+.store-edit .material-icons { font-size: 15px; }
+.store-delete { width: 26px; min-height: 24px; padding: 0; border: 1px solid transparent; color: var(--vscode-errorForeground); background: transparent; font-size: 17px; }
 .store-delete:hover { border-color: var(--vscode-errorForeground); }
 .store-detail-heading { margin-bottom: 12px; padding: 7px 10px; border-left: 4px solid var(--vscode-focusBorder); font-size: 16px; font-weight: 600; }
 .store-detail-add { position: absolute; top: 16px; right: 10px; }
-.store-state-table { min-width: 620px; border: 1px solid var(--vscode-panel-border); }
-.store-state-table-head, .store-state-table-row { display: grid; grid-template-columns: 1.2fr .8fr 1fr 1.2fr 44px; }
+.store-state-table { width: 100%; min-width: 620px; border: 1px solid var(--vscode-panel-border); }
+.store-state-table-head, .store-state-table-row { display: grid; grid-template-columns: var(--store-state-column-widths, 1.2fr .8fr 1fr 1.2fr 44px); }
 .store-state-table-head { color: var(--vscode-button-foreground); background: var(--vscode-button-background); font-weight: 600; }
-.store-state-table-head span { padding: 7px; text-align: center; border-right: 1px solid var(--vscode-panel-border); }
+.store-state-table-head span { position: relative; padding: 5px; text-align: center; border-right: 1px solid var(--vscode-panel-border); }
+.store-state-column-resizer { position: absolute; z-index: 4; top: 0; right: -5px; width: 10px; height: 100%; min-height: 100%; padding: 0; border: 0; cursor: col-resize; touch-action: none; background: transparent; }
+.store-state-column-resizer::after { content: ""; position: absolute; top: 0; bottom: 0; left: 4px; width: 2px; background: transparent; }
+.store-state-column-resizer:hover::after, .store-state-column-resizer:focus::after, body.store-column-resizing .store-state-column-resizer::after { background: var(--vscode-focusBorder); }
+body.store-column-resizing, body.store-column-resizing * { cursor: col-resize !important; user-select: none !important; }
 .store-state-table-row > input, .store-state-table-row > select, .store-state-table-row > button { border-width: 0 1px 1px 0; }
+.store-state-table-row > .store-delete { display: inline-flex; width: 100%; height: 100%; min-height: 28px; align-items: center; justify-content: center; justify-self: stretch; align-self: stretch; }
 .store-script-editor { display: grid; grid-template-rows: auto auto minmax(300px, 1fr); min-height: calc(100vh - 110px); }
 .store-script-editor label { display: grid; grid-template-columns: 90px 1fr; gap: 8px; margin-bottom: 8px; align-items: center; color: var(--vscode-descriptionForeground); }
-.store-script-editor textarea { width: 100%; min-height: 360px; padding: 12px; resize: none; border: 1px solid var(--vscode-panel-border); color: var(--vscode-editor-foreground); background: var(--vscode-editor-background); font-family: var(--vscode-editor-font-family); font-size: var(--vscode-editor-font-size); line-height: 1.5; tab-size: 2; }
-.store-script-editor textarea:focus { outline: 1px solid var(--vscode-focusBorder); }
-@media (max-width: 900px) { .store-editor-layout { grid-template-columns: 1fr; } .store-editor-sidebar { border-right: 0; border-bottom: 1px solid var(--vscode-panel-border); } }
-.pinia-store-dialog { width: min(440px, calc(100vw - 32px)); }`;
+.store-member-editor { width: 100%; min-height: 360px; border: 1px solid var(--vscode-panel-border); background: var(--vscode-editor-background); }
+.store-member-editor:focus-within { outline: 1px solid var(--vscode-focusBorder); }
+@media (max-width: 900px) { .store-editor-layout { grid-template-columns: 1fr; } .store-panel-splitter { display: none; } .store-editor-sidebar { border-bottom: 1px solid var(--vscode-panel-border); } }
+.pinia-store-dialog { width: min(440px, calc(100vw - 32px)); }
+.pinia-store-dialog input:disabled { cursor: not-allowed; opacity: .65; }
+.store-delete-dialog { width: min(390px, calc(100vw - 32px)); }
+.store-delete-message { margin: 0 0 8px; color: var(--vscode-editor-foreground); font-weight: 600; }
+.store-delete-warning { margin: 0; color: var(--vscode-descriptionForeground); font-size: 12px; }
+.store-delete-confirm { color: var(--vscode-button-foreground) !important; background: var(--vscode-inputValidation-errorBackground, #8b1a1a) !important; border-color: var(--vscode-inputValidation-errorBorder, var(--vscode-errorForeground)) !important; }`;
 }
 
 module.exports = { getStoreHtml, getStoreScript, getStoreStyles };

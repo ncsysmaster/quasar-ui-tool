@@ -186,7 +186,17 @@
                                     "dense": true
                                   },
                                   "models": {
-                                    "modelValue": "search.requiredYn"
+                                    "modelValue": "storeName.rows.state1.state1"
+                                  },
+                                  "designer": {
+                                    "storeBinding": {
+                                      "storePath": "d:\\01 PROJECTSRC\\codex\\quasar_tool\\.src\\store\\index\\IndexUtil.json",
+                                      "statePath": [
+                                        "rows",
+                                        "state1",
+                                        "state1"
+                                      ]
+                                    }
                                   }
                                 }
                               ]
@@ -205,7 +215,15 @@
                                     "dense": true
                                   },
                                   "models": {
-                                    "modelValue": "search.useYn"
+                                    "modelValue": "storeName.selectedRow"
+                                  },
+                                  "designer": {
+                                    "storeBinding": {
+                                      "storePath": "d:\\01 PROJECTSRC\\codex\\quasar_tool\\.src\\store\\index\\IndexUtil.json",
+                                      "statePath": [
+                                        "selectedRow"
+                                      ]
+                                    }
                                   }
                                 }
                               ]
@@ -249,7 +267,15 @@
                                     "bgColor": "white"
                                   },
                                   "models": {
-                                    "modelValue": "search.name"
+                                    "modelValue": "storeName.searchText"
+                                  },
+                                  "designer": {
+                                    "storeBinding": {
+                                      "storePath": "d:\\01 PROJECTSRC\\codex\\quasar_tool\\.src\\store\\index\\IndexUtil.json",
+                                      "statePath": [
+                                        "searchText"
+                                      ]
+                                    }
                                   }
                                 }
                               ]
@@ -355,6 +381,15 @@
       "value": "useIndexUtilStore",
       "defineStoreId": "indexUtil",
       "sourcePath": ".src/store/index/IndexUtil.json"
+    },
+    {
+      "type": "store",
+      "name": "useInStore",
+      "from": "src/store/in/inStore",
+      "variableName": "storeIn",
+      "value": "useInStore",
+      "defineStoreId": "in",
+      "sourcePath": ".src/store/in/inStore.json"
     }
   ]
 }

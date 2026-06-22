@@ -5,7 +5,11 @@ const { getPaletteHtml } = require("./paletteView");
 const { getPageTreeHtml } = require("./pageTreeView");
 const { getPropertiesHtml } = require("./propertiesView");
 const { findProjectFolder } = require("./projectRoot");
-const { savePiniaStoreDefinition } = require("./piniaStoreCommand");
+const {
+  importPiniaStoreIntoPage,
+  savePiniaStoreDefinition,
+  savePiniaStoreSettings,
+} = require("./piniaStoreCommand");
 const { listPiniaStores } = require("./piniaStoreRepository");
 
 const {
@@ -122,11 +126,46 @@ class PageEditorProvider {
         }
       }
 
+      if (message.type === "importPiniaStore") {
+        try {
+          const result = await importPiniaStoreIntoPage(document.uri);
+          if (!result?.sourceUri) return;
+          await postPiniaStores();
+          webviewPanel.webview.postMessage({
+            type: "selectPiniaStore",
+            fsPath: result.sourceUri.fsPath,
+          });
+        } catch (error) {
+          vscode.window.showErrorMessage(
+            `Pinia Store 연결 실패: ${error.message}`,
+          );
+        }
+      }
+
       if (message.type === "updatePiniaStore" && message.fsPath && message.definition) {
         try {
           await savePiniaStoreDefinition(message.fsPath, message.definition, document.uri);
         } catch (error) {
           vscode.window.showErrorMessage(`Pinia Store 저장 실패: ${error.message}`);
+        }
+      }
+
+      if (message.type === "updatePiniaStoreSettings" && message.fsPath && message.definition) {
+        try {
+          const result = await savePiniaStoreSettings(
+            message.fsPath,
+            message.definition,
+            document.uri,
+          );
+          await postPiniaStores();
+          if (result?.sourceUri) {
+            webviewPanel.webview.postMessage({
+              type: "selectPiniaStore",
+              fsPath: result.sourceUri.fsPath,
+            });
+          }
+        } catch (error) {
+          vscode.window.showErrorMessage(`Pinia Store 설정 저장 실패: ${error.message}`);
         }
       }
 
@@ -149,6 +188,13 @@ class PageEditorProvider {
           message.dropId,
           message.mode,
         );
+      }
+
+      if (message.type === "bindStoreState") {
+        await editorState.bindStoreState(message.id, message.expression, {
+          storePath: message.storePath,
+          statePath: message.statePath,
+        });
       }
 
       if (message.type === "formLayoutAction") {

@@ -42,7 +42,10 @@ export function generatePiniaSource(definition) {
   assertPiniaDefinition(definition)
 
   const { defineStoreId, constName } = definition.store
-  const state = renderState(definition.state || {})
+  const state = renderState(
+    definition.state || {},
+    definition.designer?.stateNotes || {}
+  )
   const getters = renderGetters(definition.getters || [])
   const actions = renderActions(definition.actions || [])
 
@@ -123,19 +126,42 @@ function assertParams(member, kind) {
   }
 }
 
-function renderState(state) {
-  const entries = Object.entries(state)
-  if (entries.length === 0) return ''
+function renderState(state, notes) {
+  return renderStateEntries(state, notes, [], 4)
+}
 
+function renderStateEntries(state, notes, parentPath, indentSize) {
+  const entries = Object.entries(state)
   return entries
     .map(([name, value], index) => {
-      if (!IDENTIFIER_PATTERN.test(name)) {
-        throw new Error(`state key "${name}" must be a valid JavaScript identifier`)
-      }
+      const path = [...parentPath, name]
+      const indent = ' '.repeat(indentSize)
+      const comment = renderComment(notes[path.join('.')], indentSize)
       const suffix = index === entries.length - 1 ? '' : ','
-      return `    ${name}: ${JSON.stringify(value, null, 2).replace(/\n/g, '\n    ')}${suffix}`
+      const property = `${indent}${renderPropertyName(name)}: ${renderStateValue(
+        value,
+        notes,
+        path,
+        indentSize
+      )}${suffix}`
+      return comment ? `${comment}\n${property}` : property
     })
     .join('\n')
+}
+
+function renderStateValue(value, notes, path, indentSize) {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const entries = renderStateEntries(value, notes, path, indentSize + 2)
+    if (!entries) return '{}'
+    return `{\n${entries}\n${' '.repeat(indentSize)}}`
+  }
+
+  const serialized = JSON.stringify(value, null, 2)
+  return String(serialized).replace(/\n/g, `\n${' '.repeat(indentSize)}`)
+}
+
+function renderPropertyName(name) {
+  return IDENTIFIER_PATTERN.test(name) ? name : JSON.stringify(name)
 }
 
 function renderGetters(getters) {
@@ -146,7 +172,9 @@ function renderGetters(getters) {
         : 'state'
       const body = indentBody(getter.body || 'return undefined', 6)
       const suffix = index === getters.length - 1 ? '' : ','
-      return `    ${getter.name}: (${params}) => {\n${body}\n    }${suffix}`
+      const comment = renderComment(getter.description, 4)
+      const source = `    ${getter.name}: (${params}) => {\n${body}\n    }${suffix}`
+      return comment ? `${comment}\n${source}` : source
     })
     .join('\n')
 }
@@ -158,7 +186,9 @@ function renderActions(actions) {
       const asyncPrefix = action.async === false ? '' : 'async '
       const body = indentBody(action.body || '', 6)
       const suffix = index === actions.length - 1 ? '' : ','
-      return `    ${asyncPrefix}${action.name}(${params}) {\n${body}\n    }${suffix}`
+      const comment = renderComment(action.description, 4)
+      const source = `    ${asyncPrefix}${action.name}(${params}) {\n${body}\n    }${suffix}`
+      return comment ? `${comment}\n${source}` : source
     })
     .join('\n')
 }
@@ -169,6 +199,16 @@ function indentBody(body, spaces) {
     .split(/\r?\n/)
     .map((line) => line ? `${indent}${line}` : '')
     .join('\n')
+}
+
+function renderComment(value, spaces) {
+  const lines = String(value || '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+  if (lines.length === 0) return ''
+  const indent = ' '.repeat(spaces)
+  return lines.map((line) => `${indent}// ${line}`).join('\n')
 }
 
 function escapeSingleQuote(value) {

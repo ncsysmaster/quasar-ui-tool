@@ -249,7 +249,7 @@ function renderScriptSetup(data, scriptSetup = {}, customSetup = '', storeImport
 
   const storeStatements = storeImports
     .filter((item) => item?.variableName && item?.name)
-    .map((item) => `const ${item.variableName} = ref('${escapeJavaScriptString(item.value || item.name)}')`)
+    .map((item) => `const ${item.variableName} = ${item.name}()`)
   const setupCode = typeof customSetup === 'string' ? customSetup.trim() : ''
   const blocks = [...storeStatements, ...statements]
   if (setupCode) blocks.push(setupCode)
@@ -261,7 +261,6 @@ function renderScriptSetup(data, scriptSetup = {}, customSetup = '', storeImport
   const importLines = storeImports
     .filter((item) => item?.name && item?.from)
     .map((item) => `import { ${item.name} } from '${escapeJavaScriptString(item.from)}'`)
-  if (storeStatements.length > 0) importLines.push("import { ref } from 'vue'")
   const imports = importLines.length > 0 ? `${[...new Set(importLines)].join('\n')}\n\n` : ''
   return `<script setup>\n${imports}${blocks.join('\n\n')}\n</script>\n`
 }

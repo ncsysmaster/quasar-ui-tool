@@ -15,18 +15,58 @@
     "importName": "storeName"
   },
   "state": {
-    "rows": [],
+    "rows": {
+      "state1": {
+        "state1": null,
+        "state2": null,
+        "state3": null
+      },
+      "state2": {
+        "state1": null,
+        "state2": null
+      }
+    },
     "selectedRow": null,
     "loading": false,
-    "error": null,
-    "state1": null,
-    "state2": null
+    "entity": {
+      "id": null,
+      "name": null
+    },
+    "searchText": null
   },
-  "getters": [],
-  "actions": [],
+  "getters": [
+    {
+      "name": "getRows",
+      "params": [
+        "state"
+      ],
+      "body": "return undefined"
+    }
+  ],
+  "actions": [
+    {
+      "name": "selectList",
+      "params": [
+        "loading"
+      ],
+      "async": true,
+      "body": "this.entity.id = 'adf'\nthis.entity.name = 'en Name'\n\nconsole.log('selectList')\n\n",
+      "description": ""
+    }
+  ],
   "designer": {
     "stateNotes": {
-      "state1": ""
+      "state1": "",
+      "rows": "참고사항은 주석으로 처리",
+      "loading": "",
+      "error": "",
+      "selectedRow": "테이블 선택한 항목",
+      "state1.entity": "",
+      "rows.state1.state1": "",
+      "entity": "",
+      "entity.id": "",
+      "entity.name": "",
+      "searchText": ""
     }
   }
 }

@@ -276,6 +276,7 @@ function parseScriptSetup(scriptSetup) {
   const dataStatementRanges = []
   const namedImports = []
   let vueRefImportRange = null
+  let usesLegacyStoreRef = false
 
   for (const statement of ast.body) {
     if (statement.type !== 'ImportDeclaration') continue
@@ -313,9 +314,23 @@ function parseScriptSetup(scriptSetup) {
           declaration.init.callee?.type === 'Identifier' &&
           declaration.init.callee.name === 'ref' &&
           declaration.init.arguments?.[0]?.type === 'Literal') {
+        usesLegacyStoreRef = true
         storeDeclarations.push({
           variableName: declaration.id.name,
           value: String(declaration.init.arguments[0].value ?? '')
+        })
+        continue
+      }
+
+      if (declaration.init.type === 'CallExpression' &&
+          declaration.init.callee?.type === 'Identifier' &&
+          declaration.init.arguments?.length === 0 &&
+          availableNamedImports.some(
+            (item) => item.name === declaration.init.callee.name
+          )) {
+        storeDeclarations.push({
+          variableName: declaration.id.name,
+          value: declaration.init.callee.name
         })
         continue
       }
@@ -356,7 +371,7 @@ function parseScriptSetup(scriptSetup) {
     dataStatementRanges.push([statement.start, statement.end])
   }
 
-  if (imports.length > 0 && vueRefImportRange) {
+  if (usesLegacyStoreRef && imports.length > 0 && vueRefImportRange) {
     dataStatementRanges.push(vueRefImportRange)
   }
 

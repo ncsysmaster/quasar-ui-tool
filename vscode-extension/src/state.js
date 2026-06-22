@@ -325,6 +325,23 @@ class PageEditorState {
     });
   }
 
+  async bindStoreState(componentId, expression, binding = {}) {
+    if (!componentId || !String(expression || "").trim()) return;
+    await this.updateModel((model) => {
+      const component = findComponent(model.components, componentId);
+      if (!component) return;
+      component.models ||= {};
+      component.models.modelValue = String(expression).trim();
+      component.designer ||= {};
+      component.designer.storeBinding = {
+        storePath: binding.storePath || "",
+        statePath: Array.isArray(binding.statePath) ? binding.statePath : [],
+      };
+      this.selectedId = componentId;
+      this.selectedCellIds = [];
+    });
+  }
+
   async removeSelectedComponent() {
     await this.removeComponentById(this.selectedId);
   }

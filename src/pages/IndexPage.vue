@@ -21,10 +21,10 @@
                 <div class="bg-grey-4 row items-center q-px-md full-height rounded-borders overflow-hidden" style="border-radius: 4px">조회구분</div>
               </div>
               <div class="col-2 bg-white row items-center q-px-sm">
-                <q-toggle v-model="search.requiredYn" label="필수" dense />
+                <q-toggle v-model="storeName.rows.state1.state1" label="필수" dense />
               </div>
               <div class="col-2 bg-white row items-center q-px-sm">
-                <q-toggle v-model="search.useYn" label="사용여부" dense />
+                <q-toggle v-model="storeName.selectedRow" label="사용여부" dense />
               </div>
             </div>
             <div class="row">
@@ -32,7 +32,7 @@
                 <div class="bg-grey-4 row items-center q-px-md full-height rounded-borders overflow-hidden" style="border-radius: 4px">조회명</div>
               </div>
               <div class="col-10 bg-white q-pa-xs">
-                <q-input v-model="search.name" outlined dense bg-color="white" />
+                <q-input v-model="storeName.searchText" outlined dense bg-color="white" />
               </div>
             </div>
           </div>
@@ -50,9 +50,11 @@
 
 <script setup>
 import { useIndexUtilStore } from 'src/store/index/IndexUtil'
-import { ref } from 'vue'
+import { useInStore } from 'src/store/in/inStore'
 
-const storeName = ref('useIndexUtilStore')
+const storeName = useIndexUtilStore()
+
+const storeIn = useInStore()
 
 const stages = [
   {
@@ -89,11 +91,15 @@ const classOptions = []
 
 function onSearch() {
   console.log('onSearch', { ...search })
-  storeName.storeName = "on Search"
+  storeName.searchText = 'search text !!!!'
   console.log('storeName.storeName : ', storeName.storeName)
 }
 
 function resetSearch() {
-  useStore.getList()
+  console.log('resetSearch storeName.storeName : ', storeName.storeName)
+  storeName.selectList(storeName.loading)
+  console.log('storeName.searchText : ', storeName.searchText)
+
+  
 }
 </script>
