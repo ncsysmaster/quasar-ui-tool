@@ -30,7 +30,7 @@ async function createPiniaStore(uri) {
 
   const ownerPage = getOwnerPage(uri);
   const storePath = await vscode.window.showInputBox({
-    title: "Pinia 파일 생성 (1/4)",
+    title: "Pinia 파일 생성 (1/5)",
     prompt: "Store 하위 경로를 입력하세요. 비워두면 store 루트에 생성됩니다.",
     placeHolder: "예: education/course",
     validateInput: validateRelativePath,
@@ -38,7 +38,7 @@ async function createPiniaStore(uri) {
   if (storePath === undefined) return;
 
   const fileNameInput = await vscode.window.showInputBox({
-    title: "Pinia 파일 생성 (2/4)",
+    title: "Pinia 파일 생성 (2/5)",
     prompt: "확장자를 제외한 Store 파일명을 입력하세요.",
     value: ownerPage || "exampleStore",
     validateInput: validateFileName,
@@ -47,7 +47,7 @@ async function createPiniaStore(uri) {
   const fileName = stripExtension(fileNameInput.trim());
 
   const defineStoreId = await vscode.window.showInputBox({
-    title: "Pinia 파일 생성 (3/4)",
+    title: "Pinia 파일 생성 (3/5)",
     prompt: "defineStore에서 사용할 고유한 Store ID를 입력하세요.",
     value: defaultStoreId(fileName),
     validateInput: validateStoreId,
@@ -55,16 +55,24 @@ async function createPiniaStore(uri) {
   if (defineStoreId === undefined) return;
 
   const constName = await vscode.window.showInputBox({
-    title: "Pinia 파일 생성 (4/4)",
+    title: "Pinia 파일 생성 (4/5)",
     prompt: "컴포넌트에서 import할 export const 이름을 입력하세요.",
     value: defaultConstName(fileName),
     validateInput: validateIdentifier,
   });
   if (constName === undefined) return;
 
+  const importName = await vscode.window.showInputBox({
+    title: "Pinia 파일 생성 (5/5)",
+    prompt: "Vue에서 Store를 참조할 Import 변수명을 입력하세요.",
+    value: "storeName",
+    validateInput: validateIdentifier,
+  });
+  if (importName === undefined) return;
+
   return createPiniaStoreFiles(
     uri,
-    { storePath, fileName, defineStoreId, constName },
+    { storePath, fileName, defineStoreId, constName, importName },
     true,
   );
 }
@@ -81,10 +89,12 @@ async function createPiniaStoreFiles(uri, options, confirmOverwrite) {
   const fileName = stripExtension(String(options.fileName || "").trim());
   const defineStoreId = String(options.defineStoreId || "").trim();
   const constName = String(options.constName || "").trim();
+  const importName = String(options.importName || "").trim();
   const validationError = validateRelativePath(storePath) ||
     validateFileName(fileName) ||
     validateStoreId(defineStoreId) ||
-    validateIdentifier(constName);
+    validateIdentifier(constName) ||
+    validateIdentifier(importName);
 
   if (validationError) {
     vscode.window.showErrorMessage(`Pinia Store 생성 실패: ${validationError}`);
@@ -129,6 +139,7 @@ async function createPiniaStoreFiles(uri, options, confirmOverwrite) {
       targetPath,
       ownerPage,
       importPath,
+      importName,
     });
     const piniaSource = generator.generatePiniaSource(definition);
 
@@ -145,6 +156,10 @@ async function createPiniaStoreFiles(uri, options, confirmOverwrite) {
 
     if (ownerPage) {
       await linkStoreToPage(uri, definition);
+      await vscode.workspace.fs.writeFile(
+        sourceUri,
+        new TextEncoder().encode(`${JSON.stringify(definition, null, 2)}\n`),
+      );
     }
     vscode.window.showInformationMessage(
       `Pinia Store 생성 완료: ${sourcePath} -> ${targetPath}`,
@@ -176,6 +191,10 @@ async function savePiniaStoreDefinition(fsPath, definition, pageUri) {
   );
   if (pageUri && definition.store?.ownerPage) {
     await linkStoreToPage(pageUri, definition);
+    await vscode.workspace.fs.writeFile(
+      sourceUri,
+      new TextEncoder().encode(`${JSON.stringify(definition, null, 2)}\n`),
+    );
   }
 }
 
@@ -192,7 +211,8 @@ async function linkStoreToPage(pageUri, definition) {
     ...imports.map((item) => item.variableName),
     ...legacyStores.map((item) => item.variableName),
   ].filter(Boolean));
-  let variableName = existingIndex >= 0 ? imports[existingIndex].variableName : "storeName";
+  let variableName = definition.store.importName ||
+    (existingIndex >= 0 ? imports[existingIndex].variableName : "storeName");
   if (!variableName || (existingIndex < 0 && usedNames.has(variableName))) {
     const baseName = `store${toPascalCase(definition.store.defineStoreId || definition.store.fileName)}`;
     variableName = baseName || "storeName";
@@ -202,6 +222,7 @@ async function linkStoreToPage(pageUri, definition) {
       suffix += 1;
     }
   }
+  definition.store.importName = variableName;
   const existingImport = existingIndex >= 0 ? imports[existingIndex] : null;
   const storeImport = {
     type: "store",

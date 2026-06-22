@@ -102,7 +102,7 @@ Custom Editor의 HTML, CSS, 클라이언트 JavaScript를 생성한다.
 
 ### `storeView.js`
 
-Store 탭 전용 HTML, Webview 동작, CSS를 관리한다. 페이지 JSON의 `imports` 순서대로 Store 탭을 구성하고 `variableName`을 탭 이름으로 사용한다. State 트리/표, Getter와 Action 편집, 신규 Store 팝업을 수정할 때 이 파일을 우선 확인한다.
+Store 탭 전용 HTML, Webview 동작, CSS를 관리한다. 페이지 JSON의 `imports` 순서대로 Store 탭을 구성하고 `variableName`을 탭 이름으로 사용한다. 신규 Store의 `Import 명`은 Store JSON의 `store.importName`, 페이지 JSON의 `imports[].variableName`, Vue의 `const <Import명>`에 동일하게 적용된다. State 트리/표, Getter와 Action 편집, 신규 Store 팝업을 수정할 때 이 파일을 우선 확인한다.
 
 ### `gridView.js`
 

@@ -11,14 +11,22 @@
     "sourcePath": ".src/store/index/IndexUtil.json",
     "targetPath": "src/store/index/IndexUtil.js",
     "ownerPage": "IndexPage",
-    "importPath": "src/store/index/IndexUtil"
+    "importPath": "src/store/index/IndexUtil",
+    "importName": "storeName"
   },
   "state": {
     "rows": [],
     "selectedRow": null,
     "loading": false,
-    "error": null
+    "error": null,
+    "state1": null,
+    "state2": null
   },
   "getters": [],
-  "actions": []
+  "actions": [],
+  "designer": {
+    "stateNotes": {
+      "state1": ""
+    }
+  }
 }

@@ -5,7 +5,9 @@ export const useIndexUtilStore = defineStore('indexUtil', {
     rows: [],
     selectedRow: null,
     loading: false,
-    error: null
+    error: null,
+    state1: null,
+    state2: null
   }),
   getters: {},
   actions: {}

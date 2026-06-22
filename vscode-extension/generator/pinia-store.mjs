@@ -30,6 +30,9 @@ export function createPiniaDefinition(options) {
   if (options.importPath) {
     definition.store.importPath = options.importPath
   }
+  if (options.importName) {
+    definition.store.importName = options.importName
+  }
 
   assertPiniaDefinition(definition)
   return definition
@@ -72,6 +75,11 @@ export function assertPiniaDefinition(definition) {
 
   if (!IDENTIFIER_PATTERN.test(String(definition.store.constName || ''))) {
     throw new Error('store.constName must be a valid JavaScript identifier')
+  }
+
+  if (definition.store.importName !== undefined &&
+      !IDENTIFIER_PATTERN.test(String(definition.store.importName || ''))) {
+    throw new Error('store.importName must be a valid JavaScript identifier')
   }
 
   if (definition.state !== undefined && (!definition.state || typeof definition.state !== 'object' || Array.isArray(definition.state))) {
