@@ -345,5 +345,16 @@
         }
       ]
     }
+  ],
+  "imports": [
+    {
+      "type": "store",
+      "name": "useIndexUtilStore",
+      "from": "src/store/index/IndexUtil",
+      "variableName": "storeName",
+      "value": "useIndexUtilStore",
+      "defineStoreId": "indexUtil",
+      "sourcePath": ".src/store/index/IndexUtil.json"
+    }
   ]
 }

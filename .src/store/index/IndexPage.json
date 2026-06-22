@@ -14,13 +14,37 @@
   "state": {
     "rows": [],
     "selectedRow": null,
-    "tableData2": [],
+    "tableData": null,
     "loading": false,
-    "error": null
+    "error": null,
+    "entity": null
   },
   "getters": [],
-  "actions": [],
+  "actions": [
+    {
+      "name": "getDetail",
+      "params": [],
+      "async": true,
+      "body": "const d = 1\n\nconsole.log",
+      "description": ""
+    },
+    {
+      "name": "getList",
+      "params": [],
+      "async": true,
+      "body": "",
+      "description": ""
+    }
+  ],
   "script": {
     "src": "IndexPage.js"
+  },
+  "designer": {
+    "stateNotes": {
+      "tableData": "",
+      "selectedRow": "",
+      "state1": "",
+      "entity": ""
+    }
   }
 }

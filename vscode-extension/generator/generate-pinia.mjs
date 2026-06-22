@@ -1,5 +1,5 @@
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
-import { dirname, extname, join, relative, resolve } from 'node:path'
+import { dirname, extname, join, relative, resolve, sep } from 'node:path'
 import { generatePiniaSource } from './pinia-store.mjs'
 
 const workspaceRoot = process.cwd()
@@ -24,12 +24,23 @@ async function main() {
     assertInsideSourceRoot(inputPath)
     const definition = await readDefinition(inputPath)
     const relativePath = relative(sourceRoot, inputPath)
-    const outputPath = resolve(targetRoot, relativePath).replace(/\.json$/i, '.js')
+    const outputPath = definition.store?.targetPath
+      ? resolve(workspaceRoot, definition.store.targetPath)
+      : resolve(targetRoot, relativePath).replace(/\.json$/i, '.js')
+    assertInsideStoreTarget(outputPath)
     const source = generatePiniaSource(definition)
 
     await mkdir(dirname(outputPath), { recursive: true })
     await writeFile(outputPath, source, 'utf8')
     console.log(`[generate-pinia] ${relative(workspaceRoot, inputPath)} -> ${relative(workspaceRoot, outputPath)}`)
+  }
+}
+
+function assertInsideStoreTarget(outputPath) {
+  const pathFromRoot = relative(targetRoot, outputPath)
+  const isAllowed = pathFromRoot !== '..' && !pathFromRoot.startsWith(`..${sep}`)
+  if (!isAllowed || extname(outputPath).toLowerCase() !== '.js') {
+    throw new Error('store.targetPath must mirror .src/store inside src/store and use .js')
   }
 }
 
@@ -67,4 +78,3 @@ function assertInsideSourceRoot(inputPath) {
     throw new Error(`${relative(workspaceRoot, inputPath)} must be inside .src/store`)
   }
 }
-

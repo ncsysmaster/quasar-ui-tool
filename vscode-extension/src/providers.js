@@ -4,7 +4,9 @@ const { getEventsHtml } = require("./eventsView");
 const { getPaletteHtml } = require("./paletteView");
 const { getPageTreeHtml } = require("./pageTreeView");
 const { getPropertiesHtml } = require("./propertiesView");
-const { findProjectFolder, toProjectRelativePath } = require("./projectRoot");
+const { findProjectFolder } = require("./projectRoot");
+const { savePiniaStoreDefinition } = require("./piniaStoreCommand");
+const { listPiniaStores } = require("./piniaStoreRepository");
 
 const {
   getDatasetHtml,
@@ -106,11 +108,26 @@ class PageEditorProvider {
       }
 
       if (message.type === "createPiniaStore") {
-        await vscode.commands.executeCommand(
+        const result = await vscode.commands.executeCommand(
           "quasarTool.createPiniaStore",
           document.uri,
+          message.options,
         );
         await postPiniaStores();
+        if (result?.sourceUri) {
+          webviewPanel.webview.postMessage({
+            type: "selectPiniaStore",
+            fsPath: result.sourceUri.fsPath,
+          });
+        }
+      }
+
+      if (message.type === "updatePiniaStore" && message.fsPath && message.definition) {
+        try {
+          await savePiniaStoreDefinition(message.fsPath, message.definition, document.uri);
+        } catch (error) {
+          vscode.window.showErrorMessage(`Pinia Store 저장 실패: ${error.message}`);
+        }
       }
 
       if (message.type === "openPiniaStore" && message.fsPath) {
@@ -403,72 +420,6 @@ function postViewState(view, state) {
     selectedCellIds: state.selectedCellIds,
     hasDocument: Boolean(state.document),
   });
-}
-
-async function listPiniaStores(projectFolder, pageDocument) {
-  const uris = await findJsonFiles(
-    vscode.Uri.joinPath(projectFolder.uri, ".src", "store"),
-  );
-  const stores = [];
-
-  for (const uri of uris) {
-    try {
-      const raw = await vscode.workspace.fs.readFile(uri);
-      const definition = JSON.parse(new TextDecoder().decode(raw));
-      stores.push({
-        fsPath: uri.fsPath,
-        relativePath: toProjectRelativePath(projectFolder, uri),
-        fileName: definition.store?.fileName || uri.path.split("/").pop(),
-        defineStoreId: definition.store?.defineStoreId || "",
-        constName: definition.store?.constName || "",
-        ownerPage: definition.store?.ownerPage || "",
-        stateKeys: Object.keys(definition.state || {}),
-      });
-    } catch {
-      stores.push({
-        fsPath: uri.fsPath,
-        relativePath: toProjectRelativePath(projectFolder, uri),
-        fileName: uri.path.split("/").pop(),
-        defineStoreId: "invalid JSON",
-        constName: "",
-        ownerPage: "",
-        stateKeys: [],
-      });
-    }
-  }
-
-  const pageName = pageDocument?.uri?.fsPath
-    ? pageDocument.uri.fsPath.split(/[\\/]/).pop().replace(/\.json$/i, "")
-    : "";
-
-  return stores
-    .filter((store) =>
-      !pageName || store.ownerPage === pageName ||
-      (!store.ownerPage && store.fileName === pageName),
-    )
-    .sort((left, right) =>
-      left.relativePath.localeCompare(right.relativePath),
-    );
-}
-
-async function findJsonFiles(directoryUri) {
-  let entries;
-  try {
-    entries = await vscode.workspace.fs.readDirectory(directoryUri);
-  } catch {
-    return [];
-  }
-
-  const files = [];
-  for (const [name, fileType] of entries) {
-    const entryUri = vscode.Uri.joinPath(directoryUri, name);
-    if (fileType === vscode.FileType.Directory) {
-      files.push(...await findJsonFiles(entryUri));
-    } else if (fileType === vscode.FileType.File && name.toLowerCase().endsWith(".json")) {
-      files.push(entryUri);
-    }
-  }
-  return files;
 }
 
 module.exports = {

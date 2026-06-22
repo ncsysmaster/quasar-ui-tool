@@ -2,6 +2,7 @@ const vscode = require('vscode')
 const { execFile } = require('child_process')
 const { existsSync } = require('fs')
 const { join, relative } = require('path')
+const { findProjectFolder } = require('./projectRoot')
 
 async function replaceDocument(document, text) {
   const edit = new vscode.WorkspaceEdit()
@@ -35,7 +36,8 @@ function getPageScriptPath(filePath) {
 }
 
 function generateVueForDocument(document) {
-  const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+  const projectFolder = findProjectFolder(document.uri)
+  const workspaceRoot = projectFolder?.uri.fsPath
   if (!workspaceRoot) return
 
   const generatorPath = join(__dirname, '..', 'generator', 'generate-vue.mjs')

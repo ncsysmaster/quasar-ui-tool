@@ -51,6 +51,37 @@
     "datasets": {
       "type": "array"
     },
+    "stores": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["variableName", "constName", "defineStoreId", "sourcePath"],
+        "properties": {
+          "variableName": { "type": "string", "pattern": "^[A-Za-z_$][A-Za-z0-9_$]*$" },
+          "constName": { "type": "string", "pattern": "^[A-Za-z_$][A-Za-z0-9_$]*$" },
+          "defineStoreId": { "type": "string" },
+          "sourcePath": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    },
+    "imports": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "from"],
+        "properties": {
+          "type": { "type": "string" },
+          "name": { "type": "string", "pattern": "^[A-Za-z_$][A-Za-z0-9_$]*$" },
+          "from": { "type": "string" },
+          "variableName": { "type": "string", "pattern": "^[A-Za-z_$][A-Za-z0-9_$]*$" },
+          "value": { "type": "string" },
+          "sourcePath": { "type": "string" },
+          "defineStoreId": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    },
     "generation": {
       "type": "object"
     }

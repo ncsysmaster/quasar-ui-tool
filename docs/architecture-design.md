@@ -39,11 +39,15 @@ flowchart LR
 
 ### Webview 표현 계층
 
-- `webviews.js`: Custom Editor 본체, Vue/Quasar 런타임 렌더링, Monaco Script 편집기, DataSet 화면
+- `webviews.js`: Custom Editor 본체, Vue/Quasar 런타임 렌더링, Monaco Script 편집기, 하위 View 조립
+- `storeView.js`: Pinia Store 선택, State/Getters/Actions 편집, 신규 Store 팝업
+- `gridView.js`: Form Grid 배치, 크기 조절, 셀 나누기·병합과 Grid 배지
 - `paletteView.js`: 컴포넌트 추가 및 드래그 시작
 - `propertiesView.js`: 속성 및 Quasar class 선택
 - `eventsView.js`: 이벤트 핸들러 생성 및 Script 이동
 - `pageTreeView.js`: 계층 탐색, 펼침/접힘, 이동, 삭제, 클립보드
+
+페이지와 Pinia Store의 연결은 페이지 JSON의 `imports` 배열이 소유한다. 각 Store import는 모듈명(`name`), 모듈 경로(`from`), 탭/변수명(`variableName`), 초기 참조값(`value`), 편집 Store JSON 경로(`sourcePath`)를 보존한다. Store 탭과 Vue 생성기는 이 동일한 배열을 사용한다.
 
 ## 4. 화면 편집 데이터 흐름
 
@@ -146,4 +150,3 @@ flowchart TB
 3. 드래그앤드롭 및 레이아웃 편집 강화
 4. 공통코드, 팝업, API, Grid 메타모델 추가
 5. 설치형 VS Code Extension 패키징과 배포
-

@@ -4,10 +4,20 @@ export const useIndexPageStore = defineStore('indexPage', {
   state: () => ({
     rows: [],
     selectedRow: null,
-    tableData2: [],
+    tableData: null,
     loading: false,
-    error: null
+    error: null,
+    entity: null
   }),
   getters: {},
-  actions: {}
+  actions: {
+    async getDetail() {
+      const d = 1
+
+      console.log
+    },
+    async getList() {
+
+    }
+  }
 })

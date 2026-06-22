@@ -49,6 +49,11 @@
 </template>
 
 <script setup>
+import { useIndexUtilStore } from 'src/store/index/IndexUtil'
+import { ref } from 'vue'
+
+const storeName = ref('useIndexUtilStore')
+
 const stages = [
   {
     "title": "1단계",
@@ -87,12 +92,6 @@ function onSearch() {
 }
 
 function resetSearch() {
-  Object.assign(search, {
-    class1: null,
-    class2: null,
-    requiredYn: false,
-    useYn: false,
-    name: ''
-  })
+  useStore.getList()
 }
 </script>

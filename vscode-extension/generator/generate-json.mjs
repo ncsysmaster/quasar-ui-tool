@@ -108,6 +108,10 @@ function generateJson(vueSource, inputPath) {
     }
   }
 
+  if (parsedScript.imports.length > 0) {
+    definition.imports = parsedScript.imports
+  }
+
   return { definition, setupScript: parsedScript.setup }
 }
 
@@ -253,9 +257,10 @@ function textNodeToString(node) {
 
 function parseScriptSetup(scriptSetup) {
   const data = {}
+  const imports = []
 
   if (!scriptSetup.trim()) {
-    return { data, setup: '' }
+    return { data, imports, setup: '' }
   }
 
   let ast
@@ -265,10 +270,31 @@ function parseScriptSetup(scriptSetup) {
       sourceType: 'module'
     })
   } catch {
-    return { data, setup: scriptSetup.trim() }
+    return { data, imports, setup: scriptSetup.trim() }
   }
 
   const dataStatementRanges = []
+  const namedImports = []
+  let vueRefImportRange = null
+
+  for (const statement of ast.body) {
+    if (statement.type !== 'ImportDeclaration') continue
+    const source = String(statement.source?.value || '')
+    const names = statement.specifiers
+      .filter((specifier) => specifier.type === 'ImportSpecifier')
+      .map((specifier) => specifier.imported?.name || specifier.local?.name)
+      .filter(Boolean)
+    if (source === 'vue' && names.length === 1 && names[0] === 'ref') {
+      vueRefImportRange = [statement.start, statement.end]
+      continue
+    }
+    names.forEach((name) => namedImports.push({
+      name,
+      from: source,
+      range: [statement.start, statement.end]
+    }))
+  }
+  const availableNamedImports = [...namedImports]
 
   for (const statement of ast.body) {
     if (statement.type !== 'VariableDeclaration' || statement.kind !== 'const') {
@@ -276,10 +302,22 @@ function parseScriptSetup(scriptSetup) {
     }
 
     const parsedDeclarations = []
+    const storeDeclarations = []
 
     for (const declaration of statement.declarations) {
       if (declaration.id?.type !== 'Identifier' || !declaration.init) {
         break
+      }
+
+      if (declaration.init.type === 'CallExpression' &&
+          declaration.init.callee?.type === 'Identifier' &&
+          declaration.init.callee.name === 'ref' &&
+          declaration.init.arguments?.[0]?.type === 'Literal') {
+        storeDeclarations.push({
+          variableName: declaration.id.name,
+          value: String(declaration.init.arguments[0].value ?? '')
+        })
+        continue
       }
 
       const value = evaluateLiteralNode(declaration.init)
@@ -288,6 +326,24 @@ function parseScriptSetup(scriptSetup) {
       }
 
       parsedDeclarations.push([declaration.id.name, value])
+    }
+
+    if (storeDeclarations.length === statement.declarations.length) {
+      storeDeclarations.forEach((binding, index) => {
+        let importIndex = availableNamedImports.findIndex((item) => item.name === binding.value)
+        if (importIndex < 0) importIndex = 0
+        const imported = availableNamedImports.splice(importIndex, 1)[0]
+        if (!imported) return
+        imports.push({
+          type: 'store',
+          name: imported.name,
+          from: imported.from,
+          ...binding
+        })
+        dataStatementRanges.push(imported.range)
+      })
+      dataStatementRanges.push([statement.start, statement.end])
+      continue
     }
 
     if (parsedDeclarations.length !== statement.declarations.length) {
@@ -300,12 +356,16 @@ function parseScriptSetup(scriptSetup) {
     dataStatementRanges.push([statement.start, statement.end])
   }
 
+  if (imports.length > 0 && vueRefImportRange) {
+    dataStatementRanges.push(vueRefImportRange)
+  }
+
   const setup = removeSourceRanges(scriptSetup, dataStatementRanges).trim()
-  return { data, setup }
+  return { data, imports, setup }
 }
 
 function removeSourceRanges(source, ranges) {
-  return ranges
+  return [...new Map(ranges.map((range) => [`${range[0]}:${range[1]}`, range])).values()]
     .slice()
     .sort((left, right) => right[0] - left[0])
     .reduce((result, [start, end]) => `${result.slice(0, start)}${result.slice(end)}`, source)

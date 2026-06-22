@@ -27,6 +27,9 @@ export function createPiniaDefinition(options) {
   if (options.ownerPage) {
     definition.store.ownerPage = options.ownerPage
   }
+  if (options.importPath) {
+    definition.store.importPath = options.importPath
+  }
 
   assertPiniaDefinition(definition)
   return definition
@@ -156,7 +159,7 @@ function indentBody(body, spaces) {
   const indent = ' '.repeat(spaces)
   return String(body)
     .split(/\r?\n/)
-    .map((line) => `${indent}${line}`)
+    .map((line) => line ? `${indent}${line}` : '')
     .join('\n')
 }
 

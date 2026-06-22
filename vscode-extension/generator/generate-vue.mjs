@@ -92,7 +92,8 @@ function generateVue(definition, inputPath, setupScript) {
   assertPageDefinition(definition, inputPath)
 
   const components = definition.components || []
-  if (components.length === 0) {
+  const storeImports = resolveStoreImports(definition)
+  if (components.length === 0 && storeImports.length === 0) {
     return '<template></template>\n'
   }
 
@@ -100,10 +101,14 @@ function generateVue(definition, inputPath, setupScript) {
   const scriptSetup = renderScriptSetup(
     definition.data || {},
     definition.generation?.scriptSetup,
-    setupScript
+    setupScript,
+    storeImports
   )
 
-  return `<template>\n${template}\n</template>\n\n${scriptSetup}`
+  const templateSource = components.length === 0
+    ? '<template></template>'
+    : `<template>\n${template}\n</template>`
+  return `${templateSource}\n\n${scriptSetup}`
 }
 
 function assertPageDefinition(definition, inputPath) {
@@ -233,7 +238,7 @@ function renderProp(name, value) {
   return `${propName}="${escapeAttribute(String(value))}"`
 }
 
-function renderScriptSetup(data, scriptSetup = {}, customSetup = '') {
+function renderScriptSetup(data, scriptSetup = {}, customSetup = '', storeImports = []) {
   const exportedNames = Array.isArray(scriptSetup.dataExports)
     ? scriptSetup.dataExports
     : Object.keys(data)
@@ -242,14 +247,44 @@ function renderScriptSetup(data, scriptSetup = {}, customSetup = '') {
     .filter((name) => Object.prototype.hasOwnProperty.call(data, name))
     .map((name) => `const ${name} = ${JSON.stringify(data[name], null, 2)}`)
 
+  const storeStatements = storeImports
+    .filter((item) => item?.variableName && item?.name)
+    .map((item) => `const ${item.variableName} = ref('${escapeJavaScriptString(item.value || item.name)}')`)
   const setupCode = typeof customSetup === 'string' ? customSetup.trim() : ''
-  const blocks = setupCode ? [...statements, setupCode] : statements
+  const blocks = [...storeStatements, ...statements]
+  if (setupCode) blocks.push(setupCode)
 
   if (blocks.length === 0) {
     return '<script setup>\n</script>\n'
   }
 
-  return `<script setup>\n${blocks.join('\n\n')}\n</script>\n`
+  const importLines = storeImports
+    .filter((item) => item?.name && item?.from)
+    .map((item) => `import { ${item.name} } from '${escapeJavaScriptString(item.from)}'`)
+  if (storeStatements.length > 0) importLines.push("import { ref } from 'vue'")
+  const imports = importLines.length > 0 ? `${[...new Set(importLines)].join('\n')}\n\n` : ''
+  return `<script setup>\n${imports}${blocks.join('\n\n')}\n</script>\n`
+}
+
+function resolveStoreImports(definition) {
+  const imports = Array.isArray(definition.imports)
+    ? definition.imports.filter((item) => item?.type === 'store' || item?.variableName)
+    : []
+  if (imports.length > 0) return imports
+
+  return (Array.isArray(definition.stores) ? definition.stores : []).map((store) => ({
+    type: 'store',
+    name: store.constName,
+    from: store.from || store.importPath || '',
+    variableName: store.variableName,
+    value: store.value || store.constName,
+    sourcePath: store.sourcePath,
+    defineStoreId: store.defineStoreId
+  }))
+}
+
+function escapeJavaScriptString(value) {
+  return String(value).replace(/\\/g, '\\\\').replace(/'/g, "\\'")
 }
 
 function resolveOutputPath(definition, inputPath) {

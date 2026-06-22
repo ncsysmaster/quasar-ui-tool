@@ -1,6 +1,6 @@
 const { getGridHtml, getGridScript, getGridStyles } = require("./gridView");
+const { getStoreHtml, getStoreScript, getStoreStyles } = require("./storeView");
 const { NEUTRAL_TO_QUASAR } = require("./componentTypes");
-
 /* 편집창 화면 */
 function getEditorHtml(webview, runtimeUris) {
   const nonce = getNonce();
@@ -28,6 +28,7 @@ function getEditorHtml(webview, runtimeUris) {
       </div>
     </div>
     <main id="content"></main>
+    ${getStoreHtml()}
     <script nonce="${nonce}" src="${runtimeUris.vue}"></script>
     <script nonce="${nonce}" src="${runtimeUris.quasar}"></script>
     <script nonce="${nonce}" src="${runtimeUris.monacoLoader}"></script>
@@ -40,6 +41,10 @@ function getEditorHtml(webview, runtimeUris) {
       let selectedId = ''
       let selectedCellIds = []
       let piniaStores = []
+      let activePiniaStorePath = ''
+      let selectedStoreStatePath = []
+      let selectedStoreMember = null
+      let storeSaveTimer = null
       let activeTab = 'screen'
       let previewApp = null
       let previewState = null
@@ -81,6 +86,19 @@ function getEditorHtml(webview, runtimeUris) {
       window.addEventListener('message', (event) => {
         if (event.data.type === 'piniaStores') {
           piniaStores = Array.isArray(event.data.stores) ? event.data.stores : []
+          if (!piniaStores.some((store) => store.fsPath === activePiniaStorePath)) {
+            activePiniaStorePath = piniaStores[0]?.fsPath || ''
+            selectedStoreStatePath = []
+            selectedStoreMember = null
+          }
+          if (activeTab === 'store') render()
+          return
+        }
+
+        if (event.data.type === 'selectPiniaStore') {
+          activePiniaStorePath = event.data.fsPath || ''
+          selectedStoreStatePath = []
+          selectedStoreMember = null
           if (activeTab === 'store') render()
           return
         }
@@ -131,8 +149,10 @@ function getEditorHtml(webview, runtimeUris) {
       })
 
       document.getElementById('create-pinia-store').addEventListener('click', () => {
-        vscode.postMessage({ type: 'createPiniaStore' })
+        showPiniaStoreDialog()
       })
+
+      setupPiniaStoreDialog()
 
       document.getElementById('toggle-grid-metrics').addEventListener('click', () => {
         showGridMetrics = !showGridMetrics
@@ -844,30 +864,7 @@ function getEditorHtml(webview, runtimeUris) {
         return model.datasets?.[0] || { name: 'defaultDataset', fields: [] }
       }
 
-      function renderPiniaStores(content) {
-        if (piniaStores.length === 0) {
-          content.innerHTML = '<div class="empty">등록된 Pinia Store가 없습니다.</div>'
-          return
-        }
-
-        content.innerHTML = '<div class="store-list">' + piniaStores.map((store) =>
-          '<button class="store-item" type="button" data-store-path="' + escapeAttr(store.fsPath) + '">' +
-            '<span class="store-name">' + escapeHtml(store.constName || store.fileName) + '</span>' +
-            '<span class="store-id">defineStore: ' + escapeHtml(store.defineStoreId || '-') + '</span>' +
-            '<span class="store-path">' + escapeHtml(store.relativePath) + '</span>' +
-            '<span class="store-state">state: ' + escapeHtml((store.stateKeys || []).join(', ') || '-') + '</span>' +
-          '</button>'
-        ).join('') + '</div>'
-
-        content.querySelectorAll('[data-store-path]').forEach((button) => {
-          button.addEventListener('click', () => {
-            vscode.postMessage({
-              type: 'openPiniaStore',
-              fsPath: button.dataset.storePath
-            })
-          })
-        })
-      }
+      ${getStoreScript()}
 
       function setupPaletteDrop() {
         const frame = document.querySelector('.runtime-preview-frame')
@@ -1019,6 +1016,7 @@ function htmlShell(webview, nonce, title, body) {
     .store-name { font-weight: 600; }
     .store-id, .store-path, .store-state { overflow: hidden; color: var(--vscode-descriptionForeground); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
     .store-state { grid-column: 1 / -1; }
+    ${getStoreStyles()}
     .check { display: flex; gap: 6px; align-items: center; color: var(--vscode-descriptionForeground); }
     .check input { width: auto; min-height: auto; }
     .qt-html-element {outline: 1px dashed #bdbdbd; outline-offset: -1px; }
