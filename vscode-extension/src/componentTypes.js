@@ -9,6 +9,7 @@ const NEUTRAL_TO_QUASAR = Object.freeze({
   Card: "QCard",
   CardSection: "QCardSection",
   Table: "QTable",
+  TableCell: "QTd",
   List: "QList",
   ListItem: "QItem",
   ListItemSection: "QItemSection",
@@ -48,4 +49,3 @@ module.exports = {
   toNeutralType,
   toQuasarType,
 };
-

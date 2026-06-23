@@ -48,6 +48,8 @@ class PageEditorProvider {
         selectedCellIds: editorState.selectedCellIds,
         activeTab: editorState.editorTab,
         scriptNavigation: editorState.scriptNavigation,
+        tableWizardRequest: editorState.tableWizardRequest,
+        tableColumnsRequest: editorState.tableColumnsRequest,
       });
     };
 
@@ -250,6 +252,17 @@ class PageEditorProvider {
           dropMode: message.mode || "inside",
         });
       }
+
+      if (message.type === "createTable") {
+        await editorState.addComponent(message.paletteIndex, message.targetId, {
+          dropMode: message.dropMode || "inside",
+          tableOptions: message.options || {},
+        });
+      }
+
+      if (message.type === "updateTableColumns") {
+        await editorState.updateTableColumns(message.id, message.columns);
+      }
     });
   }
 }
@@ -267,6 +280,10 @@ class PaletteViewProvider {
     };
     view.webview.html = getPaletteHtml(view.webview, htmlShell, getNonce);
     view.webview.onDidReceiveMessage((message) => {
+      if (message.type === "requestTableWizard") {
+        this.state.requestTableWizard({ paletteIndex: message.index });
+        return;
+      }
       if (message.type === "addComponent")
         this.state.addComponent(message.index);
     });
@@ -310,6 +327,10 @@ class PropertiesViewProvider {
       if (message.type === "deleteSelected") {
         console.log("[PropertiesViewProvider] deleteSelected");
         await this.state.removeSelectedComponent();
+      }
+
+      if (message.type === "editTableColumns") {
+        this.state.requestTableColumns(message.id);
       }
     });
   }

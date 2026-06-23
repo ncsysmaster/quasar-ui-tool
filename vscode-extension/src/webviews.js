@@ -4,6 +4,8 @@ const {
   getScreenStoreStateScript,
   getScreenStoreStateStyles,
 } = require("./screenStoreStateView");
+const { getTableHtml, getTableScript, getTableStyles } = require("./tableView");
+const { PALETTE } = require("./constants");
 const { NEUTRAL_TO_QUASAR } = require("./componentTypes");
 /* 편집창 화면 */
 function getEditorHtml(webview, runtimeUris) {
@@ -36,12 +38,14 @@ function getEditorHtml(webview, runtimeUris) {
     </div>
     <main id="content"></main>
     ${getStoreHtml()}
+    ${getTableHtml()}
     <script nonce="${nonce}" src="${runtimeUris.vue}"></script>
     <script nonce="${nonce}" src="${runtimeUris.quasar}"></script>
     <script nonce="${nonce}" src="${runtimeUris.monacoLoader}"></script>
     <script nonce="${nonce}">
       const vscode = acquireVsCodeApi()
       const componentTypeMap = ${JSON.stringify(NEUTRAL_TO_QUASAR)}
+      const tablePaletteIndex = ${PALETTE.findIndex((item) => item.type === "Table")}
       const vueRuntime = window.Vue
       const quasarRuntime = window.Quasar || window.quasar
       let model = null
@@ -64,6 +68,11 @@ function getEditorHtml(webview, runtimeUris) {
       let storeMemberEditorModel = null
       let storeMemberEditorRenderToken = 0
       let storeDeleteConfirmationResolve = null
+      let pendingTableWizard = null
+      let lastTableWizardRequest = 0
+      let tableColumnsComponentId = ''
+      let tableColumnsDraft = []
+      let lastTableColumnsRequest = 0
       let pendingScriptMethod = ''
       let lastScriptNavigationRequest = 0
       let showGridMetrics = vscode.getState()?.showGridMetrics !== false
@@ -154,6 +163,24 @@ function getEditorHtml(webview, runtimeUris) {
           updateScreenTools()
         }
 
+        const tableWizardRequest = event.data.tableWizardRequest
+        if (
+          tableWizardRequest?.requestId &&
+          tableWizardRequest.requestId !== lastTableWizardRequest
+        ) {
+          lastTableWizardRequest = tableWizardRequest.requestId
+          render()
+          showTableWizard(tableWizardRequest)
+          return
+        }
+        const tableColumnsRequest = event.data.tableColumnsRequest
+        if (tableColumnsRequest?.requestId && tableColumnsRequest.requestId !== lastTableColumnsRequest) {
+          lastTableColumnsRequest = tableColumnsRequest.requestId
+          render()
+          showTableColumnsDialog(tableColumnsRequest.componentId)
+          return
+        }
+
         if (activeTab === 'script' && scriptEditor) {
           syncScriptEditor(model.script?.setup || '')
           revealPendingScriptMethod()
@@ -187,6 +214,7 @@ function getEditorHtml(webview, runtimeUris) {
 
       setupPiniaStoreDialog()
       setupStoreDeleteDialog()
+      setupTableDialogs()
 
       document.getElementById('toggle-grid-metrics').addEventListener('click', () => {
         showGridMetrics = !showGridMetrics
@@ -578,7 +606,9 @@ function getEditorHtml(webview, runtimeUris) {
         const gridMetric = getFormGridMetric(component)
         const props = buildProps(component, repeatIndex, scope, resizeKind, gridMetric)
 
-        let children = buildChildren(component, scope, isHtml)
+        let children = component.type === 'Table'
+          ? buildTablePreviewSlots(component, scope)
+          : buildChildren(component, scope, isHtml)
         const metricBadge = buildFormGridMetricBadge(gridMetric)
         const resizeHandle = buildFormResizeHandle(component, resizeKind)
 
@@ -598,12 +628,34 @@ function getEditorHtml(webview, runtimeUris) {
         const props = { ...(component.props || {}) }
         const classNames = []
 
+        if (props.class) classNames.push(props.class)
+
+        if (component.type === 'Table') {
+          props.columns = Array.isArray(component.columns) ? component.columns : []
+          if (!Array.isArray(props.rows)) props.rows = []
+          const pagination = component.table?.pagination || {}
+          if (pagination.mode !== 'none') {
+            props.pagination = {
+              page: 1,
+              rowsPerPage: Number(pagination.rowsPerPage) || 10
+            }
+            props.rowsPerPageOptions = Array.isArray(pagination.rowsPerPageOptions)
+              ? pagination.rowsPerPageOptions
+              : [10, 20, 50, 0]
+          } else {
+            props.hidePagination = true
+          }
+        }
+
         if (component.style !== undefined) {
           props.style = component.style
         }
 
         Object.entries(component.dynamicProps || {}).forEach(([name, expression]) => {
-          props[name] = resolveValue(expression, scope)
+          const resolved = resolveValue(expression, scope)
+          props[name] = component.type === 'Table' && name === 'rows' && !Array.isArray(resolved)
+            ? []
+            : resolved
         })
 
         Object.entries(component.models || {}).forEach(([name, expression]) => {
@@ -704,6 +756,14 @@ function getEditorHtml(webview, runtimeUris) {
         }
 
         props.onContextmenu = (event) => {
+          if (component.type === 'Table') {
+            event.preventDefault()
+            event.stopPropagation()
+            vscode.postMessage({ type: 'select', id: component.id })
+            showTableContextMenu(event.clientX, event.clientY, component.id)
+            return
+          }
+
           const layoutContext = getFormLayoutContext(component.id)
           if (!layoutContext.rowId && !layoutContext.columnId) return
 
@@ -774,6 +834,15 @@ function getEditorHtml(webview, runtimeUris) {
           if (paletteIndex >= 0) {
             clearPaletteDropTarget()
 
+            if (paletteIndex === tablePaletteIndex) {
+              showTableWizard({
+                paletteIndex,
+                targetId: component.id,
+                dropMode: componentCanHaveChildren(component) ? 'inside' : 'after'
+              })
+              return
+            }
+
             vscode.postMessage({
               type: 'dropPaletteComponent',
               index: paletteIndex,
@@ -837,6 +906,99 @@ function getEditorHtml(webview, runtimeUris) {
         return undefined
       }
 
+      function buildTablePreviewSlots(component, scope) {
+        const toolbar = component.table?.toolbar || {}
+        const slots = {}
+        const hasToolbar = toolbar.filter || toolbar.search || toolbar.add || toolbar.save ||
+          toolbar.delete || toolbar.excel || toolbar.refresh || component.table?.title
+
+        if (hasToolbar) {
+          slots.top = () => {
+            const children = []
+            if (component.table?.title) {
+              children.push(vueRuntime.h('div', { class: 'qt-table-title' }, component.table.title))
+            }
+            if (toolbar.filter) {
+              children.push(vueRuntime.h(resolveQuasarComponent('Input'), {
+                dense: true,
+                outlined: true,
+                placeholder: '검색',
+                class: 'qt-table-filter-preview',
+                modelValue: resolveValue(component.table?.filterBinding, scope) || '',
+                'onUpdate:modelValue': (value) => setResolvedValue(component.table?.filterBinding, value, scope)
+              }))
+            }
+            const labels = { search: '검색', add: '신규', save: '저장', delete: '삭제', excel: '엑셀', refresh: '새로고침' }
+            Object.keys(labels).forEach((key) => {
+              if (!toolbar[key]) return
+              children.push(vueRuntime.h(resolveQuasarComponent('Button'), {
+                dense: true,
+                flat: key !== 'add',
+                color: key === 'delete' ? 'negative' : 'primary',
+                label: labels[key],
+                onClick: (event) => event.stopPropagation()
+              }))
+            })
+            return vueRuntime.h('div', { class: 'qt-table-toolbar-preview' }, children)
+          }
+        }
+
+        if (component.table?.errorBinding) {
+          slots['no-data'] = () => {
+            const error = resolveValue(component.table.errorBinding, scope)
+            return vueRuntime.h('div', {
+              class: error ? 'qt-table-error-preview text-negative' : 'qt-table-empty-preview'
+            }, error ? String(error) : (component.props?.noDataLabel || '데이터가 없습니다.'))
+          }
+        }
+
+        ;(component.columns || []).forEach((column) => {
+          const specialTypes = ['checkbox', 'select', 'badge', 'button', 'link', 'image', 'actions']
+          if (!specialTypes.includes(column.type) && !column.editable) return
+          slots['body-cell-' + column.name] = (slotProps) => {
+            const cell = resolveQuasarComponent('TableCell')
+            if (column.type === 'actions') {
+              return vueRuntime.h(cell, { props: slotProps }, [
+                vueRuntime.h(resolveQuasarComponent('Button'), { dense: true, flat: true, label: '편집' }),
+                vueRuntime.h(resolveQuasarComponent('Button'), { dense: true, flat: true, color: 'negative', label: '삭제' })
+              ])
+            }
+            let control
+            if (column.type === 'checkbox') {
+              control = vueRuntime.h(quasarRuntime.QCheckbox || 'q-checkbox', {
+                modelValue: slotProps.row?.[column.field],
+                'onUpdate:modelValue': (value) => { slotProps.row[column.field] = value }
+              })
+            } else if (column.type === 'select') {
+              control = vueRuntime.h(resolveQuasarComponent('Select'), {
+                dense: true,
+                borderless: true,
+                options: [],
+                modelValue: slotProps.row?.[column.field],
+                'onUpdate:modelValue': (value) => { slotProps.row[column.field] = value }
+              })
+            } else if (column.type === 'badge') {
+              control = vueRuntime.h(quasarRuntime.QBadge || 'q-badge', { label: slotProps.row?.[column.field], color: 'primary' })
+            } else if (column.type === 'button') {
+              control = vueRuntime.h(resolveQuasarComponent('Button'), { dense: true, flat: true, label: slotProps.row?.[column.field] || column.label })
+            } else if (column.type === 'link') {
+              control = vueRuntime.h('a', { href: slotProps.row?.[column.field], target: '_blank' }, slotProps.row?.[column.field])
+            } else if (column.type === 'image') {
+              control = vueRuntime.h('img', { src: slotProps.row?.[column.field], alt: '', style: 'max-width: 80px; max-height: 48px' })
+            } else {
+              control = vueRuntime.h(resolveQuasarComponent('Input'), {
+                dense: true,
+                borderless: true,
+                modelValue: slotProps.row?.[column.field],
+                'onUpdate:modelValue': (value) => { slotProps.row[column.field] = value }
+              })
+            }
+            return vueRuntime.h(cell, { props: slotProps }, [control])
+          }
+        })
+        return slots
+      }
+
       function resolveQuasarComponent(type) {
         const runtimeType = componentTypeMap[type] || type
         return quasarRuntime[runtimeType] || runtimeType
@@ -856,7 +1018,13 @@ function getEditorHtml(webview, runtimeUris) {
 
         const data = previewState?.model?.data || model?.data || {}
         const roots = { ...data, ...scope }
-        let target = roots[keys.shift()]
+        const rootKey = keys.shift()
+        if (keys.length === 0) {
+          if (Object.prototype.hasOwnProperty.call(data, rootKey)) data[rootKey] = nextValue
+          else if (scope && Object.prototype.hasOwnProperty.call(scope, rootKey)) scope[rootKey] = nextValue
+          return
+        }
+        let target = roots[rootKey]
 
         while (keys.length > 1 && target) {
           target = target[keys.shift()]
@@ -929,6 +1097,7 @@ function getEditorHtml(webview, runtimeUris) {
 
       ${getScreenStoreStateScript()}
       ${getStoreScript()}
+      ${getTableScript()}
 
       function setupPaletteDrop() {
         const frame = document.querySelector('.runtime-preview-frame')
@@ -957,6 +1126,10 @@ function getEditorHtml(webview, runtimeUris) {
           clearPaletteDropTarget()
 
           if (paletteIndex < 0) return
+          if (paletteIndex === tablePaletteIndex) {
+            showTableWizard({ paletteIndex, targetId: '', dropMode: 'inside' })
+            return
+          }
           vscode.postMessage({
             type: 'dropPaletteComponent',
             index: paletteIndex,
@@ -1082,6 +1255,7 @@ function htmlShell(webview, nonce, title, body) {
     .store-state { grid-column: 1 / -1; }
     ${getStoreStyles()}
     ${getScreenStoreStateStyles()}
+    ${getTableStyles()}
     .check { display: flex; gap: 6px; align-items: center; color: var(--vscode-descriptionForeground); }
     .check input { width: auto; min-height: auto; }
     .qt-html-element {outline: 1px dashed #bdbdbd; outline-offset: -1px; }

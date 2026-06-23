@@ -44,7 +44,17 @@
       "useYn": false,
       "name": ""
     },
-    "classOptions": []
+    "classOptions": [],
+    "tableyiqqkFilter": "",
+    "tableyiqqkPagination": {
+      "page": 1,
+      "rowsPerPage": 10
+    },
+    "Table001Selected": [],
+    "Table001Pagination": {
+      "page": 1,
+      "rowsPerPage": 10
+    }
   },
   "components": [
     {
@@ -335,6 +345,128 @@
           "designer": {
             "template": "courseSearchForm"
           }
+        },
+        {
+          "id": "cardyi9yj",
+          "type": "Card",
+          "props": {
+            "flat": true,
+            "bordered": true
+          },
+          "label": "Card",
+          "children": [
+            {
+              "id": "cardsectionyicnl",
+              "type": "CardSection",
+              "props": {},
+              "label": "Card Section",
+              "children": [
+                {
+                  "id": "Table001",
+                  "type": "Table",
+                  "label": "조회목록",
+                  "props": {
+                    "flat": true,
+                    "bordered": true,
+                    "dense": true,
+                    "rows": [],
+                    "rowKey": "rowSn",
+                    "separator": "vertical",
+                    "noDataLabel": "데이터가 없습니다.",
+                    "loadingLabel": "데이터를 불러오는 중입니다.",
+                    "class": "",
+                    "selection": "single"
+                  },
+                  "models": {
+                    "pagination": "Table001Pagination",
+                    "selected": "Table001Selected"
+                  },
+                  "columns": [
+                    {
+                      "name": "name",
+                      "label": "명칭",
+                      "field": "name",
+                      "type": "text",
+                      "align": "left",
+                      "sortable": true,
+                      "required": false,
+                      "editable": false
+                    },
+                    {
+                      "name": "dtlDt",
+                      "label": "상세일자",
+                      "field": "dtlDt",
+                      "type": "date",
+                      "align": "center",
+                      "sortable": true,
+                      "required": false,
+                      "editable": false
+                    },
+                    {
+                      "name": "actions",
+                      "label": "작업",
+                      "field": "actions",
+                      "type": "actions",
+                      "align": "center",
+                      "sortable": false,
+                      "required": false,
+                      "editable": false
+                    },
+                    {
+                      "name": "key",
+                      "label": "참조사항",
+                      "field": "column4",
+                      "type": "text",
+                      "align": "left",
+                      "sortable": false,
+                      "required": false,
+                      "editable": false
+                    }
+                  ],
+                  "table": {
+                    "title": "조회목록",
+                    "rowKey": "rowSn",
+                    "selection": "single",
+                    "rowsBinding": "",
+                    "loadingBinding": "",
+                    "toolbar": {
+                      "filter": false,
+                      "search": false,
+                      "add": true,
+                      "save": true,
+                      "delete": true,
+                      "excel": false,
+                      "refresh": true
+                    },
+                    "handlers": {
+                      "add": "onTableAdd_Table001",
+                      "save": "onTableSave_Table001",
+                      "delete": "onTableDelete_Table001",
+                      "refresh": "onTableRefresh_Table001"
+                    },
+                    "pagination": {
+                      "mode": "client",
+                      "rowsPerPage": 10,
+                      "rowsPerPageOptions": [
+                        10,
+                        20,
+                        50,
+                        0
+                      ]
+                    },
+                    "states": {
+                      "noData": true,
+                      "loading": true,
+                      "error": true
+                    }
+                  },
+                  "events": {
+                    "row-click": "onRowClick_Table001"
+                  }
+                }
+              ]
+            }
+          ]
         }
       ]
     }

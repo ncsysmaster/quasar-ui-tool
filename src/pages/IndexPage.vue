@@ -45,6 +45,27 @@
         </div>
       </q-card-section>
     </q-card>
+    <q-card label="Card" flat bordered>
+      <q-card-section label="Card Section">
+        <q-table label="조회목록" v-model:pagination="Table001Pagination" v-model:selected="Table001Selected" :columns="Table001_columns" :rows-per-page-options="[10,20,50,0]" flat bordered dense :rows='[]' row-key="rowSn" separator="vertical" no-data-label="데이터가 없습니다." loading-label="데이터를 불러오는 중입니다." class="" selection="single" @row-click="onRowClick_Table001">
+          <template #top>
+            <div class="row items-center q-gutter-sm full-width">
+              <div class="text-subtitle1">조회목록</div>
+              <q-btn dense flat color="primary" label="신규" @click="onTableAdd_Table001" />
+              <q-btn dense flat color="primary" label="저장" @click="onTableSave_Table001" />
+              <q-btn dense flat color="primary" label="삭제" @click="onTableDelete_Table001" />
+              <q-btn dense flat color="primary" label="새로고침" @click="onTableRefresh_Table001" />
+            </div>
+          </template>
+          <template #body-cell-actions="props">
+            <q-td :props="props">
+              <q-btn dense flat label="편집" />
+              <q-btn dense flat color="negative" label="삭제" />
+            </q-td>
+          </template>
+        </q-table>
+      </q-card-section>
+    </q-card>
   </q-page>
 </template>
 
@@ -89,6 +110,8 @@ const search = {
 
 const classOptions = []
 
+const Table001_columns = [{"name":"name","label":"명칭","field":"name","type":"text","align":"left","sortable":true,"required":false,"editable":false},{"name":"dtlDt","label":"상세일자","field":"dtlDt","type":"date","align":"center","sortable":true,"required":false,"editable":false},{"name":"actions","label":"작업","field":"actions","type":"actions","align":"center","sortable":false,"required":false,"editable":false},{"name":"key","label":"참조사항","field":"column4","type":"text","align":"left","sortable":false,"required":false,"editable":false}]
+
 function onSearch() {
   console.log('onSearch', { ...search })
   storeName.searchText = 'search text !!!!'
@@ -101,5 +124,30 @@ function resetSearch() {
   console.log('storeName.searchText : ', storeName.searchText)
 
   
+}
+
+
+function onRowClick_Table001(event, row) {
+  console.log('row-click', row)
+}
+
+
+function onTableAdd_Table001() {
+  console.log('table-add')
+}
+
+
+function onTableSave_Table001() {
+  console.log('table-save')
+}
+
+
+function onTableDelete_Table001() {
+  console.log('table-delete')
+}
+
+
+function onTableRefresh_Table001() {
+  console.log('table-refresh')
 }
 </script>

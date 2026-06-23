@@ -20,6 +20,14 @@ function getPropertiesHtml(webview, htmlShell, getNonce) {
       .class-option input { width: auto; min-height: auto; accent-color: var(--vscode-checkbox-background, #007acc); }
       .class-selector-actions .class-popup-clear { margin-right: auto; color: var(--vscode-descriptionForeground); background: var(--vscode-editorWidget-background); border: 1px solid var(--vscode-panel-border); }
       .class-popup-clear:hover { background: var(--vscode-list-hoverBackground); border-color: var(--vscode-focusBorder); }
+      .table-prop-section { margin: 0 0 8px; padding: 0 0 8px; border-bottom: 1px solid var(--vscode-panel-border); }
+      .table-prop-section h3 { min-height: 28px; margin: 0 0 5px; padding: 3px 5px 3px 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; border-left: 3px solid var(--vscode-focusBorder); font-size: 12px; background: var(--vscode-sideBarSectionHeader-background); }
+      .table-prop-section-action { width: 26px; min-width: 26px; min-height: 22px; padding: 0; border: 1px solid transparent; color: var(--vscode-icon-foreground); background: transparent; font-weight: 700; }
+      .table-prop-section-action:hover { border-color: var(--vscode-focusBorder); background: var(--vscode-toolbar-hoverBackground); }
+      .table-prop-check input[type="checkbox"] { width: auto; justify-self: start; }
+      .table-prop-columns { max-height: 150px; margin-bottom: 6px; overflow: auto; border: 1px solid var(--vscode-panel-border); }
+      .table-prop-columns > div { display: flex; justify-content: space-between; gap: 8px; padding: 5px 7px; border-bottom: 1px solid var(--vscode-panel-border); }
+      .table-prop-columns small { color: var(--vscode-descriptionForeground); }
     </style>
 
     <script nonce="${nonce}">
@@ -79,7 +87,9 @@ function getPropertiesHtml(webview, htmlShell, getNonce) {
         const props = component.props || {}
         const componentStyle = component.style || props.style || ''
 
-        content.innerHTML =
+        content.innerHTML = component.type === 'Table'
+          ? renderTableProperties(component)
+          :
           field('ID', 'id', component.id || '') +
           field('Type', 'type', component.type || '') +
           field('Tag', 'tag', component.tag || '') +
@@ -95,8 +105,7 @@ function getPropertiesHtml(webview, htmlShell, getNonce) {
           field('Height', 'style.height', getStyleDeclaration(componentStyle, 'height')) +
           field('Color', 'prop.color', props.color || '') +
           field('Label Prop', 'prop.label', props.label || '') +
-          field('Placeholder', 'prop.placeholder', props.placeholder || '') +
-          '<button class="danger" data-delete>Delete</button>'
+          field('Placeholder', 'prop.placeholder', props.placeholder || '')
 
           attachSplitter()
 
@@ -105,9 +114,13 @@ function getPropertiesHtml(webview, htmlShell, getNonce) {
             vscode.postMessage({
               type: 'updateProperty',
               name: input.dataset.name,
-              value: input.value
+              value: input.type === 'checkbox' ? input.checked : input.value
             })
           })
+        })
+
+        content.querySelector('[data-edit-table-columns]')?.addEventListener('click', () => {
+          vscode.postMessage({ type: 'editTableColumns', id: component.id })
         })
 
         content.querySelectorAll('[data-open]').forEach((button) => {
@@ -117,9 +130,71 @@ function getPropertiesHtml(webview, htmlShell, getNonce) {
             }
         })     
 
-        content.querySelector('[data-delete]')?.addEventListener('click', () => {
-          vscode.postMessage({ type: 'deleteSelected' })
-        })
+      }
+
+      function renderTableProperties(component) {
+        const props = component.props || {}
+        const table = component.table || {}
+        const toolbar = table.toolbar || {}
+        const pagination = table.pagination || {}
+        const dynamicProps = component.dynamicProps || {}
+        const models = component.models || {}
+        const columns = component.columns || []
+        const componentStyle = component.style || props.style || ''
+        return propertySection('Basic',
+          field('id', 'id', component.id || '') +
+          field('title', 'table.title', table.title || component.label || '') +
+          field('row-key', 'table.rowKey', table.rowKey || props.rowKey || 'id') +
+          fieldWithButton('Class', 'class', component.class || props.class || '', '...') +
+          field('Style', 'style', componentStyle) +
+          checkField('dense', 'prop.dense', props.dense) +
+          checkField('flat', 'prop.flat', props.flat) +
+          checkField('bordered', 'prop.bordered', props.bordered) +
+          selectField('separator', 'prop.separator', props.separator || 'horizontal', ['horizontal', 'vertical', 'cell', 'none'])
+        ) + propertySection('Data',
+          field('rows binding', 'dynamic.rows', dynamicProps.rows || '') +
+          field('columns binding', 'dynamic.columns', dynamicProps.columns || '') +
+          field('loading binding', 'dynamic.loading', dynamicProps.loading || '') +
+          field('error binding', 'table.errorBinding', table.errorBinding || '') +
+          field('selected binding', 'model.selected', models.selected || '')
+        ) + propertySectionWithAction('Columns',
+          '<div class="table-prop-columns">' + columns.map((column, index) =>
+            '<div><span>' + (index + 1) + '. ' + localEscapeHtml(column.label || column.name) + '</span><small>' + localEscapeHtml(column.type || 'text') + '</small></div>'
+          ).join('') + '</div>',
+          '<button type="button" class="table-prop-section-action" data-edit-table-columns title="컬럼 편집" aria-label="컬럼 편집">...</button>'
+        ) + propertySection('Selection',
+          selectField('selection', 'table.selection', table.selection || 'none', ['none', 'single', 'multiple']) +
+          field('row-click event', 'event.row-click', component.events?.['row-click'] || '') +
+          field('selectedRow binding', 'model.selected', models.selected || '')
+        ) + propertySection('Toolbar',
+          checkField('filter', 'table.toolbar.filter', toolbar.filter) +
+          checkField('search button', 'table.toolbar.search', toolbar.search) +
+          checkField('add button', 'table.toolbar.add', toolbar.add) +
+          checkField('save button', 'table.toolbar.save', toolbar.save) +
+          checkField('delete button', 'table.toolbar.delete', toolbar.delete) +
+          checkField('excel button', 'table.toolbar.excel', toolbar.excel) +
+          checkField('refresh button', 'table.toolbar.refresh', toolbar.refresh)
+        ) + propertySection('Pagination',
+          selectField('mode', 'table.pagination.mode', pagination.mode || 'client', ['client', 'server', 'none']) +
+          field('rowsPerPage', 'table.pagination.rowsPerPage', pagination.rowsPerPage ?? 10) +
+          field('rowsPerPageOptions', 'table.pagination.rowsPerPageOptions', (pagination.rowsPerPageOptions || [10, 20, 50, 0]).join(','))
+        )
+      }
+
+      function propertySection(title, body) {
+        return '<section class="table-prop-section"><h3>' + localEscapeHtml(title) + '</h3>' + body + '</section>'
+      }
+
+      function propertySectionWithAction(title, body, action) {
+        return '<section class="table-prop-section"><h3><span>' + localEscapeHtml(title) + '</span>' + action + '</h3>' + body + '</section>'
+      }
+
+      function checkField(label, name, checked) {
+        return '<label class="prop-field table-prop-check"><span class="prop-label">' + localEscapeHtml(label) + '</span><span class="prop-splitter"></span><input type="checkbox" data-name="' + localEscapeAttr(name) + '"' + (checked ? ' checked' : '') + '></label>'
+      }
+
+      function selectField(label, name, value, options) {
+        return '<label class="prop-field"><span class="prop-label">' + localEscapeHtml(label) + '</span><span class="prop-splitter"></span><select class="prop-input" data-name="' + localEscapeAttr(name) + '">' + options.map((option) => '<option value="' + localEscapeAttr(option) + '"' + (String(value) === option ? ' selected' : '') + '>' + localEscapeHtml(option) + '</option>').join('') + '</select></label>'
       }
 
     function getStyleDeclaration(style, property) {

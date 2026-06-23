@@ -35,6 +35,10 @@ class PageEditorState {
     this.scriptContent = "";
     this.scriptNavigation = null;
     this.scriptNavigationSequence = 0;
+    this.tableWizardRequest = null;
+    this.tableWizardSequence = 0;
+    this.tableColumnsRequest = null;
+    this.tableColumnsSequence = 0;
     this.componentClipboard = null;
   }
 
@@ -144,6 +148,29 @@ class PageEditorState {
     this.fire();
   }
 
+  requestTableWizard(options = {}) {
+    this.editorTab = "screen";
+    this.tableWizardRequest = {
+      requestId: ++this.tableWizardSequence,
+      paletteIndex: Number(options.paletteIndex),
+      targetId: options.targetId || "",
+      dropMode: options.dropMode || "inside",
+    };
+    this.fire();
+  }
+
+  requestTableColumns(componentId) {
+    const component = findComponent(this.getModel().components, componentId || this.selectedId);
+    if (!component || component.type !== "Table") return;
+    this.editorTab = "screen";
+    this.selectedId = component.id;
+    this.tableColumnsRequest = {
+      requestId: ++this.tableColumnsSequence,
+      componentId: component.id,
+    };
+    this.fire();
+  }
+
   async updateModel(mutator) {
     if (!this.document) {
       vscode.window.showWarningMessage(
@@ -170,7 +197,21 @@ class PageEditorState {
       const component =
         item.template === "courseSearchForm"
           ? createCourseSearchForm(model)
-          : createPaletteComponent(item);
+          : item.type === "Table" && options.tableOptions
+            ? createTableComponent(model, item, options.tableOptions)
+            : createPaletteComponent(item);
+
+      if (component.type === "Table") {
+        const rowClickHandler = component.events?.["row-click"];
+        if (rowClickHandler && !hasFunction(this.scriptContent, rowClickHandler)) {
+          setupCode = createTableRowClickCode(rowClickHandler);
+        }
+        Object.entries(component.table?.handlers || {}).forEach(([action, handler]) => {
+          if (handler && !hasFunction(this.scriptContent + setupCode, handler)) {
+            setupCode += createTableToolbarHandlerCode(handler, action);
+          }
+        });
+      }
 
       if (item.type === "Page" && !options.formGridCellOnly) {
         model.components ||= [];
@@ -321,7 +362,91 @@ class PageEditorState {
       } else if (name.startsWith("prop.")) {
         component.props ||= {};
         component.props[name.slice(5)] = coerceValue(value);
+      } else if (name.startsWith("dynamic.")) {
+        component.dynamicProps ||= {};
+        const key = name.slice(8);
+        if (String(value || "").trim()) component.dynamicProps[key] = String(value).trim();
+        else delete component.dynamicProps[key];
+      } else if (name.startsWith("model.")) {
+        component.models ||= {};
+        const key = name.slice(6);
+        if (String(value || "").trim()) component.models[key] = String(value).trim();
+        else delete component.models[key];
+      } else if (name.startsWith("event.")) {
+        component.events ||= {};
+        const key = name.slice(6);
+        if (String(value || "").trim()) component.events[key] = String(value).trim();
+        else delete component.events[key];
+      } else if (name.startsWith("table.")) {
+        const tablePath = name.slice(6);
+        const nextValue = tablePath === "pagination.rowsPerPageOptions"
+          ? String(value || "").split(",").map((item) => Number(item.trim())).filter(Number.isFinite)
+          : coerceValue(value);
+        setNestedComponentValue(component, tablePath, nextValue);
+        if (tablePath === "title") component.label = String(nextValue || "Table");
+        if (tablePath === "rowKey") {
+          component.props ||= {};
+          component.props.rowKey = String(nextValue || "id");
+        }
+        if (tablePath === "selection") {
+          component.props ||= {};
+          component.models ||= {};
+          if (["single", "multiple"].includes(nextValue)) {
+            component.props.selection = nextValue;
+            const binding = `${component.id}Selected`;
+            component.models.selected = binding;
+            model.data ||= {};
+            model.data[binding] ||= [];
+          } else {
+            delete component.props.selection;
+            delete component.models.selected;
+          }
+        }
+        if (tablePath === "toolbar.filter") {
+          component.dynamicProps ||= {};
+          if (nextValue) {
+            const binding = `${component.id}Filter`;
+            component.table.filterBinding = binding;
+            component.dynamicProps.filter = binding;
+            model.data ||= {};
+            model.data[binding] ||= "";
+          } else {
+            delete component.table.filterBinding;
+            delete component.dynamicProps.filter;
+          }
+        }
+        if (tablePath === "pagination.rowsPerPage") {
+          const paginationBinding = component.models?.pagination;
+          if (paginationBinding) {
+            model.data ||= {};
+            model.data[paginationBinding] ||= { page: 1, rowsPerPage: 10 };
+            model.data[paginationBinding].rowsPerPage = Number(nextValue) || 10;
+          }
+        }
+        if (tablePath === "pagination.mode") {
+          component.models ||= {};
+          const binding = `${component.id}Pagination`;
+          if (nextValue === "none") {
+            delete component.models.pagination;
+          } else {
+            component.models.pagination = binding;
+            model.data ||= {};
+            model.data[binding] ||= {
+              page: 1,
+              rowsPerPage: Number(component.table?.pagination?.rowsPerPage) || 10,
+            };
+          }
+        }
       }
+    });
+  }
+
+  async updateTableColumns(componentId, columns) {
+    await this.updateModel((model) => {
+      const component = findComponent(model.components, componentId);
+      if (!component || component.type !== "Table") return;
+      component.columns = normalizeTableColumns(columns);
+      this.selectedId = componentId;
     });
   }
 
@@ -869,6 +994,135 @@ function createPaletteComponent(item) {
   }
 
   return component;
+}
+
+function createTableComponent(model, item, options = {}) {
+  const nextId = createSequentialIdFactory(model.components);
+  const id = nextId("Table");
+  const selection = ["single", "multiple"].includes(options.selection)
+    ? options.selection
+    : "none";
+  const dynamicProps = {};
+  if (options.rowsBinding) dynamicProps.rows = String(options.rowsBinding).trim();
+  if (options.loadingBinding) dynamicProps.loading = String(options.loadingBinding).trim();
+  const { columns: _paletteColumns, rows: _paletteRows, ...baseProps } = item.props || {};
+  const toolbar = {
+    filter: Boolean(options.filter),
+    search: Boolean(options.toolbar?.search),
+    add: Boolean(options.toolbar?.add),
+    save: Boolean(options.toolbar?.save),
+    delete: Boolean(options.toolbar?.delete),
+    excel: Boolean(options.toolbar?.excel),
+    refresh: Boolean(options.toolbar?.refresh),
+  };
+  const handlers = Object.fromEntries(
+    Object.keys(toolbar)
+      .filter((key) => key !== "filter" && toolbar[key])
+      .map((key) => [key, createEventHandlerName(`table-${key}`, id)]),
+  );
+  if (selection !== "none") {
+    model.data ||= {};
+    model.data[`${id}Selected`] ||= [];
+  }
+  if (toolbar.filter) {
+    model.data ||= {};
+    model.data[`${id}Filter`] ||= "";
+    dynamicProps.filter = `${id}Filter`;
+  }
+  const paginationEnabled = options.pagination !== false;
+  if (paginationEnabled) {
+    model.data ||= {};
+    model.data[`${id}Pagination`] ||= { page: 1, rowsPerPage: 10 };
+  }
+  const models = {};
+  if (selection !== "none") models.selected = `${id}Selected`;
+  if (paginationEnabled) models.pagination = `${id}Pagination`;
+
+  return {
+    id,
+    type: "Table",
+    label: options.title || "Table",
+    props: {
+      ...baseProps,
+      ...(!options.rowsBinding ? { rows: [] } : {}),
+      rowKey: options.rowKey || "id",
+      flat: true,
+      bordered: true,
+      dense: true,
+      separator: "horizontal",
+      noDataLabel: "데이터가 없습니다.",
+      loadingLabel: "데이터를 불러오는 중입니다.",
+      ...(selection !== "none" ? { selection } : {}),
+    },
+    ...(Object.keys(dynamicProps).length ? { dynamicProps } : {}),
+    ...(Object.keys(models).length ? { models } : {}),
+    columns: normalizeTableColumns([
+      { name: "name", label: "명칭", field: "name", type: "text", align: "left", sortable: true },
+      { name: "dtlDt", label: "상세일자", field: "dtlDt", type: "date", align: "center", sortable: true },
+      { name: "actions", label: "작업", field: "actions", type: "actions", align: "center", sortable: false },
+    ]),
+    table: {
+      title: options.title || "Table",
+      rowKey: options.rowKey || "id",
+      selection,
+      rowsBinding: options.rowsBinding || "",
+      loadingBinding: options.loadingBinding || "",
+      toolbar,
+      handlers,
+      ...(toolbar.filter ? { filterBinding: `${id}Filter` } : {}),
+      pagination: {
+        mode: paginationEnabled ? "client" : "none",
+        rowsPerPage: 10,
+        rowsPerPageOptions: [10, 20, 50, 0],
+      },
+      states: { noData: true, loading: true, error: true },
+    },
+    events: { "row-click": createEventHandlerName("row-click", id) },
+  };
+}
+
+function normalizeTableColumns(columns) {
+  const allowedTypes = new Set([
+    "text", "number", "date", "datetime", "checkbox", "select",
+    "badge", "button", "link", "image", "actions",
+  ]);
+  return (Array.isArray(columns) ? columns : []).map((column, index) => {
+    const name = String(column?.name || `column${index + 1}`).trim();
+    const width = String(column?.width || "").trim();
+    return {
+      name,
+      label: String(column?.label || name),
+      field: String(column?.field || name),
+      type: allowedTypes.has(column?.type) ? column.type : "text",
+      align: ["left", "center", "right"].includes(column?.align) ? column.align : "left",
+      ...(width ? { width, style: `width: ${width}`, headerStyle: `width: ${width}` } : {}),
+      sortable: Boolean(column?.sortable),
+      required: Boolean(column?.required),
+      editable: Boolean(column?.editable),
+      ...(column?.format ? { format: String(column.format) } : {}),
+    };
+  });
+}
+
+function createTableRowClickCode(functionName) {
+  return `\n\nfunction ${functionName}(event, row) {\n  console.log('row-click', row)\n}\n`;
+}
+
+function createTableToolbarHandlerCode(functionName, action) {
+  return `\n\nfunction ${functionName}() {\n  console.log('table-${action}')\n}\n`;
+}
+
+function setNestedComponentValue(component, path, value) {
+  const keys = String(path || "").split(".").filter(Boolean);
+  if (!keys.length) return;
+  component.table ||= {};
+  let target = component.table;
+  while (keys.length > 1) {
+    const key = keys.shift();
+    target[key] ||= {};
+    target = target[key];
+  }
+  target[keys[0]] = value;
 }
 
 function createCourseSearchForm(model) {

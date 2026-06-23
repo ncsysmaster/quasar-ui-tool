@@ -21,7 +21,8 @@ export const useIndexUtilStore = defineStore('indexUtil', {
       id: null,
       name: null
     },
-    searchText: null
+    searchText: null,
+    list: []
   }),
   getters: {
     getRows: (state) => {

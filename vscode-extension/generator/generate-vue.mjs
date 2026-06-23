@@ -102,7 +102,9 @@ function generateVue(definition, inputPath, setupScript) {
     definition.data || {},
     definition.generation?.scriptSetup,
     setupScript,
-    storeImports
+    storeImports,
+    collectModelBindings(components),
+    collectTableColumnDefinitions(components)
   )
 
   const templateSource = components.length === 0
@@ -126,6 +128,9 @@ function renderTemplate(components) {
 }
 
 function renderComponent(component, depth) {
+  if (component.type === 'Table') {
+    return renderTableComponent(component, depth)
+  }
   const tagName = getTagName(component)
   const attributes = renderAttributes(component)
   const openTag = attributes.length > 0 ? `<${tagName} ${attributes}>` : `<${tagName}>`
@@ -150,6 +155,64 @@ function renderComponent(component, depth) {
   }
   content.push(...children.map((child) => renderComponent(child, depth + 1)))
   return `${indent}${openTag}\n${content.join('\n')}\n${indent}${closeTag}`
+}
+
+function renderTableComponent(component, depth) {
+  const tagName = getTagName(component)
+  const attributes = renderAttributes(component)
+  const indent = '  '.repeat(depth)
+  const childIndent = '  '.repeat(depth + 1)
+  const toolbar = component.table?.toolbar || {}
+  const content = []
+
+  if (component.table?.title || Object.values(toolbar).some(Boolean)) {
+    const controls = []
+    if (component.table?.title) controls.push(`<div class="text-subtitle1">${escapeTemplateText(component.table.title)}</div>`)
+    if (toolbar.filter) controls.push(`<q-input v-model="${component.table?.filterBinding || 'tableFilter'}" dense outlined placeholder="검색" />`)
+    const buttons = [
+      ['search', '검색', 'onTableSearch'], ['add', '신규', 'onTableAdd'], ['save', '저장', 'onTableSave'],
+      ['delete', '삭제', 'onTableDelete'], ['excel', '엑셀', 'onTableExcel'],
+      ['refresh', '새로고침', 'onTableRefresh']
+    ]
+    buttons.forEach(([key, label, fallbackHandler]) => {
+      const handler = component.table?.handlers?.[key] || fallbackHandler
+      if (toolbar[key]) controls.push(`<q-btn dense flat color="primary" label="${label}" @click="${handler}" />`)
+    })
+    content.push(`${childIndent}<template #top>\n${childIndent}  <div class="row items-center q-gutter-sm full-width">\n${controls.map((line) => `${childIndent}    ${line}`).join('\n')}\n${childIndent}  </div>\n${childIndent}</template>`)
+  }
+
+  ;(component.columns || []).forEach((column) => {
+    if (column.type === 'actions') {
+      content.push(`${childIndent}<template #body-cell-${kebabCase(column.name)}="props">\n${childIndent}  <q-td :props="props">\n${childIndent}    <q-btn dense flat label="편집" />\n${childIndent}    <q-btn dense flat color="negative" label="삭제" />\n${childIndent}  </q-td>\n${childIndent}</template>`)
+    } else if (column.editable || !['text', 'number', 'date', 'datetime'].includes(column.type || 'text')) {
+      content.push(renderTableCellTemplate(column, childIndent))
+    }
+  })
+
+  if (component.table?.errorBinding) {
+    content.push(`${childIndent}<template #no-data>\n${childIndent}  <div v-if="${component.table.errorBinding}" class="text-negative">{{ ${component.table.errorBinding} }}</div>\n${childIndent}  <div v-else>${escapeTemplateText(component.props?.noDataLabel || '데이터가 없습니다.')}</div>\n${childIndent}</template>`)
+  }
+
+  if (content.length === 0) {
+    return `${indent}<${tagName}${attributes ? ` ${attributes}` : ''} />`
+  }
+  return `${indent}<${tagName}${attributes ? ` ${attributes}` : ''}>\n${content.join('\n')}\n${indent}</${tagName}>`
+}
+
+function renderTableCellTemplate(column, indent) {
+  const value = `props.row.${column.field}`
+  let control
+  if (column.type === 'checkbox') control = `<q-checkbox v-model="${value}" dense />`
+  else if (column.type === 'select') control = `<q-select v-model="${value}" :options="${column.optionsBinding || '[]'}" dense borderless />`
+  else if (column.type === 'badge') control = `<q-badge :label="${value}" color="primary" />`
+  else if (column.type === 'button') control = `<q-btn dense flat color="primary" :label="${value}" />`
+  else if (column.type === 'link') control = `<a :href="${value}" target="_blank">{{ ${value} }}</a>`
+  else if (column.type === 'image') control = `<img :src="${value}" alt="" style="max-width: 80px; max-height: 48px" />`
+  else {
+    const inputType = column.type === 'number' ? 'number' : column.type === 'date' ? 'date' : column.type === 'datetime' ? 'datetime-local' : 'text'
+    control = `<q-input v-model="${value}" type="${inputType}" dense borderless />`
+  }
+  return `${indent}<template #body-cell-${kebabCase(column.name)}="props">\n${indent}  <q-td :props="props">\n${indent}    ${control}\n${indent}  </q-td>\n${indent}</template>`
 }
 
 function getTagName(component) {
@@ -200,8 +263,29 @@ function renderAttributes(component) {
     attributes.push(`:${kebabCase(name)}="${escapeAttribute(String(expression))}"`)
   })
 
+  if (component.type === 'Table' && Array.isArray(component.columns) && !component.dynamicProps?.columns) {
+    attributes.push(`:columns="${getTableColumnsVariableName(component)}"`)
+  }
+
+  if (component.type === 'Table') {
+    const pagination = component.table?.pagination || {}
+    if (pagination.mode === 'none') {
+      attributes.push('hide-pagination')
+    } else if (!component.models?.pagination) {
+      const rowsPerPage = Number(pagination.rowsPerPage) || 10
+      const options = Array.isArray(pagination.rowsPerPageOptions) ? pagination.rowsPerPageOptions : [10, 20, 50, 0]
+      attributes.push(`:pagination="{ page: 1, rowsPerPage: ${rowsPerPage} }"`)
+    }
+    if (pagination.mode !== 'none') {
+      const options = Array.isArray(pagination.rowsPerPageOptions) ? pagination.rowsPerPageOptions : [10, 20, 50, 0]
+      attributes.push(`:rows-per-page-options="${escapeAttribute(JSON.stringify(options))}"`)
+    }
+  }
+
   Object.entries(component.props || {}).forEach(([name, value]) => {
     if (name === 'style') return
+    if (component.type === 'Table' && name === 'columns') return
+    if (Object.prototype.hasOwnProperty.call(component.dynamicProps || {}, name)) return
     attributes.push(renderProp(name, value))
   })
 
@@ -210,6 +294,17 @@ function renderAttributes(component) {
   })
 
   return attributes.join(' ')
+}
+
+function renderTableColumnsExpression(columns) {
+  return `[${columns.map((column) => {
+    const value = { ...column }
+    const formatter = value.format
+    delete value.format
+    const literal = JSON.stringify(value)
+    if (!formatter) return literal
+    return `${literal.slice(0, -1)},"format":${formatter}}`
+  }).join(',')}]`
 }
 
 function renderProp(name, value) {
@@ -238,20 +333,32 @@ function renderProp(name, value) {
   return `${propName}="${escapeAttribute(String(value))}"`
 }
 
-function renderScriptSetup(data, scriptSetup = {}, customSetup = '', storeImports = []) {
+function renderScriptSetup(
+  data,
+  scriptSetup = {},
+  customSetup = '',
+  storeImports = [],
+  modelBindings = new Set(),
+  tableColumnDefinitions = []
+) {
   const exportedNames = Array.isArray(scriptSetup.dataExports)
     ? scriptSetup.dataExports
     : Object.keys(data)
 
   const statements = exportedNames
     .filter((name) => Object.prototype.hasOwnProperty.call(data, name))
-    .map((name) => `const ${name} = ${JSON.stringify(data[name], null, 2)}`)
+    .map((name) => modelBindings.has(name)
+      ? `const ${name} = ref(${JSON.stringify(data[name], null, 2)})`
+      : `const ${name} = ${JSON.stringify(data[name], null, 2)}`)
 
   const storeStatements = storeImports
     .filter((item) => item?.variableName && item?.name)
     .map((item) => `const ${item.variableName} = ${item.name}()`)
   const setupCode = typeof customSetup === 'string' ? customSetup.trim() : ''
-  const blocks = [...storeStatements, ...statements]
+  const tableColumnStatements = tableColumnDefinitions.map(
+    ({ name, columns }) => `const ${name} = ${renderTableColumnsExpression(columns)}`
+  )
+  const blocks = [...storeStatements, ...statements, ...tableColumnStatements]
   if (setupCode) blocks.push(setupCode)
 
   if (blocks.length === 0) {
@@ -261,8 +368,47 @@ function renderScriptSetup(data, scriptSetup = {}, customSetup = '', storeImport
   const importLines = storeImports
     .filter((item) => item?.name && item?.from)
     .map((item) => `import { ${item.name} } from '${escapeJavaScriptString(item.from)}'`)
+  if (statements.some((statement) => statement.includes(' = ref(')) && !/import\s*\{[^}]*\bref\b[^}]*\}\s*from\s*['"]vue['"]/.test(setupCode)) {
+    importLines.unshift("import { ref } from 'vue'")
+  }
   const imports = importLines.length > 0 ? `${[...new Set(importLines)].join('\n')}\n\n` : ''
   return `<script setup>\n${imports}${blocks.join('\n\n')}\n</script>\n`
+}
+
+function collectModelBindings(components, result = new Set()) {
+  ;(components || []).forEach((component) => {
+    Object.values(component.models || {}).forEach((expression) => {
+      if (/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(expression || '')) result.add(expression)
+    })
+    const filterBinding = component.table?.filterBinding
+    if (/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(filterBinding || '')) result.add(filterBinding)
+    collectModelBindings(component.children, result)
+  })
+  return result
+}
+
+function collectTableColumnDefinitions(components, result = []) {
+  ;(components || []).forEach((component) => {
+    if (
+      component.type === 'Table' &&
+      Array.isArray(component.columns) &&
+      !component.dynamicProps?.columns
+    ) {
+      result.push({
+        name: getTableColumnsVariableName(component),
+        columns: component.columns
+      })
+    }
+    collectTableColumnDefinitions(component.children, result)
+  })
+  return result
+}
+
+function getTableColumnsVariableName(component) {
+  const tableId = String(component?.id || 'Table')
+    .replace(/[^A-Za-z0-9_$]/g, '_')
+    .replace(/^(?=\d)/, '_')
+  return `${tableId}_columns`
 }
 
 function resolveStoreImports(definition) {

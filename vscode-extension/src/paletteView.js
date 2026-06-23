@@ -15,6 +15,7 @@ function getPaletteHtml(webview, htmlShell, getNonce) {
             class="palette-item"
             draggable="true"
             data-add="${index}"
+            data-component-type="${escapeHtml(item.type)}"
           >
             <span class="palette-icon">${getPaletteIcon(item.type, item.label)}</span>
             <span class="palette-label">${escapeHtml(item.label)}</span>
@@ -29,7 +30,9 @@ function getPaletteHtml(webview, htmlShell, getNonce) {
       document.querySelectorAll('[data-add]').forEach((button) => {
         button.addEventListener('click', () => {
           vscode.postMessage({
-            type: 'addComponent',
+            type: button.dataset.componentType === 'Table'
+              ? 'requestTableWizard'
+              : 'addComponent',
             index: Number(button.dataset.add)
           })
         })

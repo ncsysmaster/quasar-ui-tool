@@ -32,7 +32,8 @@
       "id": null,
       "name": null
     },
-    "searchText": null
+    "searchText": null,
+    "list": []
   },
   "getters": [
     {
@@ -66,7 +67,8 @@
       "entity": "",
       "entity.id": "",
       "entity.name": "",
-      "searchText": ""
+      "searchText": "",
+      "list": ""
     }
   }
 }
