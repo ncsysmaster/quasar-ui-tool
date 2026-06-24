@@ -101,6 +101,13 @@ function registerStoreMemberEditorShortcuts(monaco) {
   storeMemberEditor.addCommand(ctrlCmd | monaco.KeyCode.KeyY, () => {
     storeMemberEditor.trigger("keyboard", "redo", null);
   });
+  storeMemberEditor.addCommand(ctrlCmd | monaco.KeyCode.KeyS, async () => {
+    await formatEditorDocument(storeMemberEditor);
+  });
+  storeMemberEditor.addCommand(
+    monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.KeyF,
+    () => formatEditorDocument(storeMemberEditor),
+  );
 }
 
 async function copyStoreMemberSelection() {

@@ -17,6 +17,8 @@ function getEditorHtml(webview, runtimeUris) {
     `
     <link rel="stylesheet" href="${runtimeUris.materialIconsCss}">
     <link rel="stylesheet" href="${runtimeUris.quasarCss}">
+    <link rel="stylesheet" href="${runtimeUris.agGridCss}">
+    <link rel="stylesheet" href="${runtimeUris.agGridThemeCss}">
     <div class="tabs">
       <button class="tab active" data-tab="screen">Screen</button>
       <button class="tab" data-tab="script">Script</button>
@@ -40,6 +42,8 @@ function getEditorHtml(webview, runtimeUris) {
     ${getStoreHtml()}
     ${getTableHtml()}
     <script nonce="${nonce}" src="${runtimeUris.vue}"></script>
+    <script nonce="${nonce}" src="${runtimeUris.agGridCommunity}"></script>
+    <script nonce="${nonce}" src="${runtimeUris.agGridVue}"></script>
     <script nonce="${nonce}" src="${runtimeUris.quasar}"></script>
     <script nonce="${nonce}" src="${runtimeUris.monacoLoader}"></script>
     <script nonce="${nonce}">
@@ -48,6 +52,11 @@ function getEditorHtml(webview, runtimeUris) {
       const tablePaletteIndex = ${PALETTE.findIndex((item) => item.type === "Table")}
       const vueRuntime = window.Vue
       const quasarRuntime = window.Quasar || window.quasar
+      const agGridRuntime = window.agGrid || {}
+      const agGridVueRuntime = window.AgGridVue || {}
+      if (agGridRuntime.ModuleRegistry && agGridRuntime.AllCommunityModule) {
+        agGridRuntime.ModuleRegistry.registerModules([agGridRuntime.AllCommunityModule])
+      }
       let model = null
       let selectedId = ''
       let selectedCellIds = []
@@ -67,6 +76,7 @@ function getEditorHtml(webview, runtimeUris) {
       let storeMemberEditor = null
       let storeMemberEditorModel = null
       let storeMemberEditorRenderToken = 0
+      let quasarToolCompletionProviderDisposable = null
       let storeDeleteConfirmationResolve = null
       let pendingTableWizard = null
       let lastTableWizardRequest = 0
@@ -128,7 +138,7 @@ function getEditorHtml(webview, runtimeUris) {
             selectedStoreMember = null
           }
           if (activeTab === 'store' && !activeStoreBeingEdited) render()
-          if (activeTab === 'screen') renderScreenStoreStatePanel()
+          if (activeTab === 'screen' || activeTab === 'script') renderScreenStoreStatePanel()
           return
         }
 
@@ -296,7 +306,18 @@ function getEditorHtml(webview, runtimeUris) {
         if (activeTab === 'script') {
           unmountPreview()
           disposeStoreMemberEditor()
-          content.innerHTML = '<div id="script-editor" class="script-editor" role="application" aria-label="JavaScript editor"></div>'
+          const existingScriptContainer = document.getElementById('script-editor')
+          if (scriptEditor && existingScriptContainer?.isConnected) {
+            syncScriptEditor(model.script?.setup || '')
+            renderScreenStoreStatePanel()
+            setupScriptStoreStateDrop(existingScriptContainer)
+            revealPendingScriptMethod()
+            scriptEditor.focus()
+            return
+          }
+          disposeScriptEditor()
+          content.innerHTML = '<div class="script-editor-workspace"><div class="script-editor-shell"><div id="script-editor" class="script-editor" role="application" aria-label="JavaScript editor"></div></div><aside id="screen-store-state-panel" class="screen-store-state-panel" aria-label="Store State"></aside></div>'
+          renderScreenStoreStatePanel()
           mountScriptEditor(model.script?.setup || '')
           return
         }
@@ -391,11 +412,15 @@ function getEditorHtml(webview, runtimeUris) {
           if (token !== scriptRenderToken || activeTab !== 'script' || !container.isConnected) return
 
           const pageId = model?.page?.id || 'Page'
-          scriptEditorModel = monaco.editor.createModel(
+          const scriptUri = monaco.Uri.parse('file:///.src/pages/' + encodeURIComponent(pageId) + '.js')
+          scriptEditorModel = monaco.editor.getModel(scriptUri) || monaco.editor.createModel(
             value,
             'javascript',
-            monaco.Uri.parse('file:///.src/pages/' + encodeURIComponent(pageId) + '.js')
+            scriptUri
           )
+          if (scriptEditorModel.getValue() !== value) {
+            scriptEditorModel.setValue(value)
+          }
           scriptEditor = monaco.editor.create(container, {
             model: scriptEditorModel,
             theme: getMonacoTheme(),
@@ -420,6 +445,7 @@ function getEditorHtml(webview, runtimeUris) {
           })
 
           registerScriptEditorShortcuts(monaco)
+          setupScriptStoreStateDrop(container)
 
           scriptEditor.onDidChangeModelContent(() => {
             clearTimeout(scriptSaveTimer)
@@ -435,6 +461,54 @@ function getEditorHtml(webview, runtimeUris) {
             container.innerHTML = '<div class="empty error-text">Script editor failed to load: ' + escapeHtml(error.message) + '</div>'
           }
         }
+      }
+
+      function setupScriptStoreStateDrop(container) {
+        if (!container || container.dataset.storeStateDropReady === 'true') return
+        container.dataset.storeStateDropReady = 'true'
+
+        container.addEventListener('dragover', (event) => {
+          if (!isStoreStateDrag(event.dataTransfer)) return
+          event.preventDefault()
+          event.dataTransfer.dropEffect = 'copy'
+          container.classList.add('qt-script-store-drop-target')
+        })
+
+        container.addEventListener('dragleave', (event) => {
+          if (container.contains(event.relatedTarget)) return
+          container.classList.remove('qt-script-store-drop-target')
+        })
+
+        container.addEventListener('drop', (event) => {
+          const binding = getStoreStateBinding(event.dataTransfer)
+          if (!binding?.expression || !scriptEditor || !scriptEditorModel) return
+          event.preventDefault()
+          event.stopPropagation()
+          container.classList.remove('qt-script-store-drop-target')
+
+          const target = scriptEditor.getTargetAtClientPoint?.(event.clientX, event.clientY)
+          const position = target?.position || scriptEditor.getPosition()
+          if (!position) return
+
+          const range = new window.monaco.Range(
+            position.lineNumber,
+            position.column,
+            position.lineNumber,
+            position.column
+          )
+          scriptEditor.pushUndoStop()
+          scriptEditor.executeEdits('store-state-drop', [{
+            range,
+            text: binding.expression,
+            forceMoveMarkers: true
+          }])
+          scriptEditor.pushUndoStop()
+          scriptEditor.setPosition({
+            lineNumber: position.lineNumber,
+            column: position.column + binding.expression.length
+          })
+          scriptEditor.focus()
+        })
       }
 
       function syncScriptEditor(value) {
@@ -476,8 +550,15 @@ function getEditorHtml(webview, runtimeUris) {
         scriptEditor.addCommand(ctrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyZ, () => {
           scriptEditor.trigger('keyboard', 'redo', null)
         })
-        scriptEditor.addCommand(ctrlCmd | monaco.KeyCode.KeyY, () => {
+          scriptEditor.addCommand(ctrlCmd | monaco.KeyCode.KeyY, () => {
           scriptEditor.trigger('keyboard', 'redo', null)
+        })
+        scriptEditor.addCommand(ctrlCmd | monaco.KeyCode.KeyS, async () => {
+          await formatEditorDocument(scriptEditor)
+          vscode.postMessage({ type: 'updateScript', value: scriptEditorModel.getValue() })
+        })
+        scriptEditor.addCommand(monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.KeyF, () => {
+          formatEditorDocument(scriptEditor)
         })
       }
 
@@ -544,6 +625,175 @@ function getEditorHtml(webview, runtimeUris) {
           moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs
         })
         javascript.addExtraLib(getFrameworkTypeDefinitions(), 'file:///node_modules/@types/quasar-tool/index.d.ts')
+        registerQuasarToolCompletions(monaco)
+      }
+
+      function registerQuasarToolCompletions(monaco) {
+        if (quasarToolCompletionProviderDisposable) return
+        quasarToolCompletionProviderDisposable = monaco.languages.registerCompletionItemProvider('javascript', {
+          triggerCharacters: ['.', '$'],
+          provideCompletionItems(editorModel, position) {
+            return {
+              suggestions: [
+                ...buildStoreStateCompletionItems(monaco, editorModel, position),
+                ...buildQuasarScriptCompletionItems(monaco, editorModel, position)
+              ]
+            }
+          }
+        })
+      }
+
+      function buildStoreStateCompletionItems(monaco, editorModel, position) {
+        const tokenInfo = getCompletionTokenInfo(editorModel, position)
+        const stores = getStoreCompletionSources()
+        const matchedStore = stores.find((store) =>
+          tokenInfo.token === store.importName ||
+          tokenInfo.token.startsWith(store.importName + '.') ||
+          tokenInfo.token === store.importName + '.'
+        )
+
+        if (!matchedStore) {
+          return stores.flatMap((store) => flattenStoreStateCompletionItems(monaco, store, tokenInfo))
+        }
+
+        const suffix = tokenInfo.token.slice(matchedStore.importName.length)
+        const pathText = suffix.startsWith('.') ? suffix.slice(1) : ''
+        const endsWithDot = tokenInfo.token.endsWith('.')
+        const pathParts = pathText ? pathText.split('.') : []
+        const partial = endsWithDot ? '' : pathParts.pop() || ''
+        const parentPath = pathParts.filter(Boolean)
+        const parentValue = getValueByPath(matchedStore.state, parentPath)
+        const children = parentValue && typeof parentValue === 'object' && !Array.isArray(parentValue)
+          ? Object.entries(parentValue)
+          : []
+
+        return children
+          .filter(([name]) => !partial || name.toLowerCase().startsWith(partial.toLowerCase()))
+          .map(([name, value]) => ({
+            label: name,
+            kind: monaco.languages.CompletionItemKind.Property,
+            insertText: name,
+            detail: matchedStore.importName + '.' + [...parentPath, name].join('.'),
+            documentation: 'Store State - ' + storeValueType(value),
+            range: tokenInfo.currentSegmentRange
+          }))
+      }
+
+      function buildQuasarScriptCompletionItems(monaco, editorModel, position) {
+        const range = editorModel.getWordUntilPosition(position)
+        const completionRange = new monaco.Range(position.lineNumber, range.startColumn, position.lineNumber, range.endColumn)
+        const items = [
+          ['useQuasar', "const $q = useQuasar()", 'Quasar instance helper'],
+          ['$q.notify', "$q.notify({ message: '\${1:message}', color: '\${2:primary}' })", 'Quasar notify'],
+          ['$q.dialog', "$q.dialog({ title: '\${1:title}', message: '\${2:message}' })", 'Quasar dialog'],
+          ['Notify.create', "Notify.create({ message: '\${1:message}', color: '\${2:primary}' })", 'Quasar Notify plugin'],
+          ['Dialog.create', "Dialog.create({ title: '\${1:title}', message: '\${2:message}' })", 'Quasar Dialog plugin'],
+          ['Loading.show', 'Loading.show()', 'Quasar loading show'],
+          ['Loading.hide', 'Loading.hide()', 'Quasar loading hide'],
+          ['ref', "const \${1:name} = ref(\${2:null})", 'Vue ref'],
+          ['reactive', "const \${1:state} = reactive({\\n  \${2:key}: \${3:null}\\n})", 'Vue reactive'],
+          ['computed', "const \${1:value} = computed(() => \${2:source})", 'Vue computed'],
+          ['watch', "watch(\${1:source}, (\${2:value}) => {\\n  \${3:// TODO}\\n})", 'Vue watch'],
+          ['onMounted', "onMounted(() => {\\n  \${1:// TODO}\\n})", 'Vue lifecycle'],
+          ['nextTick', 'await nextTick()', 'Vue nextTick']
+        ]
+
+        return items.map(([label, insertText, detail]) => ({
+          label,
+          kind: monaco.languages.CompletionItemKind.Snippet,
+          insertText,
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          detail,
+          range: completionRange
+        }))
+      }
+
+      function getCompletionTokenInfo(editorModel, position) {
+        const linePrefix = editorModel.getLineContent(position.lineNumber).slice(0, position.column - 1)
+        const match = linePrefix.match(/([A-Za-z_$][\\w$]*(?:\\.[A-Za-z_$][\\w$]*)*\\.?)$/)
+        const token = match?.[1] || ''
+        const tokenStartColumn = position.column - token.length
+        const currentSegmentLength = token.endsWith('.')
+          ? 0
+          : (token.split('.').pop() || '').length
+        return {
+          token,
+          tokenRange: new monaco.Range(position.lineNumber, tokenStartColumn, position.lineNumber, position.column),
+          currentSegmentRange: new monaco.Range(position.lineNumber, position.column - currentSegmentLength, position.lineNumber, position.column)
+        }
+      }
+
+      function getStoreCompletionSources() {
+        return (Array.isArray(piniaStores) ? piniaStores : []).map((store) => {
+          const importName =
+            store.tabName ||
+            store.pageImport?.variableName ||
+            store.definition?.store?.importName ||
+            store.constName ||
+            'store'
+          return {
+            importName,
+            state: store.definition?.state || {},
+            fsPath: store.fsPath || ''
+          }
+        })
+      }
+
+      function flattenStoreStateCompletionItems(monaco, store, tokenInfo) {
+        const result = [{
+          label: store.importName,
+          kind: monaco.languages.CompletionItemKind.Variable,
+          insertText: store.importName,
+          detail: 'Pinia Store',
+          documentation: store.fsPath,
+          range: tokenInfo.currentSegmentRange
+        }]
+        const walk = (value, path) => {
+          if (!value || typeof value !== 'object' || Array.isArray(value)) return
+          Object.entries(value).forEach(([name, child]) => {
+            const nextPath = [...path, name]
+            const expression = buildStoreBindingExpression(store.importName, nextPath)
+            result.push({
+              label: expression,
+              kind: child && typeof child === 'object' && !Array.isArray(child)
+                ? monaco.languages.CompletionItemKind.Struct
+                : monaco.languages.CompletionItemKind.Property,
+              insertText: expression,
+              detail: 'Store State - ' + storeValueType(child),
+              documentation: expression,
+              range: tokenInfo.tokenRange.startColumn === tokenInfo.tokenRange.endColumn
+                ? tokenInfo.currentSegmentRange
+                : tokenInfo.tokenRange
+            })
+            walk(child, nextPath)
+          })
+        }
+        walk(store.state, [])
+        return result
+      }
+
+      function getValueByPath(value, path) {
+        return (path || []).reduce((current, key) => {
+          if (!current || typeof current !== 'object') return undefined
+          return current[key]
+        }, value)
+      }
+
+      async function formatEditorDocument(editor) {
+        if (!editor) return
+        const action = editor.getAction('editor.action.formatDocument')
+        if (action?.isSupported?.() !== false) {
+          try {
+            await action.run()
+            return
+          } catch {}
+        }
+        const selectionAction = editor.getAction('editor.action.formatSelection')
+        if (selectionAction?.isSupported?.() !== false) {
+          try {
+            await selectionAction.run()
+          } catch {}
+        }
       }
 
       function getFrameworkTypeDefinitions() {
@@ -600,15 +850,17 @@ function getEditorHtml(webview, runtimeUris) {
       }
 
       function renderSingleComponent(component, scope, repeatIndex) {
+        if (component.type === 'Table') {
+          return renderTablePreviewComponent(component, scope, repeatIndex)
+        }
+
         const isHtml = component.type === 'HtmlElement'
         const tag = isHtml ? component.tag || 'div' : resolveQuasarComponent(component.type)
         const resizeKind = getFormResizeKind(component)
         const gridMetric = getFormGridMetric(component)
         const props = buildProps(component, repeatIndex, scope, resizeKind, gridMetric)
 
-        let children = component.type === 'Table'
-          ? buildTablePreviewSlots(component, scope)
-          : buildChildren(component, scope, isHtml)
+        let children = buildChildren(component, scope, isHtml)
         const metricBadge = buildFormGridMetricBadge(gridMetric)
         const resizeHandle = buildFormResizeHandle(component, resizeKind)
 
@@ -616,6 +868,175 @@ function getEditorHtml(webview, runtimeUris) {
         children = appendPreviewChild(children, resizeHandle)
 
         return vueRuntime.h(tag, props, children)
+      }
+
+      function renderTablePreviewComponent(component, scope, repeatIndex) {
+        const wrapperClass = ['qt-ag-table-preview']
+        if (component.id === selectedId) wrapperClass.push('qt-selected')
+
+        const wrapperProps = {
+          class: wrapperClass,
+          key: repeatIndex === undefined
+            ? component.id || component.type
+            : (component.id || component.type) + '-' + repeatIndex,
+          'data-qt-id': component.id || '',
+          tabindex: 0,
+          draggable: true,
+          onClick: (event) => {
+            event.stopPropagation()
+            event.currentTarget.focus()
+            if (component.id !== selectedId || selectedCellIds.length > 0) {
+              vscode.postMessage({ type: 'select', id: component.id })
+            }
+          },
+          onDblclick: (event) => {
+            event.preventDefault()
+            event.stopPropagation()
+            vscode.postMessage({ type: 'openFirstEventMethod', id: component.id })
+          },
+          onContextmenu: (event) => {
+            event.preventDefault()
+            event.stopPropagation()
+            vscode.postMessage({ type: 'select', id: component.id })
+            showTableContextMenu(event.clientX, event.clientY, component.id)
+          },
+          onDragstart: (event) => {
+            event.stopPropagation()
+            event.dataTransfer.setData('text/plain', component.id)
+            vscode.postMessage({ type: 'select', id: component.id })
+          }
+        }
+
+        return vueRuntime.h('div', wrapperProps, [
+          buildTableToolbarPreview(component, scope),
+          vueRuntime.h(resolveAgGridComponent(), buildAgGridPreviewProps(component, scope))
+        ].filter(Boolean))
+      }
+
+      function buildTableToolbarPreview(component, scope) {
+        const toolbar = component.table?.toolbar || {}
+        const hasToolbar = toolbar.filter || toolbar.search || toolbar.add || toolbar.save ||
+          toolbar.delete || toolbar.excel || toolbar.refresh || component.table?.title
+        if (!hasToolbar) return null
+
+        const children = []
+        if (component.table?.title) {
+          children.push(vueRuntime.h('div', { class: 'qt-table-title' }, component.table.title))
+        }
+        if (toolbar.filter) {
+          children.push(vueRuntime.h(resolveQuasarComponent('Input'), {
+            dense: true,
+            outlined: true,
+            placeholder: '검색',
+            class: 'qt-table-filter-preview',
+            modelValue: resolveValue(component.table?.filterBinding, scope) || '',
+            'onUpdate:modelValue': (value) => setResolvedValue(component.table?.filterBinding, value, scope)
+          }))
+        }
+        const labels = { search: '검색', add: '신규', save: '저장', delete: '삭제', excel: '엑셀', refresh: '새로고침' }
+        if (Object.keys(labels).some((key) => toolbar[key])) {
+          children.push(vueRuntime.h('div', { class: 'qt-table-toolbar-spacer' }))
+        }
+        Object.keys(labels).forEach((key) => {
+          if (!toolbar[key]) return
+          children.push(vueRuntime.h(resolveQuasarComponent('Button'), {
+            outline: true,
+            unelevated: true,
+            class: 'qt-table-toolbar-btn',
+            color: getTableToolbarButtonColor(key),
+            textColor: getTableToolbarButtonTextColor(key),
+            label: labels[key],
+            onClick: (event) => event.stopPropagation(),
+            onDblclick: (event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              vscode.postMessage({
+                type: 'openTableToolbarMethod',
+                id: component.id,
+                action: key
+              })
+            }
+          }))
+        })
+
+        return vueRuntime.h('div', { class: 'qt-table-toolbar-preview' }, children)
+      }
+
+      function buildAgGridPreviewProps(component, scope) {
+        const pagination = component.table?.pagination || {}
+        const selection = component.table?.selection || component.props?.selection || 'none'
+        const rows = resolveValue(component.dynamicProps?.rows || component.table?.rowsBinding, scope)
+        const rowKey = component.table?.rowKey || component.props?.rowKey || 'id'
+        const props = {
+          class: 'ag-theme-quartz qt-ag-grid',
+          style: getAgGridPreviewStyle(component),
+          rowData: Array.isArray(rows) ? rows : (Array.isArray(component.props?.rows) ? component.props.rows : []),
+          columnDefs: (component.columns || []).map(toAgGridPreviewColumnDef),
+          defaultColDef: { resizable: true, sortable: true, filter: true },
+          animateRows: true,
+          getRowId: (params) => String(params.data?.[rowKey] ?? ''),
+          onRowClicked: (event) => {
+            event.event?.stopPropagation?.()
+            if (component.id !== selectedId) vscode.postMessage({ type: 'select', id: component.id })
+          }
+        }
+
+        if (pagination.mode !== 'none') {
+          props.pagination = true
+          props.paginationPageSize = Number(pagination.rowsPerPage) || 10
+          props.paginationPageSizeSelector = Array.isArray(pagination.rowsPerPageOptions)
+            ? pagination.rowsPerPageOptions
+            : [10, 20, 50, 0]
+        }
+
+        if (selection === 'single' || selection === 'multiple') {
+          props.rowSelection = { mode: selection === 'multiple' ? 'multiRow' : 'singleRow' }
+          props.onSelectionChanged = (event) => {
+            if (component.models?.selected) {
+              setResolvedValue(component.models.selected, event.api.getSelectedRows(), scope)
+            }
+          }
+        }
+
+        if (component.table?.loadingBinding) {
+          props.loading = Boolean(resolveValue(component.table.loadingBinding, scope))
+        }
+
+        return props
+      }
+
+      function getAgGridPreviewStyle(component) {
+        const declarations = String(component.style || '')
+          .split(';')
+          .map((item) => item.trim())
+          .filter(Boolean)
+        if (!declarations.some((item) => item.toLowerCase().startsWith('width:'))) declarations.push('width: 100%')
+        if (!declarations.some((item) => item.toLowerCase().startsWith('height:'))) declarations.push('height: 360px')
+        return declarations.join('; ')
+      }
+
+      function toAgGridPreviewColumnDef(column) {
+        const width = Number.parseInt(column?.width, 10)
+        const align = ['left', 'center', 'right'].includes(column?.align) ? column.align : ''
+        const type = column?.type || 'text'
+        const def = {
+          colId: String(column?.name || column?.field || 'column'),
+          headerName: String(column?.label || column?.name || column?.field || 'Column'),
+          field: String(column?.field || column?.name || 'column'),
+          sortable: Boolean(column?.sortable),
+          resizable: true,
+          editable: Boolean(column?.editable),
+          ...(Number.isFinite(width) ? { width } : {}),
+          ...(align ? { cellStyle: { textAlign: align } } : {})
+        }
+        if (type === 'number') def.type = 'numericColumn'
+        if (type === 'checkbox') def.cellRenderer = 'agCheckboxCellRenderer'
+        if (type === 'actions') {
+          def.cellRenderer = () => '<button type="button" class="qt-ag-action-btn">편집</button><button type="button" class="qt-ag-action-btn qt-ag-action-danger">삭제</button>'
+          def.sortable = false
+          def.filter = false
+        }
+        return def
       }
 
       function appendPreviewChild(children, child) {
@@ -929,14 +1350,28 @@ function getEditorHtml(webview, runtimeUris) {
               }))
             }
             const labels = { search: '검색', add: '신규', save: '저장', delete: '삭제', excel: '엑셀', refresh: '새로고침' }
+            if (Object.keys(labels).some((key) => toolbar[key])) {
+              children.push(vueRuntime.h('div', { class: 'qt-table-toolbar-spacer' }))
+            }
             Object.keys(labels).forEach((key) => {
               if (!toolbar[key]) return
               children.push(vueRuntime.h(resolveQuasarComponent('Button'), {
-                dense: true,
-                flat: key !== 'add',
-                color: key === 'delete' ? 'negative' : 'primary',
+                outline: true,
+                unelevated: true,
+                class: 'qt-table-toolbar-btn',
+                color: getTableToolbarButtonColor(key),
+                textColor: getTableToolbarButtonTextColor(key),
                 label: labels[key],
-                onClick: (event) => event.stopPropagation()
+                onClick: (event) => event.stopPropagation(),
+                onDblclick: (event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  vscode.postMessage({
+                    type: 'openTableToolbarMethod',
+                    id: component.id,
+                    action: key
+                  })
+                }
               }))
             })
             return vueRuntime.h('div', { class: 'qt-table-toolbar-preview' }, children)
@@ -1002,6 +1437,20 @@ function getEditorHtml(webview, runtimeUris) {
       function resolveQuasarComponent(type) {
         const runtimeType = componentTypeMap[type] || type
         return quasarRuntime[runtimeType] || runtimeType
+      }
+
+      function resolveAgGridComponent() {
+        return agGridVueRuntime.AgGridVue || 'ag-grid-vue'
+      }
+
+      function getTableToolbarButtonColor(key) {
+        if (key === 'save') return 'primary'
+        if (key === 'delete') return 'red'
+        return 'grey-5'
+      }
+
+      function getTableToolbarButtonTextColor(key) {
+        return getTableToolbarButtonColor(key) === 'grey-5' ? 'grey-8' : undefined
       }
 
       function resolveValue(path, scope) {
@@ -1234,7 +1683,11 @@ function htmlShell(webview, nonce, title, body) {
     #quasar-preview .q-page-container,
     #quasar-preview .q-page { min-height: calc(100vh - 42px); }
     .qt-selected { box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.85) !important; }
+    .script-editor-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 300px; min-height: calc(100vh - 42px); }
+    .script-editor-shell { min-width: 0; overflow: hidden; }
     .script-editor { width: 100%; height: calc(100vh - 42px); overflow: hidden; }
+    .script-editor-workspace .script-editor { height: calc(100vh - 42px); }
+    .qt-script-store-drop-target { outline: 2px solid var(--vscode-focusBorder); outline-offset: -2px; }
     .error-text { color: var(--vscode-errorForeground); }
     .summary, .empty, .view-body { padding: 12px; }
     .list-item, .tree-row { display: grid; gap: 2px; width: 100%; padding: 9px 8px; border: 0; border-bottom: 1px solid var(--vscode-panel-border); color: var(--vscode-editor-foreground); background: transparent; text-align: left; }

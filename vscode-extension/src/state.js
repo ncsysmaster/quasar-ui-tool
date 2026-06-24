@@ -1,6 +1,6 @@
 const vscode = require("vscode");
 const { mkdir, readFile, writeFile } = require("fs/promises");
-const { basename, dirname } = require("path");
+const { basename, dirname, resolve } = require("path");
 const { PALETTE } = require("./constants");
 const {
   generateVueForDocument,
@@ -40,6 +40,8 @@ class PageEditorState {
     this.tableColumnsRequest = null;
     this.tableColumnsSequence = 0;
     this.componentClipboard = null;
+    this.lastModelBindingWarningKey = "";
+    this.lastTableRowsBindingWarningKey = "";
   }
 
   async setDocument(document) {
@@ -56,6 +58,8 @@ class PageEditorState {
 
     if (document.uri.toString() === this.document.uri.toString()) {
       this.document = document;
+      this.warnMissingModelBindings();
+      this.warnInvalidTableRowsBindings().catch(() => {});
       this.fire();
       return;
     }
@@ -183,6 +187,8 @@ class PageEditorState {
     mutator(model);
 
     await replaceDocument(this.document, stringifyModel(model));
+    this.warnMissingModelBindings(model);
+    await this.warnInvalidTableRowsBindings(model);
     this.scheduleGenerateVue(this.document);
   }
 
@@ -365,8 +371,10 @@ class PageEditorState {
       } else if (name.startsWith("dynamic.")) {
         component.dynamicProps ||= {};
         const key = name.slice(8);
-        if (String(value || "").trim()) component.dynamicProps[key] = String(value).trim();
+        const expression = String(value || "").trim();
+        if (expression) component.dynamicProps[key] = expression;
         else delete component.dynamicProps[key];
+        syncTableDynamicBinding(component, key, expression);
       } else if (name.startsWith("model.")) {
         component.models ||= {};
         const key = name.slice(6);
@@ -905,6 +913,73 @@ class PageEditorState {
     }, 250);
   }
 
+  warnMissingModelBindings(model) {
+    let missing;
+    try {
+      model ||= this.getModel();
+      missing = collectMissingModelBindings(model, this.scriptContent);
+    } catch {
+      return;
+    }
+    if (missing.length === 0) {
+      this.lastModelBindingWarningKey = "";
+      return;
+    }
+
+    const warningKey = missing
+      .map((item) => `${item.componentId}.${item.modelName}:${item.expression}`)
+      .sort()
+      .join("|");
+    if (warningKey === this.lastModelBindingWarningKey) return;
+    this.lastModelBindingWarningKey = warningKey;
+
+    const preview = missing
+      .slice(0, 5)
+      .map((item) => `${item.componentId}.${item.modelName}: ${item.expression}`)
+      .join(", ");
+    const suffix =
+      missing.length > 5 ? ` 외 ${missing.length - 5}건` : "";
+    vscode.window.showWarningMessage(
+      `Quasar Tool: 정의되지 않은 v-model이 있습니다. ${preview}${suffix}`,
+    );
+  }
+
+  async warnInvalidTableRowsBindings(model) {
+    let invalidBindings;
+    try {
+      model ||= this.getModel();
+      invalidBindings = await collectInvalidTableRowsBindings(
+        model,
+        this.document?.uri,
+      );
+    } catch {
+      return;
+    }
+
+    if (invalidBindings.length === 0) {
+      this.lastTableRowsBindingWarningKey = "";
+      return;
+    }
+
+    const warningKey = invalidBindings
+      .map((item) => `${item.componentId}:${item.expression}:${item.reason}`)
+      .sort()
+      .join("|");
+    if (warningKey === this.lastTableRowsBindingWarningKey) return;
+    this.lastTableRowsBindingWarningKey = warningKey;
+
+    const preview = invalidBindings
+      .slice(0, 5)
+      .map((item) => `${item.componentId}: ${item.expression} (${item.reason})`)
+      .join(", ");
+    const suffix =
+      invalidBindings.length > 5 ? ` 외 ${invalidBindings.length - 5}건` : "";
+
+    vscode.window.showErrorMessage(
+      `Quasar Tool: 테이블 rows binding은 array 타입이어야 합니다. ${preview}${suffix}`,
+    );
+  }
+
   async updateSelectedEvent(eventName, value) {
     let shouldCreateHandler = false;
 
@@ -969,6 +1044,26 @@ class PageEditorState {
     }
 
     await this.openSelectedEventMethod(firstEvent[0], firstEvent[1]);
+  }
+
+  async openTableToolbarMethod(componentId, action) {
+    const component = findComponent(this.getModel().components, componentId);
+    if (!component || component.type !== "Table") return;
+
+    this.selectedId = componentId;
+    const handler = component.table?.handlers?.[action];
+    if (!handler) {
+      this.fire();
+      return;
+    }
+
+    if (!hasFunction(this.scriptContent, handler)) {
+      await this.updateScript(
+        this.scriptContent + createTableToolbarHandlerCode(handler, action),
+      );
+    }
+
+    this.requestScriptMethod(handler);
   }
 }
 
@@ -1110,6 +1205,229 @@ function createTableRowClickCode(functionName) {
 
 function createTableToolbarHandlerCode(functionName, action) {
   return `\n\nfunction ${functionName}() {\n  console.log('table-${action}')\n}\n`;
+}
+
+function syncTableDynamicBinding(component, key, expression) {
+  if (!component || component.type !== "Table") return;
+  component.table ||= {};
+
+  if (key === "rows") {
+    component.table.rowsBinding = expression;
+    if (expression) {
+      component.props ||= {};
+      delete component.props.rows;
+    }
+  }
+
+  if (key === "loading") {
+    component.table.loadingBinding = expression;
+  }
+}
+
+async function collectInvalidTableRowsBindings(model, documentUri) {
+  const storeDefinitions = await loadImportedStoreDefinitions(model, documentUri);
+  const invalidBindings = [];
+
+  visitComponents(model?.components, (component) => {
+    if (component.type !== "Table") return;
+
+    const expression = getTableRowsBindingExpression(component);
+    if (!expression) {
+      if (
+        Object.prototype.hasOwnProperty.call(component.props || {}, "rows") &&
+        !Array.isArray(component.props.rows)
+      ) {
+        invalidBindings.push({
+          componentId: component.id || "Table",
+          expression: "props.rows",
+          reason: getValueTypeName(component.props.rows),
+        });
+      }
+      return;
+    }
+
+    const result = resolveRowsBindingValue(
+      expression,
+      model,
+      storeDefinitions,
+    );
+    if (!result) return;
+    if (result.exists && Array.isArray(result.value)) return;
+
+    invalidBindings.push({
+      componentId: component.id || "Table",
+      expression,
+      reason: result.exists
+        ? getValueTypeName(result.value)
+        : "경로 없음",
+    });
+  });
+
+  return invalidBindings;
+}
+
+async function loadImportedStoreDefinitions(model, documentUri) {
+  const workspaceRoot = getWorkspaceRoot(documentUri);
+  if (!workspaceRoot) return new Map();
+
+  const stores = new Map();
+  const imports = [
+    ...(Array.isArray(model?.imports) ? model.imports : []),
+    ...(Array.isArray(model?.stores) ? model.stores : []),
+  ];
+
+  await Promise.all(
+    imports
+      .filter((item) => item?.variableName && item?.sourcePath)
+      .map(async (item) => {
+        try {
+          const sourcePath = resolve(
+            workspaceRoot,
+            String(item.sourcePath).replace(/^[\\/]+/, ""),
+          );
+          const definition = JSON.parse(await readFile(sourcePath, "utf8"));
+          stores.set(item.variableName, definition);
+        } catch {
+          stores.set(item.variableName, null);
+        }
+      }),
+  );
+
+  return stores;
+}
+
+function getWorkspaceRoot(documentUri) {
+  if (!documentUri) return "";
+  return vscode.workspace.getWorkspaceFolder(documentUri)?.uri.fsPath || "";
+}
+
+function getTableRowsBindingExpression(component) {
+  return String(
+    component?.dynamicProps?.rows ||
+      component?.table?.rowsBinding ||
+      "",
+  ).trim();
+}
+
+function resolveRowsBindingValue(expression, model, storeDefinitions) {
+  const parsed = parseSimpleMemberExpression(expression);
+  if (!parsed) return null;
+
+  if (storeDefinitions.has(parsed.root)) {
+    const storeDefinition = storeDefinitions.get(parsed.root);
+    if (!storeDefinition) return { exists: false };
+    const statePath =
+      parsed.path[0] === "$state" ? parsed.path.slice(1) : parsed.path;
+    return getValueAtPath(storeDefinition.state || {}, statePath);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(model?.data || {}, parsed.root)) {
+    return getValueAtPath(model.data[parsed.root], parsed.path);
+  }
+
+  return null;
+}
+
+function parseSimpleMemberExpression(expression) {
+  const value = String(expression || "").trim();
+  if (!/^[A-Za-z_$][A-Za-z0-9_$]*(?:\.[A-Za-z_$][A-Za-z0-9_$]*)*$/.test(value)) {
+    return null;
+  }
+
+  const parts = value.split(".");
+  return {
+    root: parts[0],
+    path: parts.slice(1),
+  };
+}
+
+function getValueAtPath(value, path) {
+  let current = value;
+  for (const key of path) {
+    if (
+      current === null ||
+      current === undefined ||
+      !Object.prototype.hasOwnProperty.call(Object(current), key)
+    ) {
+      return { exists: false };
+    }
+    current = current[key];
+  }
+
+  return { exists: true, value: current };
+}
+
+function getValueTypeName(value) {
+  if (Array.isArray(value)) return "array";
+  if (value === null) return "null";
+  return typeof value;
+}
+
+function collectMissingModelBindings(model, scriptContent = "") {
+  const declaredNames = new Set([
+    ...Object.keys(model?.data || {}),
+    ...((model?.generation?.scriptSetup?.dataExports || []).filter(Boolean)),
+    ...extractScriptDeclaredNames(scriptContent),
+    ...(Array.isArray(model?.imports)
+      ? model.imports.map((item) => item?.variableName).filter(Boolean)
+      : []),
+    ...(Array.isArray(model?.stores)
+      ? model.stores.map((item) => item?.variableName).filter(Boolean)
+      : []),
+  ]);
+  const missing = [];
+
+  visitComponents(model?.components, (component) => {
+    Object.entries(component.models || {}).forEach(([modelName, expression]) => {
+      const rootName = getExpressionRootName(expression);
+      if (!rootName || declaredNames.has(rootName)) return;
+      missing.push({
+        componentId: component.id || component.type || "component",
+        modelName,
+        expression,
+      });
+    });
+  });
+
+  return missing;
+}
+
+function extractScriptDeclaredNames(scriptContent = "") {
+  const names = new Set();
+  const patterns = [
+    /\b(?:const|let|var|function)\s+([A-Za-z_$][A-Za-z0-9_$]*)/g,
+    /\bimport\s*\{\s*([^}]+)\s*\}\s*from\b/g,
+  ];
+
+  let match;
+  while ((match = patterns[0].exec(scriptContent))) {
+    names.add(match[1]);
+  }
+
+  while ((match = patterns[1].exec(scriptContent))) {
+    String(match[1])
+      .split(",")
+      .map((item) => item.trim().split(/\s+as\s+/i).pop().trim())
+      .filter(Boolean)
+      .forEach((name) => names.add(name));
+  }
+
+  return names;
+}
+
+function getExpressionRootName(expression) {
+  const value = String(expression || "").trim();
+  if (!/^[A-Za-z_$][A-Za-z0-9_$]*(?:\.[A-Za-z_$][A-Za-z0-9_$]*)*$/.test(value)) {
+    return "";
+  }
+  return value.split(".")[0];
+}
+
+function visitComponents(components, visitor) {
+  (components || []).forEach((component) => {
+    visitor(component);
+    visitComponents(component.children, visitor);
+  });
 }
 
 function setNestedComponentValue(component, path, value) {

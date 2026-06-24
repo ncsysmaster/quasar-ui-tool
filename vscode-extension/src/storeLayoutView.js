@@ -181,6 +181,101 @@ function setupStorePanelSplitter(content) {
   });
 }
 
+function setupStoreSectionResize(content) {
+  const sections = [...content.querySelectorAll("[data-store-section]")];
+  if (!sections.length) return;
+
+  const savedHeights = vscode.getState()?.storeSectionHeights || {};
+  sections.forEach((section) => {
+    const kind = section.dataset.storeSection;
+    const handle = section.querySelector("[data-store-section-resize]");
+    if (!kind || !handle) return;
+
+    const savedHeight = Number(savedHeights[kind]);
+    if (Number.isFinite(savedHeight) && savedHeight > 0) {
+      setStoreSectionHeight(section, handle, savedHeight);
+    }
+
+    handle.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const startY = event.clientY;
+      const startHeight = section.getBoundingClientRect().height;
+      handle.setPointerCapture(event.pointerId);
+      document.body.classList.add("store-section-resizing");
+
+      const move = (moveEvent) => {
+        setStoreSectionHeight(
+          section,
+          handle,
+          startHeight + moveEvent.clientY - startY,
+        );
+      };
+      const stop = () => {
+        handle.removeEventListener("pointermove", move);
+        handle.removeEventListener("pointerup", stop);
+        handle.removeEventListener("pointercancel", stop);
+        document.body.classList.remove("store-section-resizing");
+        saveStoreSectionHeight(kind, section);
+      };
+      handle.addEventListener("pointermove", move);
+      handle.addEventListener("pointerup", stop);
+      handle.addEventListener("pointercancel", stop);
+    });
+
+    handle.addEventListener("keydown", (event) => {
+      if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+      event.preventDefault();
+      const current = section.getBoundingClientRect().height;
+      const height = setStoreSectionHeight(
+        section,
+        handle,
+        current + (event.key === "ArrowUp" ? -16 : 16),
+      );
+      saveStoreSectionHeight(kind, section, height);
+    });
+
+    handle.addEventListener("dblclick", (event) => {
+      event.preventDefault();
+      section.style.removeProperty("height");
+      handle.removeAttribute("aria-valuenow");
+      const nextState = { ...(vscode.getState() || {}) };
+      const nextHeights = { ...(nextState.storeSectionHeights || {}) };
+      delete nextHeights[kind];
+      nextState.storeSectionHeights = nextHeights;
+      vscode.setState(nextState);
+    });
+  });
+}
+
+function setStoreSectionHeight(section, handle, requestedHeight) {
+  const minimumHeight = 58;
+  const maximumHeight = Math.max(140, window.innerHeight - 140);
+  const height = Math.max(
+    minimumHeight,
+    Math.min(maximumHeight, requestedHeight),
+  );
+  section.style.height = height + "px";
+  handle.setAttribute("aria-valuenow", String(Math.round(height)));
+  handle.setAttribute("aria-valuemin", String(minimumHeight));
+  handle.setAttribute("aria-valuemax", String(Math.round(maximumHeight)));
+  return height;
+}
+
+function saveStoreSectionHeight(kind, section, height) {
+  const nextHeight =
+    Number(height) || Number.parseFloat(section.style.height) || 0;
+  if (!Number.isFinite(nextHeight) || nextHeight <= 0) return;
+  vscode.setState({
+    ...(vscode.getState() || {}),
+    storeSectionHeights: {
+      ...(vscode.getState()?.storeSectionHeights || {}),
+      [kind]: nextHeight,
+    },
+  });
+}
+
 function setStoreSidebarWidth(layout, splitter, requestedWidth) {
   const splitterWidth = splitter.getBoundingClientRect().width || 7;
   const minimumLeft = Math.min(300, layout.clientWidth * 0.45);
@@ -203,7 +298,10 @@ function setStoreSidebarWidth(layout, splitter, requestedWidth) {
 const storeLayoutFunctions = [
   setupStoreStateTableResize,
   setupStorePanelSplitter,
+  setupStoreSectionResize,
   setStoreSidebarWidth,
+  setStoreSectionHeight,
+  saveStoreSectionHeight,
 ];
 
 module.exports = { storeLayoutFunctions };

@@ -139,10 +139,10 @@ function renderPiniaStores(content) {
       .join("") +
     "</div>" +
     '<div class="store-editor-layout"><section class="store-editor-sidebar">' +
-    '<div class="store-section"><div class="store-section-title"><h3>State</h3><button type="button" data-add-state>+ 추가</button></div>' +
+    '<div class="store-section" data-store-section="state"><div class="store-section-title"><h3>State</h3><button type="button" data-add-state>+ 추가</button></div>' +
     '<div class="store-state-tree">' +
     renderStoreStateTree(definition.state || {}, []) +
-    "</div></div>" +
+    '</div><div class="store-section-resizer" data-store-section-resize="state" role="separator" aria-label="State panel height resize" aria-orientation="horizontal" tabindex="0"></div></div>' +
     renderStoreMembers("getters", definition.getters || [], "Getters") +
     renderStoreMembers("actions", definition.actions || [], "Actions") +
     '</section><div class="store-panel-splitter" role="separator" aria-label="Store 패널 너비 조절" aria-orientation="vertical" tabindex="0"></div>' +
@@ -153,6 +153,7 @@ function renderPiniaStores(content) {
   setupStoreEditorEvents(content, store);
   if (selectedStoreMember) mountStoreMemberEditor(store);
   setupStoreStateTableResize(content);
+  setupStoreSectionResize(content);
   setupStorePanelSplitter(content);
 }
 
@@ -245,7 +246,9 @@ function renderStoreStateTree(value, path, nested = false) {
 
 function renderStoreMembers(kind, members, title) {
   return (
-    '<div class="store-section"><div class="store-section-title"><h3>' +
+    '<div class="store-section" data-store-section="' +
+    kind +
+    '"><div class="store-section-title"><h3>' +
     title +
     "</h3>" +
     '<button type="button" data-add-member="' +
@@ -301,7 +304,11 @@ function renderStoreMembers(kind, members, title) {
         );
       })
       .join("") +
-    "</div></div>"
+    '</div><div class="store-section-resizer" data-store-section-resize="' +
+    kind +
+    '" role="separator" aria-label="' +
+    title +
+    ' panel height resize" aria-orientation="horizontal" tabindex="0"></div></div>'
   );
 }
 
@@ -998,11 +1005,15 @@ function getStoreStyles() {
 .store-panel-splitter:hover::after, .store-panel-splitter:focus::after, body.store-panel-resizing .store-panel-splitter::after { background: var(--vscode-focusBorder); }
 body.store-panel-resizing, body.store-panel-resizing * { cursor: col-resize !important; user-select: none !important; }
 .store-editor-detail { position: relative; padding: 10px; overflow: auto; }
-.store-section { margin-bottom: 4px; border: 1px solid var(--vscode-panel-border); border-radius: 4px; overflow: hidden; }
+.store-section { position: relative; display: flex; min-height: 58px; margin-bottom: 4px; flex-direction: column; border: 1px solid var(--vscode-panel-border); border-radius: 4px; overflow: hidden; }
 .store-section h3 { margin: 0; padding: 3px 7px; border-left: 3px solid var(--vscode-focusBorder); font-size: 12px; font-weight: 600; line-height: 18px; }
-.store-section-title { display: flex; min-height: 28px; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--vscode-panel-border); }
+.store-section-title { display: flex; flex: 0 0 auto; min-height: 28px; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--vscode-panel-border); }
 .store-section-title button, .store-detail-add { min-height: 22px; margin-right: 5px; padding: 1px 7px; border: 0; border-radius: 3px; color: var(--vscode-button-foreground); background: var(--vscode-button-background); font-size: 12px; line-height: 18px; }
-.store-state-tree { min-height: 0; padding: 2px 5px 4px; overflow: hidden; }
+.store-section-resizer { position: relative; z-index: 3; flex: 0 0 7px; height: 7px; padding: 0; border: 0; border-top: 1px solid var(--vscode-panel-border); cursor: row-resize; touch-action: none; background: var(--vscode-editor-background); outline: none; }
+.store-section-resizer::after { content: ""; position: absolute; left: 50%; top: 2px; width: 32px; height: 2px; transform: translateX(-50%); border-radius: 999px; background: transparent; transition: background-color 100ms ease; }
+.store-section-resizer:hover::after, .store-section-resizer:focus::after, body.store-section-resizing .store-section-resizer::after { background: var(--vscode-focusBorder); }
+body.store-section-resizing, body.store-section-resizing * { cursor: row-resize !important; user-select: none !important; }
+.store-state-tree { flex: 1 1 auto; min-height: 0; padding: 2px 5px 4px; overflow: auto; }
 .store-state-node { position: relative; }
 .store-state-row { position: relative; z-index: 2; display: flex; width: 100%; min-width: 0; min-height: 24px; padding: 2px 5px 2px 1px; align-items: center; border: 0; color: var(--vscode-editor-foreground); background: transparent; line-height: 18px; cursor: pointer; user-select: none; }
 .store-state-row:hover { background: var(--vscode-list-hoverBackground); }
@@ -1019,7 +1030,7 @@ body.store-panel-resizing, body.store-panel-resizing * { cursor: col-resize !imp
 .store-state-children { position: relative; margin-left: 14px; padding-left: 12px; border-left: 1px solid var(--vscode-tree-indentGuidesStroke, var(--vscode-panel-border)); }
 .store-state-children > .store-state-node::before { content: ""; position: absolute; z-index: 1; left: -12px; top: 12px; width: 12px; border-top: 1px solid var(--vscode-tree-indentGuidesStroke, var(--vscode-panel-border)); }
 .store-state-children > .store-state-node:last-child::after { content: ""; position: absolute; z-index: 1; left: -13px; top: 13px; bottom: 0; width: 2px; background: var(--vscode-editor-background); }
-.store-member-list { padding: 1px; }
+.store-member-list { flex: 1 1 auto; min-height: 0; padding: 1px; overflow: auto; }
 .store-member-list:empty { display: none; }
 .store-member-row { display: grid; grid-template-columns: minmax(100px, .8fr) minmax(130px, 1.4fr) 26px 26px; gap: 3px; padding: 2px; border: 1px solid transparent; }
 .store-member-row.action { grid-template-columns: minmax(90px, .8fr) 68px minmax(100px, 1fr) 26px 26px; }
