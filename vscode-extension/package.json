@@ -7,6 +7,7 @@
   "files": [
     "src/**",
     "generator/**",
+    "templates/**",
     "media/**",
     "README.md"
   ],

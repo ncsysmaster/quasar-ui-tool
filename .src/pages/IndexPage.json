@@ -364,22 +364,22 @@
                 {
                   "id": "Table001",
                   "type": "Table",
-                  "label": "조회목록",
+                  "label": "tblList",
                   "props": {
                     "flat": true,
                     "bordered": true,
                     "dense": true,
-                    "rows": [],
                     "rowKey": "rowSn",
-                    "separator": "vertical",
+                    "separator": "horizontal",
                     "noDataLabel": "데이터가 없습니다.",
                     "loadingLabel": "데이터를 불러오는 중입니다.",
-                    "class": "",
-                    "selection": "single"
+                    "selection": "multiple"
+                  },
+                  "dynamicProps": {
+                    "rows": "storeName.list"
                   },
                   "models": {
-                    "pagination": "Table001Pagination",
-                    "selected": "Table001Selected"
+                    "pagination": "Table001Pagination"
                   },
                   "columns": [
                     {
@@ -411,24 +411,14 @@
                       "sortable": false,
                       "required": false,
                       "editable": false
-                    },
-                    {
-                      "name": "key",
-                      "label": "참조사항",
-                      "field": "column4",
-                      "type": "text",
-                      "align": "left",
-                      "sortable": false,
-                      "required": false,
-                      "editable": false
                     }
                   ],
                   "table": {
-                    "title": "조회목록",
+                    "title": "tblList",
                     "rowKey": "rowSn",
-                    "selection": "single",
-                    "rowsBinding": "",
-                    "loadingBinding": "",
+                    "selection": "multiple",
+                    "rowsBinding": "storeName.list",
+                    "loadingBinding": "storeName.loading",
                     "toolbar": {
                       "filter": false,
                       "search": false,
@@ -446,7 +436,7 @@
                     },
                     "pagination": {
                       "mode": "client",
-                      "rowsPerPage": 10,
+                      "rowsPerPage": 20,
                       "rowsPerPageOptions": [
                         10,
                         20,

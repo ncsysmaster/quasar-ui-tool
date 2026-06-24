@@ -47,31 +47,47 @@
     </q-card>
     <q-card label="Card" flat bordered>
       <q-card-section label="Card Section">
-        <q-table label="조회목록" v-model:pagination="Table001Pagination" v-model:selected="Table001Selected" :columns="Table001_columns" :rows-per-page-options="[10,20,50,0]" flat bordered dense :rows='[]' row-key="rowSn" separator="vertical" no-data-label="데이터가 없습니다." loading-label="데이터를 불러오는 중입니다." class="" selection="single" @row-click="onRowClick_Table001">
-          <template #top>
-            <div class="row items-center q-gutter-sm full-width">
-              <div class="text-subtitle1">조회목록</div>
-              <q-btn dense flat color="primary" label="신규" @click="onTableAdd_Table001" />
-              <q-btn dense flat color="primary" label="저장" @click="onTableSave_Table001" />
-              <q-btn dense flat color="primary" label="삭제" @click="onTableDelete_Table001" />
-              <q-btn dense flat color="primary" label="새로고침" @click="onTableRefresh_Table001" />
-            </div>
-          </template>
-          <template #body-cell-actions="props">
-            <q-td :props="props">
-              <q-btn dense flat label="편집" />
-              <q-btn dense flat color="negative" label="삭제" />
-            </q-td>
-          </template>
-        </q-table>
+        <div class="qt-ag-table-wrap">
+          <div class="row items-center q-gutter-sm full-width qt-table-toolbar-preview">
+            <div class="text-subtitle1">tblList</div>
+            <q-space />
+            <q-btn outline unelevated class="qt-table-toolbar-btn" style="height: 24px; min-height: 24px; padding: 0 10px; background: rgba(255, 255, 255, 0.82); opacity: 0.72" color="grey-5" text-color="grey-8" label="신규" @click="onTableAdd_Table001" />
+            <q-btn outline unelevated class="qt-table-toolbar-btn" style="height: 24px; min-height: 24px; padding: 0 10px; background: rgba(255, 255, 255, 0.82); opacity: 0.72" color="primary" label="저장" @click="onTableSave_Table001" />
+            <q-btn outline unelevated class="qt-table-toolbar-btn" style="height: 24px; min-height: 24px; padding: 0 10px; background: rgba(255, 255, 255, 0.82); opacity: 0.72" color="red" label="삭제" @click="onTableDelete_Table001" />
+            <q-btn outline unelevated class="qt-table-toolbar-btn" style="height: 24px; min-height: 24px; padding: 0 10px; background: rgba(255, 255, 255, 0.82); opacity: 0.72" color="grey-5" text-color="grey-8" label="새로고침" @click="onTableRefresh_Table001" />
+          </div>
+          <ag-grid-vue ref="Table001Ref"
+          class="ag-theme-quartz qt-ag-grid"
+          style="width: 100%; height: 360px"
+          :row-data="storeName.list"
+          :column-defs="Table001_columnDefs"
+          :default-col-def="{ resizable: true, sortable: true, filter: true }"
+          :animate-rows="true"
+          :get-row-id="(params) => String(params.data?.['rowSn'] ?? '')"
+          @grid-ready="(event) => Table001.setGridApi(event.api)"
+          :pagination="true"
+          :pagination-page-size="20"
+          :pagination-page-size-selector="[10,20,50,0]"
+          :row-selection="{ mode: 'multiRow' }"
+          :loading="storeName.loading"
+          @row-clicked="(event) => onRowClick_Table001(event.event, event.data)" />
+        </div>
       </q-card-section>
     </q-card>
   </q-page>
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import { useIndexUtilStore } from 'src/store/index/IndexUtil'
 import { useInStore } from 'src/store/in/inStore'
+import { createTableApi } from 'src/component/quasar-ui-api'
+import { AgGridVue } from 'ag-grid-vue3'
+import { ModuleRegistry, AllCommunityModule } from 'ag-grid-community'
+import 'ag-grid-community/styles/ag-grid.css'
+import 'ag-grid-community/styles/ag-theme-quartz.css'
+
+ModuleRegistry.registerModules([AllCommunityModule])
 
 const storeName = useIndexUtilStore()
 
@@ -110,7 +126,20 @@ const search = {
 
 const classOptions = []
 
-const Table001_columns = [{"name":"name","label":"명칭","field":"name","type":"text","align":"left","sortable":true,"required":false,"editable":false},{"name":"dtlDt","label":"상세일자","field":"dtlDt","type":"date","align":"center","sortable":true,"required":false,"editable":false},{"name":"actions","label":"작업","field":"actions","type":"actions","align":"center","sortable":false,"required":false,"editable":false},{"name":"key","label":"참조사항","field":"column4","type":"text","align":"left","sortable":false,"required":false,"editable":false}]
+const Table001_columnDefs = [{ "colId": "name", "headerName": "명칭", "field": "name", "sortable": true, "resizable": true, "editable": false, "cellStyle": { "textAlign": "left" } },{ "colId": "dtlDt", "headerName": "상세일자", "field": "dtlDt", "sortable": true, "resizable": true, "editable": false, "cellStyle": { "textAlign": "center" } },{ "colId": "actions", "headerName": "작업", "field": "actions", "sortable": false, "resizable": true, "editable": false, "cellStyle": { "textAlign": "center" }, "cellRenderer": () => '<button type="button" class="qt-ag-action-btn" style="margin-right:4px;padding:1px 7px;border:1px solid #cfd8dc;border-radius:3px;background:#fff;color:#455a64">편집</button><button type="button" class="qt-ag-action-btn qt-ag-action-danger" style="padding:1px 7px;border:1px solid #ffcdd2;border-radius:3px;background:#fff;color:#c62828">삭제</button>', "filter": false }]
+
+const Table001Ref = ref(null)
+
+const Table001 = createTableApi({
+  id: "Table001",
+  type: "Table",
+  componentRef: Table001Ref,
+  rowKey: "rowSn",
+  rows: { get: () => storeName.list, set: (value) => { storeName.list = value } },
+  columns: { get: () => Table001_columnDefs },
+  pagination: { get: () => Table001Pagination.value, set: (value) => { Table001Pagination.value = value } },
+  loading: { get: () => storeName.loading, set: (value) => { storeName.loading = value } }
+})
 
 function onSearch() {
   console.log('onSearch', { ...search })
@@ -121,19 +150,31 @@ function onSearch() {
 function resetSearch() {
   console.log('resetSearch storeName.storeName : ', storeName.storeName)
   storeName.selectList(storeName.loading)
+  
+
   console.log('storeName.searchText : ', storeName.searchText)
 
-  
 }
 
 
 function onRowClick_Table001(event, row) {
   console.log('row-click', row)
+
 }
 
 
 function onTableAdd_Table001() {
   console.log('table-add')
+    const newRow = {
+    rowSn: Date.now(),
+    name: '홍길동',
+    dtlDt: '혁신기획팀',
+    actions : '',
+    key: 'abdc'
+  }
+  Table001.addRow(newRow)
+
+  
 }
 
 

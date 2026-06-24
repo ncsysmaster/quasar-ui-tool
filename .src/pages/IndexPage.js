@@ -7,19 +7,31 @@ function onSearch() {
 function resetSearch() {
   console.log('resetSearch storeName.storeName : ', storeName.storeName)
   storeName.selectList(storeName.loading)
+  
+
   console.log('storeName.searchText : ', storeName.searchText)
 
-  
 }
 
 
 function onRowClick_Table001(event, row) {
   console.log('row-click', row)
+
 }
 
 
 function onTableAdd_Table001() {
   console.log('table-add')
+    const newRow = {
+    rowSn: Date.now(),
+    name: '홍길동',
+    dtlDt: '혁신기획팀',
+    actions : '',
+    key: 'abdc'
+  }
+  Table001.addRow(newRow)
+
+  
 }
 
 

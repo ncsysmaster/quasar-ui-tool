@@ -152,9 +152,9 @@ function getPropertiesHtml(webview, htmlShell, getNonce) {
           checkField('bordered', 'prop.bordered', props.bordered) +
           selectField('separator', 'prop.separator', props.separator || 'horizontal', ['horizontal', 'vertical', 'cell', 'none'])
         ) + propertySection('Data',
-          field('rows binding', 'dynamic.rows', dynamicProps.rows || '') +
+          field('rows binding', 'dynamic.rows', dynamicProps.rows || table.rowsBinding || '') +
           field('columns binding', 'dynamic.columns', dynamicProps.columns || '') +
-          field('loading binding', 'dynamic.loading', dynamicProps.loading || '') +
+          field('loading binding', 'dynamic.loading', dynamicProps.loading || table.loadingBinding || '') +
           field('error binding', 'table.errorBinding', table.errorBinding || '') +
           field('selected binding', 'model.selected', models.selected || '')
         ) + propertySectionWithAction('Columns',

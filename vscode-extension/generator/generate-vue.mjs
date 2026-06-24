@@ -92,6 +92,7 @@ function generateVue(definition, inputPath, setupScript) {
   assertPageDefinition(definition, inputPath)
 
   const components = definition.components || []
+  apiSourceComponents = buildApiSourceComponentMap(components)
   const storeImports = resolveStoreImports(definition)
   if (components.length === 0 && storeImports.length === 0) {
     return '<template></template>\n'
@@ -104,7 +105,9 @@ function generateVue(definition, inputPath, setupScript) {
     setupScript,
     storeImports,
     collectModelBindings(components),
-    collectTableColumnDefinitions(components)
+    collectTableColumnDefinitions(components),
+    collectTableLocalRefs(components),
+    collectComponentApiDefinitions(components)
   )
 
   const templateSource = components.length === 0
@@ -158,17 +161,16 @@ function renderComponent(component, depth) {
 }
 
 function renderTableComponent(component, depth) {
-  const tagName = getTagName(component)
-  const attributes = renderAttributes(component)
   const indent = '  '.repeat(depth)
   const childIndent = '  '.repeat(depth + 1)
   const toolbar = component.table?.toolbar || {}
   const content = []
 
   if (component.table?.title || Object.values(toolbar).some(Boolean)) {
-    const controls = []
-    if (component.table?.title) controls.push(`<div class="text-subtitle1">${escapeTemplateText(component.table.title)}</div>`)
-    if (toolbar.filter) controls.push(`<q-input v-model="${component.table?.filterBinding || 'tableFilter'}" dense outlined placeholder="검색" />`)
+    const leftControls = []
+    const buttonControls = []
+    if (component.table?.title) leftControls.push(`<div class="text-subtitle1">${escapeTemplateText(component.table.title)}</div>`)
+    if (toolbar.filter) leftControls.push(`<q-input v-model="${component.table?.filterBinding || 'tableFilter'}" dense outlined placeholder="검색" />`)
     const buttons = [
       ['search', '검색', 'onTableSearch'], ['add', '신규', 'onTableAdd'], ['save', '저장', 'onTableSave'],
       ['delete', '삭제', 'onTableDelete'], ['excel', '엑셀', 'onTableExcel'],
@@ -176,43 +178,91 @@ function renderTableComponent(component, depth) {
     ]
     buttons.forEach(([key, label, fallbackHandler]) => {
       const handler = component.table?.handlers?.[key] || fallbackHandler
-      if (toolbar[key]) controls.push(`<q-btn dense flat color="primary" label="${label}" @click="${handler}" />`)
+      if (toolbar[key]) {
+        buttonControls.push(`<q-btn ${renderTableToolbarButtonAttrs(key)} label="${label}" @click="${handler}" />`)
+      }
     })
-    content.push(`${childIndent}<template #top>\n${childIndent}  <div class="row items-center q-gutter-sm full-width">\n${controls.map((line) => `${childIndent}    ${line}`).join('\n')}\n${childIndent}  </div>\n${childIndent}</template>`)
+    const controls = [
+      ...leftControls,
+      ...(buttonControls.length ? ['<q-space />'] : []),
+      ...buttonControls,
+    ]
+    content.push(`${childIndent}<div class="row items-center q-gutter-sm full-width qt-table-toolbar-preview">\n${controls.map((line) => `${childIndent}  ${line}`).join('\n')}\n${childIndent}</div>`)
   }
 
-  ;(component.columns || []).forEach((column) => {
-    if (column.type === 'actions') {
-      content.push(`${childIndent}<template #body-cell-${kebabCase(column.name)}="props">\n${childIndent}  <q-td :props="props">\n${childIndent}    <q-btn dense flat label="편집" />\n${childIndent}    <q-btn dense flat color="negative" label="삭제" />\n${childIndent}  </q-td>\n${childIndent}</template>`)
-    } else if (column.editable || !['text', 'number', 'date', 'datetime'].includes(column.type || 'text')) {
-      content.push(renderTableCellTemplate(column, childIndent))
-    }
-  })
+  content.push(`${childIndent}<ag-grid-vue ${renderAgGridAttributes(component, depth + 1)} />`)
 
-  if (component.table?.errorBinding) {
-    content.push(`${childIndent}<template #no-data>\n${childIndent}  <div v-if="${component.table.errorBinding}" class="text-negative">{{ ${component.table.errorBinding} }}</div>\n${childIndent}  <div v-else>${escapeTemplateText(component.props?.noDataLabel || '데이터가 없습니다.')}</div>\n${childIndent}</template>`)
-  }
-
-  if (content.length === 0) {
-    return `${indent}<${tagName}${attributes ? ` ${attributes}` : ''} />`
-  }
-  return `${indent}<${tagName}${attributes ? ` ${attributes}` : ''}>\n${content.join('\n')}\n${indent}</${tagName}>`
+  return `${indent}<div class="qt-ag-table-wrap">\n${content.join('\n')}\n${indent}</div>`
 }
 
-function renderTableCellTemplate(column, indent) {
-  const value = `props.row.${column.field}`
-  let control
-  if (column.type === 'checkbox') control = `<q-checkbox v-model="${value}" dense />`
-  else if (column.type === 'select') control = `<q-select v-model="${value}" :options="${column.optionsBinding || '[]'}" dense borderless />`
-  else if (column.type === 'badge') control = `<q-badge :label="${value}" color="primary" />`
-  else if (column.type === 'button') control = `<q-btn dense flat color="primary" :label="${value}" />`
-  else if (column.type === 'link') control = `<a :href="${value}" target="_blank">{{ ${value} }}</a>`
-  else if (column.type === 'image') control = `<img :src="${value}" alt="" style="max-width: 80px; max-height: 48px" />`
-  else {
-    const inputType = column.type === 'number' ? 'number' : column.type === 'date' ? 'date' : column.type === 'datetime' ? 'datetime-local' : 'text'
-    control = `<q-input v-model="${value}" type="${inputType}" dense borderless />`
+function renderTableToolbarButtonAttrs(key) {
+  const baseAttrs = 'outline unelevated class="qt-table-toolbar-btn" style="height: 24px; min-height: 24px; padding: 0 10px; background: rgba(255, 255, 255, 0.82); opacity: 0.72"'
+  if (key === 'save') return `${baseAttrs} color="primary"`
+  if (key === 'delete') return `${baseAttrs} color="red"`
+  return `${baseAttrs} color="grey-5" text-color="grey-8"`
+}
+
+function renderAgGridAttributes(component, depth) {
+  const attributes = [
+    `ref="${getComponentRefName(component)}"`,
+    'class="ag-theme-quartz qt-ag-grid"',
+    `style="${escapeAttribute(getAgGridStyle(component))}"`,
+    `:row-data="${escapeAttribute(getTableRowsExpression(component))}"`,
+    `:column-defs="${getTableColumnsVariableName(component)}"`,
+    ':default-col-def="{ resizable: true, sortable: true, filter: true }"',
+    ':animate-rows="true"',
+    `:get-row-id="(params) => String(params.data?.['${escapeJavaScriptString(getTableRowKey(component))}'] ?? '')"`,
+    `@grid-ready="(event) => ${getComponentApiName(component)}.setGridApi(event.api)"`,
+  ]
+  const pagination = component.table?.pagination || {}
+  const selection = component.table?.selection || component.props?.selection || 'none'
+  const rowClickHandler = component.events?.['row-click'] || component.events?.rowClick
+
+  if (pagination.mode !== 'none') {
+    const rowsPerPage = Number(pagination.rowsPerPage) || 10
+    const options = Array.isArray(pagination.rowsPerPageOptions) ? pagination.rowsPerPageOptions : [10, 20, 50, 0]
+    attributes.push(':pagination="true"')
+    attributes.push(`:pagination-page-size="${rowsPerPage}"`)
+    attributes.push(`:pagination-page-size-selector="${escapeAttribute(JSON.stringify(options))}"`)
   }
-  return `${indent}<template #body-cell-${kebabCase(column.name)}="props">\n${indent}  <q-td :props="props">\n${indent}    ${control}\n${indent}  </q-td>\n${indent}</template>`
+
+  if (selection === 'single' || selection === 'multiple') {
+    const mode = selection === 'multiple' ? 'multiRow' : 'singleRow'
+    attributes.push(`:row-selection="{ mode: '${mode}' }"`)
+    if (isAssignableExpression(component.models?.selected)) {
+      attributes.push(`@selection-changed="(event) => ${getComponentApiName(component)}.setSelected(event.api.getSelectedRows())"`)
+    }
+  }
+
+  if (isAssignableExpression(component.table?.loadingBinding)) {
+    attributes.push(`:loading="${escapeAttribute(component.table.loadingBinding)}"`)
+  }
+
+  if (rowClickHandler) {
+    attributes.push(`@row-clicked="(event) => ${escapeAttribute(String(rowClickHandler))}(event.event, event.data)"`)
+  }
+
+  const joined = attributes.join('\n' + '  '.repeat(depth))
+  return joined
+}
+
+function getAgGridStyle(component) {
+  const style = String(component.style || '').trim()
+  const declarations = style
+    .split(';')
+    .map((item) => item.trim())
+    .filter(Boolean)
+  if (!declarations.some((item) => item.toLowerCase().startsWith('width:'))) {
+    declarations.push('width: 100%')
+  }
+  if (!declarations.some((item) => item.toLowerCase().startsWith('height:'))) {
+    declarations.push('height: 360px')
+  }
+  return declarations.join('; ')
+}
+
+function getTableRowKey(component) {
+  return component.table?.rowKey || component.props?.rowKey || 'id'
 }
 
 function getTagName(component) {
@@ -225,6 +275,10 @@ function getTagName(component) {
 
 function renderAttributes(component) {
   const attributes = []
+
+  if (component.type === 'Table' && component.id) {
+    attributes.push(`ref="${getComponentRefName(component)}"`)
+  }
 
   if (component.class) {
     attributes.push(`class="${escapeAttribute(component.class)}"`)
@@ -260,6 +314,7 @@ function renderAttributes(component) {
   })
 
   Object.entries(component.dynamicProps || {}).forEach(([name, expression]) => {
+    if (component.type === 'Table' && name === 'rows') return
     attributes.push(`:${kebabCase(name)}="${escapeAttribute(String(expression))}"`)
   })
 
@@ -268,6 +323,7 @@ function renderAttributes(component) {
   }
 
   if (component.type === 'Table') {
+    attributes.push(`:rows="${escapeAttribute(getTableRowsExpression(component))}"`)
     const pagination = component.table?.pagination || {}
     if (pagination.mode === 'none') {
       attributes.push('hide-pagination')
@@ -284,6 +340,7 @@ function renderAttributes(component) {
 
   Object.entries(component.props || {}).forEach(([name, value]) => {
     if (name === 'style') return
+    if (component.type === 'Table' && name === 'rows') return
     if (component.type === 'Table' && name === 'columns') return
     if (Object.prototype.hasOwnProperty.call(component.dynamicProps || {}, name)) return
     attributes.push(renderProp(name, value))
@@ -297,14 +354,52 @@ function renderAttributes(component) {
 }
 
 function renderTableColumnsExpression(columns) {
-  return `[${columns.map((column) => {
-    const value = { ...column }
-    const formatter = value.format
-    delete value.format
-    const literal = JSON.stringify(value)
-    if (!formatter) return literal
-    return `${literal.slice(0, -1)},"format":${formatter}}`
-  }).join(',')}]`
+  return `[${columns.map((column) => renderAgGridColumnDefExpression(column)).join(',')}]`
+}
+
+function renderAgGridColumnDefExpression(column) {
+  const width = Number.parseInt(column?.width, 10)
+  const align = ['left', 'center', 'right'].includes(column?.align) ? column.align : ''
+  const type = column?.type || 'text'
+  const value = {
+    colId: String(column?.name || column?.field || 'column'),
+    headerName: String(column?.label || column?.name || column?.field || 'Column'),
+    field: String(column?.field || column?.name || 'column'),
+    sortable: Boolean(column?.sortable),
+    resizable: true,
+    editable: Boolean(column?.editable),
+    ...(Number.isFinite(width) ? { width } : {}),
+    ...(align ? { cellStyle: { textAlign: align } } : {}),
+    ...(column?.required ? { headerClass: 'qt-required-column' } : {}),
+  }
+
+  if (type === 'number') value.type = 'numericColumn'
+  if (type === 'checkbox') value.cellRenderer = 'agCheckboxCellRenderer'
+  if (type === 'badge') value.cellRenderer = (params) => params.value == null ? '' : String(params.value)
+  if (type === 'button') value.cellRenderer = (params) => params.value == null ? String(value.headerName) : String(params.value)
+  if (type === 'link') value.cellRenderer = (params) => params.value == null ? '' : `<a href="${String(params.value)}" target="_blank">${String(params.value)}</a>`
+  if (type === 'image') value.cellRenderer = (params) => params.value == null ? '' : `<img src="${String(params.value)}" alt="" style="max-width:80px;max-height:48px" />`
+  if (type === 'actions') {
+    value.cellRenderer = () => '<button type="button" class="qt-ag-action-btn" style="margin-right:4px;padding:1px 7px;border:1px solid #cfd8dc;border-radius:3px;background:#fff;color:#455a64">편집</button><button type="button" class="qt-ag-action-btn qt-ag-action-danger" style="padding:1px 7px;border:1px solid #ffcdd2;border-radius:3px;background:#fff;color:#c62828">삭제</button>'
+    value.sortable = false
+    value.filter = false
+  }
+
+  const formatter = column?.format
+  const literal = objectToJavaScriptLiteral(value)
+  if (!formatter) return literal
+  return `${literal.slice(0, -1)}, valueFormatter: (params) => ${formatter}(params.value, params.data) }`
+}
+
+function objectToJavaScriptLiteral(value) {
+  if (typeof value === 'function') return value.toString()
+  if (Array.isArray(value)) return `[${value.map((item) => objectToJavaScriptLiteral(item)).join(', ')}]`
+  if (value && typeof value === 'object') {
+    return `{ ${Object.entries(value)
+      .map(([key, item]) => `${JSON.stringify(key)}: ${objectToJavaScriptLiteral(item)}`)
+      .join(', ')} }`
+  }
+  return JSON.stringify(value)
 }
 
 function renderProp(name, value) {
@@ -339,7 +434,9 @@ function renderScriptSetup(
   customSetup = '',
   storeImports = [],
   modelBindings = new Set(),
-  tableColumnDefinitions = []
+  tableColumnDefinitions = [],
+  tableLocalRefs = [],
+  componentApiDefinitions = []
 ) {
   const exportedNames = Array.isArray(scriptSetup.dataExports)
     ? scriptSetup.dataExports
@@ -358,7 +455,23 @@ function renderScriptSetup(
   const tableColumnStatements = tableColumnDefinitions.map(
     ({ name, columns }) => `const ${name} = ${renderTableColumnsExpression(columns)}`
   )
-  const blocks = [...storeStatements, ...statements, ...tableColumnStatements]
+  const tableLocalRefStatements = tableLocalRefs.map(
+    ({ name, value }) => `const ${name} = ref(${JSON.stringify(value, null, 2)})`
+  )
+  const componentRefStatements = componentApiDefinitions.map(
+    ({ refName }) => `const ${refName} = ref(null)`
+  )
+  const componentApiStatements = componentApiDefinitions.map((definition) =>
+    renderComponentApiStatement(definition, modelBindings, tableLocalRefs)
+  )
+  const blocks = [
+    ...storeStatements,
+    ...statements,
+    ...tableColumnStatements,
+    ...tableLocalRefStatements,
+    ...componentRefStatements,
+    ...componentApiStatements,
+  ]
   if (setupCode) blocks.push(setupCode)
 
   if (blocks.length === 0) {
@@ -368,8 +481,20 @@ function renderScriptSetup(
   const importLines = storeImports
     .filter((item) => item?.name && item?.from)
     .map((item) => `import { ${item.name} } from '${escapeJavaScriptString(item.from)}'`)
-  if (statements.some((statement) => statement.includes(' = ref(')) && !/import\s*\{[^}]*\bref\b[^}]*\}\s*from\s*['"]vue['"]/.test(setupCode)) {
+  const needsRef = blocks.some((statement) => statement.includes(' = ref('))
+  if (needsRef && !/import\s*\{[^}]*\bref\b[^}]*\}\s*from\s*['"]vue['"]/.test(setupCode)) {
     importLines.unshift("import { ref } from 'vue'")
+  }
+  const apiFactoryNames = [...new Set(componentApiDefinitions.map((definition) => definition.factoryName))]
+  if (apiFactoryNames.length > 0) {
+    importLines.push(`import { ${apiFactoryNames.sort().join(', ')} } from 'src/component/quasar-ui-api'`)
+  }
+  if (componentApiDefinitions.some((definition) => definition.type === 'Table')) {
+    importLines.push("import { AgGridVue } from 'ag-grid-vue3'")
+    importLines.push("import { ModuleRegistry, AllCommunityModule } from 'ag-grid-community'")
+    importLines.push("import 'ag-grid-community/styles/ag-grid.css'")
+    importLines.push("import 'ag-grid-community/styles/ag-theme-quartz.css'")
+    blocks.unshift('ModuleRegistry.registerModules([AllCommunityModule])')
   }
   const imports = importLines.length > 0 ? `${[...new Set(importLines)].join('\n')}\n\n` : ''
   return `<script setup>\n${imports}${blocks.join('\n\n')}\n</script>\n`
@@ -404,11 +529,146 @@ function collectTableColumnDefinitions(components, result = []) {
   return result
 }
 
+function collectTableLocalRefs(components, result = []) {
+  ;(components || []).forEach((component) => {
+    if (
+      component.type === 'Table' &&
+      !component.table?.rowsBinding &&
+      !component.dynamicProps?.rows
+    ) {
+      result.push({
+        name: getTableRowsVariableName(component),
+        value: Array.isArray(component.props?.rows) ? component.props.rows : []
+      })
+    }
+    collectTableLocalRefs(component.children, result)
+  })
+  return result
+}
+
+function collectComponentApiDefinitions(components, result = []) {
+  ;(components || []).forEach((component) => {
+    if (component?.id && component.type === 'Table') {
+      result.push({
+        id: String(component.id),
+        type: String(component.type || 'HtmlElement'),
+        apiName: getComponentApiName(component),
+        refName: getComponentRefName(component),
+        factoryName: getComponentApiFactoryName(component)
+      })
+    }
+    collectComponentApiDefinitions(component.children, result)
+  })
+  return dedupeApiDefinitions(result)
+}
+
+function dedupeApiDefinitions(definitions) {
+  const seen = new Set()
+  return definitions.filter((definition) => {
+    if (seen.has(definition.apiName)) return false
+    seen.add(definition.apiName)
+    return true
+  })
+}
+
+function renderComponentApiStatement(definition, modelBindings, tableLocalRefs) {
+  const options = [
+    `id: ${JSON.stringify(definition.id)}`,
+    `type: ${JSON.stringify(definition.type)}`,
+    `componentRef: ${definition.refName}`
+  ]
+  const component = findApiSourceComponent(definition.id)
+
+  if (component?.type === 'Table') {
+    options.push(`rowKey: ${JSON.stringify(component.table?.rowKey || component.props?.rowKey || 'id')}`)
+    options.push(`rows: ${renderAccessor(getTableRowsExpression(component), modelBindings, tableLocalRefs)}`)
+    options.push(`columns: { get: () => ${getTableColumnsVariableName(component)} }`)
+    if (isAssignableExpression(component.models?.selected)) {
+      options.push(`selected: ${renderAccessor(component.models.selected, modelBindings)}`)
+    }
+    if (isAssignableExpression(component.models?.pagination)) {
+      options.push(`pagination: ${renderAccessor(component.models.pagination, modelBindings)}`)
+    }
+    if (isAssignableExpression(component.table?.loadingBinding)) {
+      options.push(`loading: ${renderAccessor(component.table.loadingBinding, modelBindings)}`)
+    }
+  }
+
+  return `const ${definition.apiName} = ${definition.factoryName}({\n  ${options.join(',\n  ')}\n})`
+}
+
+let apiSourceComponents = null
+
+function findApiSourceComponent(id) {
+  return apiSourceComponents?.get(id) || null
+}
+
+function buildApiSourceComponentMap(components, map = new Map()) {
+  ;(components || []).forEach((component) => {
+    if (component?.id) map.set(String(component.id), component)
+    buildApiSourceComponentMap(component.children, map)
+  })
+  return map
+}
+
+function getComponentApiFactoryName(component) {
+  if (component.type === 'Table') return 'createTableApi'
+  return 'createBaseComponentApi'
+}
+
 function getTableColumnsVariableName(component) {
   const tableId = String(component?.id || 'Table')
     .replace(/[^A-Za-z0-9_$]/g, '_')
     .replace(/^(?=\d)/, '_')
-  return `${tableId}_columns`
+  return `${tableId}_columnDefs`
+}
+
+function getTableRowsVariableName(component) {
+  return `${getComponentApiName(component)}_rows`
+}
+
+function getTableRowsExpression(component) {
+  if (component.dynamicProps?.rows) return component.dynamicProps.rows
+  if (component.table?.rowsBinding) return component.table.rowsBinding
+  return getTableRowsVariableName(component)
+}
+
+function getComponentApiName(component) {
+  return toIdentifier(component?.id || component?.type || 'component')
+}
+
+function getComponentRefName(component) {
+  return `${getComponentApiName(component)}Ref`
+}
+
+function toIdentifier(value) {
+  return String(value || 'component')
+    .replace(/[^A-Za-z0-9_$]/g, '_')
+    .replace(/^(?=\d)/, '_')
+}
+
+function isAssignableExpression(expression) {
+  return /^[A-Za-z_$][A-Za-z0-9_$]*(?:\.[A-Za-z_$][A-Za-z0-9_$]*)*$/.test(expression || '')
+}
+
+function renderAccessor(expression, modelBindings, tableLocalRefs = []) {
+  return `{ get: () => ${renderReadExpression(expression, modelBindings, tableLocalRefs)}, set: (value) => { ${renderWriteExpression(expression, modelBindings, 'value', tableLocalRefs)} } }`
+}
+
+function renderReadExpression(expression, modelBindings, tableLocalRefs = []) {
+  return needsValueAccess(expression, modelBindings, tableLocalRefs) ? `${expression}.value` : expression
+}
+
+function renderWriteExpression(expression, modelBindings, valueExpression, tableLocalRefs = []) {
+  return needsValueAccess(expression, modelBindings, tableLocalRefs)
+    ? `${expression}.value = ${valueExpression}`
+    : `${expression} = ${valueExpression}`
+}
+
+function needsValueAccess(expression, modelBindings, tableLocalRefs = []) {
+  if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(expression || '')) return false
+  if (modelBindings.has(expression)) return true
+  return tableLocalRefs.some((item) => item.name === expression)
 }
 
 function resolveStoreImports(definition) {

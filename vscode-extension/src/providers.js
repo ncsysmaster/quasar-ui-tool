@@ -105,6 +105,10 @@ class PageEditorProvider {
         await editorState.openFirstComponentMethod(message.id);
       }
 
+      if (message.type === "openTableToolbarMethod") {
+        await editorState.openTableToolbarMethod(message.id, message.action);
+      }
+
       if (message.type === "setEditorTab") {
         editorState.setEditorTab(message.tab);
       }
