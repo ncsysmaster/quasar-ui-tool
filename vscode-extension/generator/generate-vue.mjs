@@ -192,7 +192,7 @@ function renderTableComponent(component, depth) {
 
   content.push(`${childIndent}<ag-grid-vue ${renderAgGridAttributes(component, depth + 1)} />`)
 
-  return `${indent}<div class="qt-ag-table-wrap">\n${content.join('\n')}\n${indent}</div>`
+  return `${indent}<div class="qt-ag-table-wrap" @paste.capture="${getComponentApiName(component)}.handlePaste">\n${content.join('\n')}\n${indent}</div>`
 }
 
 function renderTableToolbarButtonAttrs(key) {
@@ -205,14 +205,19 @@ function renderTableToolbarButtonAttrs(key) {
 function renderAgGridAttributes(component, depth) {
   const attributes = [
     `ref="${getComponentRefName(component)}"`,
-    'class="ag-theme-quartz qt-ag-grid"',
+    'class="qt-ag-grid"',
     `style="${escapeAttribute(getAgGridStyle(component))}"`,
     `:row-data="${escapeAttribute(getTableRowsExpression(component))}"`,
     `:column-defs="${getTableColumnsVariableName(component)}"`,
-    ':default-col-def="{ resizable: true, sortable: true, filter: true }"',
+    `:default-col-def="{ resizable: true, sortable: true, filter: true, minWidth: 70, suppressKeyboardEvent: (params) => ${getComponentApiName(component)}.suppressKeyboardEvent(params) }"`,
+    ':header-height="48"',
+    ':row-height="42"',
     ':animate-rows="true"',
-    `:get-row-id="(params) => String(params.data?.['${escapeJavaScriptString(getTableRowKey(component))}'] ?? '')"`,
+    ':single-click-edit="true"',
+    `:get-row-id="(params) => String(params.data?.__qtRowId ?? params.data?.['${escapeJavaScriptString(getTableRowKey(component))}'] ?? params.node?.rowIndex ?? '')"`,
     `@grid-ready="(event) => ${getComponentApiName(component)}.setGridApi(event.api)"`,
+    `@cell-key-down="(event) => ${getComponentApiName(component)}.handleCellKeyDown(event)"`,
+    `@cell-value-changed="(event) => ${getComponentApiName(component)}.handleCellValueChanged(event)"`,
   ]
   const pagination = component.table?.pagination || {}
   const selection = component.table?.selection || component.props?.selection || 'none'
@@ -228,7 +233,7 @@ function renderAgGridAttributes(component, depth) {
 
   if (selection === 'single' || selection === 'multiple') {
     const mode = selection === 'multiple' ? 'multiRow' : 'singleRow'
-    attributes.push(`:row-selection="{ mode: '${mode}' }"`)
+    attributes.push(`:row-selection="{ mode: '${mode}', enableClickSelection: true }"`)
     if (isAssignableExpression(component.models?.selected)) {
       attributes.push(`@selection-changed="(event) => ${getComponentApiName(component)}.setSelected(event.api.getSelectedRows())"`)
     }
@@ -247,18 +252,26 @@ function renderAgGridAttributes(component, depth) {
 }
 
 function getAgGridStyle(component) {
-  const style = String(component.style || '').trim()
-  const declarations = style
+  const declarations = String(component.style || '')
     .split(';')
     .map((item) => item.trim())
     .filter(Boolean)
-  if (!declarations.some((item) => item.toLowerCase().startsWith('width:'))) {
-    declarations.push('width: 100%')
-  }
-  if (!declarations.some((item) => item.toLowerCase().startsWith('height:'))) {
-    declarations.push('height: 360px')
-  }
-  return declarations.join('; ')
+  const width = findStyleDeclarationValue(declarations, 'width') || '100%'
+  const height = findStyleDeclarationValue(declarations, 'height') || '360px'
+  const rest = declarations.filter((item) => {
+    const property = item.slice(0, item.indexOf(':')).trim().toLowerCase()
+    return property !== 'width' && property !== 'height'
+  })
+  return [`width: ${width}`, `height: ${height}`, ...rest].join('; ')
+}
+
+function findStyleDeclarationValue(declarations, propertyName) {
+  const target = String(propertyName || '').trim().toLowerCase()
+  const declaration = declarations.find((item) => {
+    const separator = item.indexOf(':')
+    return separator >= 0 && item.slice(0, separator).trim().toLowerCase() === target
+  })
+  return declaration ? declaration.slice(declaration.indexOf(':') + 1).trim() : ''
 }
 
 function getTableRowKey(component) {
@@ -275,10 +288,6 @@ function getTagName(component) {
 
 function renderAttributes(component) {
   const attributes = []
-
-  if (component.type === 'Table' && component.id) {
-    attributes.push(`ref="${getComponentRefName(component)}"`)
-  }
 
   if (component.class) {
     attributes.push(`class="${escapeAttribute(component.class)}"`)
@@ -314,34 +323,11 @@ function renderAttributes(component) {
   })
 
   Object.entries(component.dynamicProps || {}).forEach(([name, expression]) => {
-    if (component.type === 'Table' && name === 'rows') return
     attributes.push(`:${kebabCase(name)}="${escapeAttribute(String(expression))}"`)
   })
 
-  if (component.type === 'Table' && Array.isArray(component.columns) && !component.dynamicProps?.columns) {
-    attributes.push(`:columns="${getTableColumnsVariableName(component)}"`)
-  }
-
-  if (component.type === 'Table') {
-    attributes.push(`:rows="${escapeAttribute(getTableRowsExpression(component))}"`)
-    const pagination = component.table?.pagination || {}
-    if (pagination.mode === 'none') {
-      attributes.push('hide-pagination')
-    } else if (!component.models?.pagination) {
-      const rowsPerPage = Number(pagination.rowsPerPage) || 10
-      const options = Array.isArray(pagination.rowsPerPageOptions) ? pagination.rowsPerPageOptions : [10, 20, 50, 0]
-      attributes.push(`:pagination="{ page: 1, rowsPerPage: ${rowsPerPage} }"`)
-    }
-    if (pagination.mode !== 'none') {
-      const options = Array.isArray(pagination.rowsPerPageOptions) ? pagination.rowsPerPageOptions : [10, 20, 50, 0]
-      attributes.push(`:rows-per-page-options="${escapeAttribute(JSON.stringify(options))}"`)
-    }
-  }
-
   Object.entries(component.props || {}).forEach(([name, value]) => {
     if (name === 'style') return
-    if (component.type === 'Table' && name === 'rows') return
-    if (component.type === 'Table' && name === 'columns') return
     if (Object.prototype.hasOwnProperty.call(component.dynamicProps || {}, name)) return
     attributes.push(renderProp(name, value))
   })
@@ -357,8 +343,28 @@ function renderTableColumnsExpression(columns) {
   return `[${columns.map((column) => renderAgGridColumnDefExpression(column)).join(',')}]`
 }
 
+function getRenderableTableColumns(component) {
+  const columns = Array.isArray(component?.columns) ? component.columns : []
+  if (component?.table?.showModeColumn === false) return columns
+  if (columns.some((column) => (column?.field || column?.name) === 'mode')) return columns
+  return [
+    {
+      name: 'mode',
+      label: '',
+      field: 'mode',
+      type: 'text',
+      align: 'center',
+      width: '46px',
+      sortable: true,
+      editable: false,
+      modeColumn: true,
+    },
+    ...columns,
+  ]
+}
+
 function renderAgGridColumnDefExpression(column) {
-  const width = Number.parseInt(column?.width, 10)
+  const sizing = getAgGridColumnSizing(column)
   const align = ['left', 'center', 'right'].includes(column?.align) ? column.align : ''
   const type = column?.type || 'text'
   const value = {
@@ -368,9 +374,16 @@ function renderAgGridColumnDefExpression(column) {
     sortable: Boolean(column?.sortable),
     resizable: true,
     editable: Boolean(column?.editable),
-    ...(Number.isFinite(width) ? { width } : {}),
+    ...sizing,
     ...(align ? { cellStyle: { textAlign: align } } : {}),
     ...(column?.required ? { headerClass: 'qt-required-column' } : {}),
+    ...(column?.modeColumn || column?.field === 'mode' ? {
+      cellClass: 'qt-table-mode-cell',
+      editable: false,
+      headerName: '',
+      minWidth: 42,
+      maxWidth: 52,
+    } : {}),
   }
 
   if (type === 'number') value.type = 'numericColumn'
@@ -383,12 +396,35 @@ function renderAgGridColumnDefExpression(column) {
     value.cellRenderer = () => '<button type="button" class="qt-ag-action-btn" style="margin-right:4px;padding:1px 7px;border:1px solid #cfd8dc;border-radius:3px;background:#fff;color:#455a64">편집</button><button type="button" class="qt-ag-action-btn qt-ag-action-danger" style="padding:1px 7px;border:1px solid #ffcdd2;border-radius:3px;background:#fff;color:#c62828">삭제</button>'
     value.sortable = false
     value.filter = false
+    value.editable = false
   }
 
   const formatter = column?.format
   const literal = objectToJavaScriptLiteral(value)
   if (!formatter) return literal
   return `${literal.slice(0, -1)}, valueFormatter: (params) => ${formatter}(params.value, params.data) }`
+}
+
+function getAgGridColumnSizing(column) {
+  const rawWidth = String(column?.width || '').trim()
+  if (!rawWidth) return { flex: 1 }
+
+  const percentMatch = rawWidth.match(/^([0-9]+(?:\.[0-9]+)?)%$/)
+  if (percentMatch) {
+    return { flex: Math.max(0.1, Number.parseFloat(percentMatch[1])), minWidth: 70 }
+  }
+
+  const flexMatch = rawWidth.match(/^([0-9]+(?:\.[0-9]+)?)fr$/i)
+  if (flexMatch) {
+    return { flex: Math.max(0.1, Number.parseFloat(flexMatch[1])), minWidth: 70 }
+  }
+
+  const pixelMatch = rawWidth.match(/^([0-9]+(?:\.[0-9]+)?)(px)?$/i)
+  if (pixelMatch) {
+    return { width: Math.max(40, Math.round(Number.parseFloat(pixelMatch[1]))) }
+  }
+
+  return { flex: 1, minWidth: 70 }
 }
 
 function objectToJavaScriptLiteral(value) {
@@ -492,8 +528,6 @@ function renderScriptSetup(
   if (componentApiDefinitions.some((definition) => definition.type === 'Table')) {
     importLines.push("import { AgGridVue } from 'ag-grid-vue3'")
     importLines.push("import { ModuleRegistry, AllCommunityModule } from 'ag-grid-community'")
-    importLines.push("import 'ag-grid-community/styles/ag-grid.css'")
-    importLines.push("import 'ag-grid-community/styles/ag-theme-quartz.css'")
     blocks.unshift('ModuleRegistry.registerModules([AllCommunityModule])')
   }
   const imports = importLines.length > 0 ? `${[...new Set(importLines)].join('\n')}\n\n` : ''
@@ -521,7 +555,7 @@ function collectTableColumnDefinitions(components, result = []) {
     ) {
       result.push({
         name: getTableColumnsVariableName(component),
-        columns: component.columns
+        columns: getRenderableTableColumns(component)
       })
     }
     collectTableColumnDefinitions(component.children, result)

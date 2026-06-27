@@ -34,7 +34,7 @@ const PALETTE = [
   {
     type: "Table",
     label: "Table",
-    props: { flat: true, bordered: true, dense: true, rows: [], columns: [] },
+    props: { rows: [] },
   },
   {
     type: "HtmlElement",

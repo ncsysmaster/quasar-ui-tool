@@ -59,9 +59,10 @@ function activate(context) {
     vscode.workspace.onDidChangeTextDocument((event) =>
       state.onTextDocumentChanged(event.document),
     ),
-    vscode.workspace.onDidSaveTextDocument((document) =>
-      state.scheduleGenerateVue(document),
-    ),
+    vscode.workspace.onDidSaveTextDocument(async (document) => {
+      await state.onTextDocumentSaved(document);
+      state.scheduleGenerateVue(document);
+    }),
     vscode.commands.registerCommand(
       "quasarTool.openPageEditor",
       async (uri) => {
@@ -81,6 +82,12 @@ function activate(context) {
         );
       },
     ),
+    vscode.commands.registerCommand("quasarTool.saveActiveEditor", async () => {
+      const saved = await state.saveActiveEditor();
+      if (!saved) {
+        await vscode.commands.executeCommand("workbench.action.files.save");
+      }
+    }),
   );
 }
 

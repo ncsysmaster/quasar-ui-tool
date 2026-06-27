@@ -366,19 +366,13 @@
                   "type": "Table",
                   "label": "tblList",
                   "props": {
-                    "flat": true,
-                    "bordered": true,
-                    "dense": true,
                     "rowKey": "rowSn",
-                    "separator": "horizontal",
                     "noDataLabel": "데이터가 없습니다.",
                     "loadingLabel": "데이터를 불러오는 중입니다.",
                     "selection": "multiple"
                   },
-                  "dynamicProps": {
-                    "rows": "storeName.list"
-                  },
                   "models": {
+                    "selected": "storeName.selectedRow",
                     "pagination": "Table001Pagination"
                   },
                   "columns": [
@@ -389,8 +383,8 @@
                       "type": "text",
                       "align": "left",
                       "sortable": true,
-                      "required": false,
-                      "editable": false
+                      "required": true,
+                      "editable": true
                     },
                     {
                       "name": "dtlDt",
@@ -399,8 +393,8 @@
                       "type": "date",
                       "align": "center",
                       "sortable": true,
-                      "required": false,
-                      "editable": false
+                      "required": true,
+                      "editable": true
                     },
                     {
                       "name": "actions",
@@ -410,7 +404,17 @@
                       "align": "center",
                       "sortable": false,
                       "required": false,
-                      "editable": false
+                      "editable": true
+                    },
+                    {
+                      "name": "add",
+                      "label": "주소",
+                      "field": "address",
+                      "type": "text",
+                      "align": "left",
+                      "sortable": true,
+                      "required": false,
+                      "editable": true
                     }
                   ],
                   "table": {
@@ -418,7 +422,7 @@
                     "rowKey": "rowSn",
                     "selection": "multiple",
                     "rowsBinding": "storeName.list",
-                    "loadingBinding": "storeName.loading",
+                    "loadingBinding": "",
                     "toolbar": {
                       "filter": false,
                       "search": false,
@@ -436,7 +440,7 @@
                     },
                     "pagination": {
                       "mode": "client",
-                      "rowsPerPage": 20,
+                      "rowsPerPage": 10,
                       "rowsPerPageOptions": [
                         10,
                         20,
@@ -448,10 +452,15 @@
                       "noData": true,
                       "loading": true,
                       "error": true
-                    }
+                    },
+                    "showModeColumn": true
                   },
                   "events": {
                     "row-click": "onRowClick_Table001"
+                  },
+                  "style": "height: 400px",
+                  "dynamicProps": {
+                    "rows": "storeName.list"
                   }
                 }
               ]

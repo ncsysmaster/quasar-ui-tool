@@ -77,6 +77,7 @@ function getStoreScript() {
     getStoreStateContainer,
     getStoreStateValue,
     scheduleStoreSave,
+    saveActivePiniaStore,
     storeValueType,
     storeValueText,
     parseStoreValue,
@@ -725,16 +726,19 @@ function getStoreStateValue(state, path) {
 }
 
 function scheduleStoreSave(store) {
-  clearTimeout(storeSaveTimer);
-  storeSaveTimer = setTimeout(
-    () =>
-      vscode.postMessage({
-        type: "updatePiniaStore",
-        fsPath: store.fsPath,
-        definition: store.definition,
-      }),
-    250,
-  );
+  if (!store?.fsPath) return;
+  dirtyPiniaStorePaths.add(store.fsPath);
+  markTabDirty("store", true);
+}
+
+function saveActivePiniaStore() {
+  const store = getActivePiniaStore();
+  if (!store?.fsPath) return;
+  vscode.postMessage({
+    type: "updatePiniaStore",
+    fsPath: store.fsPath,
+    definition: store.definition,
+  });
 }
 
 function storeValueType(value) {

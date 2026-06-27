@@ -103,6 +103,16 @@ function registerStoreMemberEditorShortcuts(monaco) {
   });
   storeMemberEditor.addCommand(ctrlCmd | monaco.KeyCode.KeyS, async () => {
     await formatEditorDocument(storeMemberEditor);
+    const store = getActivePiniaStore();
+    if (storeMemberEditorModel && selectedStoreMember && store) {
+      const member =
+        store.definition[selectedStoreMember.kind]?.[selectedStoreMember.index];
+      if (member) {
+        member.body = extractStoreMemberBody(storeMemberEditorModel.getValue());
+        scheduleStoreSave(store);
+      }
+    }
+    saveActivePiniaStore();
   });
   storeMemberEditor.addCommand(
     monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.KeyF,

@@ -17,8 +17,6 @@ function getEditorHtml(webview, runtimeUris) {
     `
     <link rel="stylesheet" href="${runtimeUris.materialIconsCss}">
     <link rel="stylesheet" href="${runtimeUris.quasarCss}">
-    <link rel="stylesheet" href="${runtimeUris.agGridCss}">
-    <link rel="stylesheet" href="${runtimeUris.agGridThemeCss}">
     <div class="tabs">
       <button class="tab active" data-tab="screen">Screen</button>
       <button class="tab" data-tab="script">Script</button>
@@ -65,17 +63,20 @@ function getEditorHtml(webview, runtimeUris) {
       let selectedStoreStatePath = []
       const collapsedStoreStatePaths = new Set()
       let selectedStoreMember = null
-      let storeSaveTimer = null
       let activeTab = 'screen'
       let previewApp = null
       let previewState = null
       let scriptEditor = null
       let scriptEditorModel = null
-      let scriptSaveTimer = null
+      let scriptDirty = false
+      let scriptSaving = false
+      let scriptDraftValue = null
       let scriptRenderToken = 0
       let storeMemberEditor = null
       let storeMemberEditorModel = null
       let storeMemberEditorRenderToken = 0
+      let dirtyTabs = { screen: false, script: false, store: false }
+      const dirtyPiniaStorePaths = new Set()
       let quasarToolCompletionProviderDisposable = null
       let storeDeleteConfirmationResolve = null
       let pendingTableWizard = null
@@ -150,6 +151,28 @@ function getEditorHtml(webview, runtimeUris) {
           return
         }
 
+        if (event.data.type === 'saved') {
+          if (event.data.tab === 'screen') {
+            markTabDirty('screen', false)
+          } else if (event.data.tab === 'script') {
+            scriptSaving = false
+            if (!scriptEditorModel || scriptEditorModel.getValue() === String(event.data.value ?? '')) {
+              scriptDirty = false
+              scriptDraftValue = null
+              markTabDirty('script', false)
+            }
+          } else if (event.data.tab === 'store') {
+            if (event.data.fsPath) dirtyPiniaStorePaths.delete(event.data.fsPath)
+            markTabDirty('store', dirtyPiniaStorePaths.size > 0)
+          }
+          return
+        }
+
+        if (event.data.type === 'requestSave') {
+          saveActiveTab()
+          return
+        }
+
         if (event.data.type !== 'state') return
 
         model = event.data.model
@@ -157,6 +180,8 @@ function getEditorHtml(webview, runtimeUris) {
         selectedCellIds = Array.isArray(event.data.selectedCellIds)
           ? event.data.selectedCellIds
           : []
+        dirtyTabs.screen = Boolean(event.data.dirtyTabs?.screen)
+        updateDirtyTabIndicators()
 
         const navigation = event.data.scriptNavigation
         if (navigation?.requestId && navigation.requestId !== lastScriptNavigationRequest) {
@@ -192,7 +217,7 @@ function getEditorHtml(webview, runtimeUris) {
         }
 
         if (activeTab === 'script' && scriptEditor) {
-          syncScriptEditor(model.script?.setup || '')
+          if (!scriptDirty) syncScriptEditor(model.script?.setup || '')
           revealPendingScriptMethod()
           return
         }
@@ -214,6 +239,8 @@ function getEditorHtml(webview, runtimeUris) {
           render()
         })
       })
+
+      updateDirtyTabIndicators()
 
       document.getElementById('create-pinia-store').addEventListener('click', () => {
         showPiniaStoreDialog()
@@ -245,18 +272,20 @@ function getEditorHtml(webview, runtimeUris) {
 
       vscode.postMessage({ type: 'ready' })
 
-      document.addEventListener('keydown', (event) => {
-        console.log('[keydown]', event.key, {
-          selectedId,
-          activeTab,
-          target: event.target?.tagName
-        })
+      window.addEventListener('keydown', handleGlobalKeydown, true)
+
+      function handleGlobalKeydown(event) {
+        if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 's') {
+          event.preventDefault()
+          event.stopPropagation()
+          saveActiveTab()
+          return
+        }
 
         if (activeTab !== 'screen') return
 
         const tagName = event.target?.tagName?.toLowerCase()
         if (event.target?.isContentEditable || tagName === 'input' || tagName === 'textarea' || tagName === 'select') {
-          console.log('[keydown ignored] input area')
           return
         }
 
@@ -292,7 +321,34 @@ function getEditorHtml(webview, runtimeUris) {
             type: 'deleteSelected'
           })
         }
-      })
+      }
+
+      function updateDirtyTabIndicators() {
+        document.querySelectorAll('[data-tab]').forEach((tab) => {
+          const tabName = tab.dataset.tab
+          const label = tabName === 'screen' ? 'Screen' : tabName === 'script' ? 'Script' : 'Store'
+          tab.textContent = (dirtyTabs[tabName] ? '*' : '') + label
+        })
+      }
+
+      function markTabDirty(tabName, value = true) {
+        dirtyTabs[tabName] = Boolean(value)
+        updateDirtyTabIndicators()
+      }
+
+      function saveActiveTab() {
+        if (activeTab === 'screen') {
+          vscode.postMessage({ type: 'saveScreen' })
+          return
+        }
+        if (activeTab === 'script' && scriptEditor && scriptEditorModel) {
+          saveScriptEditor()
+          return
+        }
+        if (activeTab === 'store') {
+          saveActivePiniaStore()
+        }
+      }
 
       function render() {
         const content = document.getElementById('content')
@@ -413,13 +469,16 @@ function getEditorHtml(webview, runtimeUris) {
 
           const pageId = model?.page?.id || 'Page'
           const scriptUri = monaco.Uri.parse('file:///.src/pages/' + encodeURIComponent(pageId) + '.js')
+          const editorValue = scriptDirty && scriptDraftValue !== null
+            ? scriptDraftValue
+            : value
           scriptEditorModel = monaco.editor.getModel(scriptUri) || monaco.editor.createModel(
-            value,
+            editorValue,
             'javascript',
             scriptUri
           )
-          if (scriptEditorModel.getValue() !== value) {
-            scriptEditorModel.setValue(value)
+          if (scriptEditorModel.getValue() !== editorValue) {
+            scriptEditorModel.setValue(editorValue)
           }
           scriptEditor = monaco.editor.create(container, {
             model: scriptEditorModel,
@@ -448,10 +507,10 @@ function getEditorHtml(webview, runtimeUris) {
           setupScriptStoreStateDrop(container)
 
           scriptEditor.onDidChangeModelContent(() => {
-            clearTimeout(scriptSaveTimer)
-            scriptSaveTimer = setTimeout(() => {
-              vscode.postMessage({ type: 'updateScript', value: scriptEditorModel.getValue() })
-            }, 250)
+            if (scriptSaving) return
+            scriptDirty = true
+            scriptDraftValue = scriptEditorModel.getValue()
+            markTabDirty('script', true)
           })
 
           scriptEditor.focus()
@@ -512,6 +571,7 @@ function getEditorHtml(webview, runtimeUris) {
       }
 
       function syncScriptEditor(value) {
+        if (scriptDirty) return
         if (!scriptEditorModel || scriptEditorModel.getValue() === value) return
 
         const selections = scriptEditor.getSelections()
@@ -550,16 +610,33 @@ function getEditorHtml(webview, runtimeUris) {
         scriptEditor.addCommand(ctrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyZ, () => {
           scriptEditor.trigger('keyboard', 'redo', null)
         })
-          scriptEditor.addCommand(ctrlCmd | monaco.KeyCode.KeyY, () => {
+        scriptEditor.addCommand(ctrlCmd | monaco.KeyCode.KeyY, () => {
           scriptEditor.trigger('keyboard', 'redo', null)
         })
         scriptEditor.addCommand(ctrlCmd | monaco.KeyCode.KeyS, async () => {
-          await formatEditorDocument(scriptEditor)
-          vscode.postMessage({ type: 'updateScript', value: scriptEditorModel.getValue() })
+          await saveScriptEditor()
         })
         scriptEditor.addCommand(monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.KeyF, () => {
           formatEditorDocument(scriptEditor)
         })
+      }
+
+      async function saveScriptEditor() {
+        if (!scriptEditorModel && scriptDraftValue === null) return
+        scriptSaving = true
+        if (scriptEditor) {
+          await formatEditorDocument(scriptEditor, 800)
+        }
+        const value = scriptEditorModel
+          ? scriptEditorModel.getValue()
+          : String(scriptDraftValue ?? '')
+        scriptSaving = false
+        scriptDraftValue = value
+        if (model) {
+          model.script ||= {}
+          model.script.setup = value
+        }
+        vscode.postMessage({ type: 'updateScript', value })
       }
 
       async function copyScriptSelection() {
@@ -598,8 +675,10 @@ function getEditorHtml(webview, runtimeUris) {
 
       function disposeScriptEditor() {
         scriptRenderToken += 1
-        clearTimeout(scriptSaveTimer)
-        scriptSaveTimer = null
+        if (scriptDirty && scriptEditorModel) {
+          scriptDraftValue = scriptEditorModel.getValue()
+        }
+        scriptSaving = false
         scriptEditor?.dispose()
         scriptEditorModel?.dispose()
         scriptEditor = null
@@ -779,19 +858,23 @@ function getEditorHtml(webview, runtimeUris) {
         }, value)
       }
 
-      async function formatEditorDocument(editor) {
+      async function formatEditorDocument(editor, timeoutMs = 2000) {
         if (!editor) return
+        const withTimeout = (promise) => Promise.race([
+          promise,
+          new Promise((resolve) => setTimeout(resolve, timeoutMs))
+        ])
         const action = editor.getAction('editor.action.formatDocument')
         if (action?.isSupported?.() !== false) {
           try {
-            await action.run()
+            await withTimeout(action.run())
             return
           } catch {}
         }
         const selectionAction = editor.getAction('editor.action.formatSelection')
         if (selectionAction?.isSupported?.() !== false) {
           try {
-            await selectionAction.run()
+            await withTimeout(selectionAction.run())
           } catch {}
         }
       }
@@ -966,15 +1049,25 @@ function getEditorHtml(webview, runtimeUris) {
         const pagination = component.table?.pagination || {}
         const selection = component.table?.selection || component.props?.selection || 'none'
         const rows = resolveValue(component.dynamicProps?.rows || component.table?.rowsBinding, scope)
+        const rowData = Array.isArray(rows) ? rows : (Array.isArray(component.props?.rows) ? component.props.rows : [])
         const rowKey = component.table?.rowKey || component.props?.rowKey || 'id'
         const props = {
-          class: 'ag-theme-quartz qt-ag-grid',
+          class: 'qt-ag-grid',
           style: getAgGridPreviewStyle(component),
-          rowData: Array.isArray(rows) ? rows : (Array.isArray(component.props?.rows) ? component.props.rows : []),
-          columnDefs: (component.columns || []).map(toAgGridPreviewColumnDef),
-          defaultColDef: { resizable: true, sortable: true, filter: true },
+          rowData: normalizeTablePreviewRows(rowData),
+          columnDefs: getTablePreviewColumns(component).map(toAgGridPreviewColumnDef),
+          defaultColDef: {
+            resizable: true,
+            sortable: true,
+            filter: true,
+            minWidth: 70,
+            suppressKeyboardEvent: suppressAgGridKeyboardEvent
+          },
+          headerHeight: 48,
+          rowHeight: 42,
           animateRows: true,
-          getRowId: (params) => String(params.data?.[rowKey] ?? ''),
+          singleClickEdit: true,
+          getRowId: (params) => String(params.data?.__qtRowId ?? params.data?.[rowKey] ?? params.node?.rowIndex ?? ''),
           onRowClicked: (event) => {
             event.event?.stopPropagation?.()
             if (component.id !== selectedId) vscode.postMessage({ type: 'select', id: component.id })
@@ -990,7 +1083,10 @@ function getEditorHtml(webview, runtimeUris) {
         }
 
         if (selection === 'single' || selection === 'multiple') {
-          props.rowSelection = { mode: selection === 'multiple' ? 'multiRow' : 'singleRow' }
+          props.rowSelection = {
+            mode: selection === 'multiple' ? 'multiRow' : 'singleRow',
+            enableClickSelection: true
+          }
           props.onSelectionChanged = (event) => {
             if (component.models?.selected) {
               setResolvedValue(component.models.selected, event.api.getSelectedRows(), scope)
@@ -1005,18 +1101,205 @@ function getEditorHtml(webview, runtimeUris) {
         return props
       }
 
+      function suppressAgGridKeyboardEvent(params = {}) {
+        const event = params.event
+        const columnDef = params.column?.getColDef?.() || params.colDef || {}
+        if (params.editing && shouldCompleteAgGridEditingOnly(event)) {
+          return completeAgGridEditingCell(params)
+        }
+
+        if (params.editing && getCellMoveKey(event)) {
+          if (shouldKeepHorizontalArrowInEditor(event)) return false
+          return moveAgGridEditingCell(params, event.key)
+        }
+
+        const isImeEvent = Boolean(
+          event?.isComposing ||
+          event?.key === 'Process' ||
+          event?.key === 'Unidentified' ||
+          event?.keyCode === 229 ||
+          event?.which === 229
+        )
+        if (params.editing || !isEditableAgGridColumnDef(columnDef, params)) return false
+
+        const isPrintableEvent = Boolean(
+          event &&
+          typeof event.key === 'string' &&
+          event.key.length === 1 &&
+          !event.ctrlKey &&
+          !event.metaKey &&
+          !event.altKey
+        )
+        return isPrintableEvent || isImeEvent
+      }
+
+      function isArrowKeyboardEvent(event) {
+        return ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event?.key)
+      }
+
+      function getCellMoveKey(event) {
+        if (event?.key === 'Enter' && event.shiftKey) return ''
+        if (event?.key === 'Enter') return 'ArrowDown'
+        return isArrowKeyboardEvent(event) ? event.key : ''
+      }
+
+      function shouldCompleteAgGridEditingOnly(event) {
+        return event?.key === 'Enter' && event.shiftKey
+      }
+
+      function isEditableAgGridColumnDef(columnDef, params = {}) {
+        if (typeof columnDef?.editable === 'function') return Boolean(columnDef.editable(params))
+        return columnDef?.editable === true
+      }
+
+      function getTextInputFromEvent(event) {
+        const target = event?.target
+        if (!target) return null
+        const tagName = String(target.tagName || '').toLowerCase()
+        if (tagName === 'input' || tagName === 'textarea') return target
+        return typeof target.closest === 'function' ? target.closest('input,textarea') : null
+      }
+
+      function shouldKeepHorizontalArrowInEditor(event) {
+        if (event?.key !== 'ArrowLeft' && event?.key !== 'ArrowRight') return false
+        const input = getTextInputFromEvent(event)
+        if (!input || typeof input.selectionStart !== 'number' || typeof input.selectionEnd !== 'number') {
+          return false
+        }
+
+        const selectionStart = input.selectionStart
+        const selectionEnd = input.selectionEnd
+        if (selectionStart !== selectionEnd) return true
+
+        const textLength = String(input.value || '').length
+        if (event.key === 'ArrowLeft') return selectionStart > 0
+        return selectionEnd < textLength
+      }
+
+      function getAgGridDisplayedColumns(eventApi) {
+        const allColumns = eventApi?.getAllDisplayedColumns?.()
+        if (Array.isArray(allColumns) && allColumns.length > 0) return allColumns
+        const centerColumns = eventApi?.getDisplayedCenterColumns?.()
+        return Array.isArray(centerColumns) ? centerColumns : []
+      }
+
+      function moveAgGridEditingCell(params, key) {
+        const eventApi = params.api
+        const moveKey = getCellMoveKey({ key })
+        const shouldStartEditingAfterMove = key !== 'Enter'
+        if (!eventApi || !moveKey) return false
+
+        const columns = getAgGridDisplayedColumns(eventApi)
+        if (columns.length === 0) return false
+
+        const currentColumnId = params.column?.getColId?.() || params.colDef?.colId || params.colDef?.field
+        const currentColumnIndex = columns.findIndex((column) => column?.getColId?.() === currentColumnId)
+        const currentRowIndex = Number.isInteger(Number(params.node?.rowIndex))
+          ? Number(params.node.rowIndex)
+          : Number(eventApi.getFocusedCell?.()?.rowIndex)
+
+        if (!Number.isInteger(currentRowIndex) || currentColumnIndex < 0) return false
+
+        const displayedRowCount = Number(eventApi.getDisplayedRowCount?.() || 0)
+        let nextRowIndex = currentRowIndex
+        let nextColumnIndex = currentColumnIndex
+
+        if (moveKey === 'ArrowUp') nextRowIndex -= 1
+        if (moveKey === 'ArrowDown') nextRowIndex += 1
+
+        if (moveKey === 'ArrowLeft' || moveKey === 'ArrowRight') {
+          const direction = moveKey === 'ArrowLeft' ? -1 : 1
+          nextColumnIndex += direction
+          while (nextColumnIndex >= 0 && nextColumnIndex < columns.length) {
+            const rowNode = eventApi.getDisplayedRowAtIndex?.(nextRowIndex)
+            const columnDef = columns[nextColumnIndex]?.getColDef?.() || {}
+            if (isEditableAgGridColumnDef(columnDef, {
+              ...params,
+              api: eventApi,
+              node: rowNode,
+              data: rowNode?.data,
+              column: columns[nextColumnIndex],
+              colDef: columnDef
+            })) break
+            nextColumnIndex += direction
+          }
+        }
+
+        if (nextRowIndex < 0 || nextRowIndex >= displayedRowCount) return false
+        if (nextColumnIndex < 0 || nextColumnIndex >= columns.length) return false
+
+        const targetColumn = columns[nextColumnIndex]
+        const targetColumnId = targetColumn?.getColId?.()
+        const targetRowNode = eventApi.getDisplayedRowAtIndex?.(nextRowIndex)
+        const targetColumnDef = targetColumn?.getColDef?.() || {}
+        if (!targetColumnId || !isEditableAgGridColumnDef(targetColumnDef, {
+          ...params,
+          api: eventApi,
+          node: targetRowNode,
+          data: targetRowNode?.data,
+          column: targetColumn,
+          colDef: targetColumnDef
+        })) return false
+
+        params.event?.preventDefault?.()
+        params.event?.stopPropagation?.()
+        eventApi.stopEditing?.(false)
+
+        setTimeout(() => {
+          eventApi.ensureIndexVisible?.(nextRowIndex)
+          eventApi.ensureColumnVisible?.(targetColumnId)
+          eventApi.setFocusedCell?.(nextRowIndex, targetColumnId)
+          if (shouldStartEditingAfterMove) {
+            eventApi.startEditingCell?.({ rowIndex: nextRowIndex, colKey: targetColumnId })
+          }
+        }, 0)
+
+        return true
+      }
+
+      function completeAgGridEditingCell(params = {}) {
+        const eventApi = params.api
+        if (!eventApi) return false
+
+        params.event?.preventDefault?.()
+        params.event?.stopPropagation?.()
+        eventApi.stopEditing?.(false)
+        return true
+      }
+
+      function normalizeTablePreviewRows(rows) {
+        return (Array.isArray(rows) ? rows : []).map((row) => {
+          if (!row || typeof row !== 'object') return row
+          if (!['R', 'C', 'U', 'D'].includes(String(row.mode || '').toUpperCase())) row.mode = 'R'
+          return row
+        })
+      }
+
       function getAgGridPreviewStyle(component) {
         const declarations = String(component.style || '')
           .split(';')
           .map((item) => item.trim())
           .filter(Boolean)
-        if (!declarations.some((item) => item.toLowerCase().startsWith('width:'))) declarations.push('width: 100%')
-        if (!declarations.some((item) => item.toLowerCase().startsWith('height:'))) declarations.push('height: 360px')
-        return declarations.join('; ')
+        const width = findStyleDeclarationValue(declarations, 'width') || '100%'
+        const height = findStyleDeclarationValue(declarations, 'height') || '360px'
+        const rest = declarations.filter((item) => {
+          const property = item.slice(0, item.indexOf(':')).trim().toLowerCase()
+          return property !== 'width' && property !== 'height'
+        })
+        return ['width: ' + width, 'height: ' + height].concat(rest).join('; ')
+      }
+
+      function findStyleDeclarationValue(declarations, propertyName) {
+        const target = String(propertyName || '').trim().toLowerCase()
+        const declaration = declarations.find((item) => {
+          const separator = item.indexOf(':')
+          return separator >= 0 && item.slice(0, separator).trim().toLowerCase() === target
+        })
+        return declaration ? declaration.slice(declaration.indexOf(':') + 1).trim() : ''
       }
 
       function toAgGridPreviewColumnDef(column) {
-        const width = Number.parseInt(column?.width, 10)
+        const sizing = getAgGridPreviewColumnSizing(column)
         const align = ['left', 'center', 'right'].includes(column?.align) ? column.align : ''
         const type = column?.type || 'text'
         const def = {
@@ -1026,8 +1309,15 @@ function getEditorHtml(webview, runtimeUris) {
           sortable: Boolean(column?.sortable),
           resizable: true,
           editable: Boolean(column?.editable),
-          ...(Number.isFinite(width) ? { width } : {}),
-          ...(align ? { cellStyle: { textAlign: align } } : {})
+          ...sizing,
+          ...(align ? { cellStyle: { textAlign: align } } : {}),
+          ...(column?.modeColumn || column?.field === 'mode' ? {
+            cellClass: 'qt-table-mode-cell',
+            editable: false,
+            headerName: '',
+            minWidth: 42,
+            maxWidth: 52
+          } : {})
         }
         if (type === 'number') def.type = 'numericColumn'
         if (type === 'checkbox') def.cellRenderer = 'agCheckboxCellRenderer'
@@ -1037,6 +1327,45 @@ function getEditorHtml(webview, runtimeUris) {
           def.filter = false
         }
         return def
+      }
+
+      function getTablePreviewColumns(component) {
+        const columns = Array.isArray(component?.columns) ? component.columns : []
+        if (component?.table?.showModeColumn === false) return columns
+        if (columns.some((column) => (column?.field || column?.name) === 'mode')) return columns
+        return [{
+          name: 'mode',
+          label: '',
+          field: 'mode',
+          type: 'text',
+          align: 'center',
+          width: '46px',
+          sortable: true,
+          editable: false,
+          modeColumn: true
+        }, ...columns]
+      }
+
+      function getAgGridPreviewColumnSizing(column) {
+        const rawWidth = String(column?.width || '').trim()
+        if (!rawWidth) return { flex: 1 }
+
+        const percentMatch = rawWidth.match(/^([0-9]+(?:\.[0-9]+)?)%$/)
+        if (percentMatch) {
+          return { flex: Math.max(0.1, Number.parseFloat(percentMatch[1])), minWidth: 70 }
+        }
+
+        const flexMatch = rawWidth.match(/^([0-9]+(?:\.[0-9]+)?)fr$/i)
+        if (flexMatch) {
+          return { flex: Math.max(0.1, Number.parseFloat(flexMatch[1])), minWidth: 70 }
+        }
+
+        const pixelMatch = rawWidth.match(/^([0-9]+(?:\.[0-9]+)?)(px)?$/i)
+        if (pixelMatch) {
+          return { width: Math.max(40, Math.round(Number.parseFloat(pixelMatch[1]))) }
+        }
+
+        return { flex: 1, minWidth: 70 }
       }
 
       function appendPreviewChild(children, child) {
@@ -1051,32 +1380,13 @@ function getEditorHtml(webview, runtimeUris) {
 
         if (props.class) classNames.push(props.class)
 
-        if (component.type === 'Table') {
-          props.columns = Array.isArray(component.columns) ? component.columns : []
-          if (!Array.isArray(props.rows)) props.rows = []
-          const pagination = component.table?.pagination || {}
-          if (pagination.mode !== 'none') {
-            props.pagination = {
-              page: 1,
-              rowsPerPage: Number(pagination.rowsPerPage) || 10
-            }
-            props.rowsPerPageOptions = Array.isArray(pagination.rowsPerPageOptions)
-              ? pagination.rowsPerPageOptions
-              : [10, 20, 50, 0]
-          } else {
-            props.hidePagination = true
-          }
-        }
-
         if (component.style !== undefined) {
           props.style = component.style
         }
 
         Object.entries(component.dynamicProps || {}).forEach(([name, expression]) => {
           const resolved = resolveValue(expression, scope)
-          props[name] = component.type === 'Table' && name === 'rows' && !Array.isArray(resolved)
-            ? []
-            : resolved
+          props[name] = resolved
         })
 
         Object.entries(component.models || {}).forEach(([name, expression]) => {
@@ -1177,14 +1487,6 @@ function getEditorHtml(webview, runtimeUris) {
         }
 
         props.onContextmenu = (event) => {
-          if (component.type === 'Table') {
-            event.preventDefault()
-            event.stopPropagation()
-            vscode.postMessage({ type: 'select', id: component.id })
-            showTableContextMenu(event.clientX, event.clientY, component.id)
-            return
-          }
-
           const layoutContext = getFormLayoutContext(component.id)
           if (!layoutContext.rowId && !layoutContext.columnId) return
 
@@ -1615,6 +1917,15 @@ function getDatasetHtml(webview) {
         model = event.data.model
         render()
       })
+
+      window.addEventListener('keydown', (event) => {
+        if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey) return
+        if (event.key.toLowerCase() !== 's') return
+
+        event.preventDefault()
+        event.stopPropagation()
+        vscode.postMessage({ type: 'saveScreen' })
+      }, true)
 
       vscode.postMessage({ type: 'ready' })
 

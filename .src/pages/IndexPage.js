@@ -13,7 +13,6 @@ function resetSearch() {
 
 }
 
-
 function onRowClick_Table001(event, row) {
   console.log('row-click', row)
 
@@ -29,8 +28,8 @@ function onTableAdd_Table001() {
     actions : '',
     key: 'abdc'
   }
+  
   Table001.addRow(newRow)
-
   
 }
 
@@ -41,10 +40,20 @@ function onTableSave_Table001() {
 
 
 function onTableDelete_Table001() {
+  
   console.log('table-delete')
+
+  const selIndex = Table001.getSelectedIndex()
+
+  console.log('selected index', selIndex)
+
+  Table001.delSelectedRow()
+  
 }
 
 
 function onTableRefresh_Table001() {
   console.log('table-refresh')
+
+  console.log('onRefre ', storeName.list)
 }

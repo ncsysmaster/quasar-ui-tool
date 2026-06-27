@@ -39,6 +39,10 @@ class PageEditorProvider {
       webviewPanel.webview,
       getRuntimeUris(webviewPanel.webview, this.context),
     );
+    const webviewRegistration = this.state.registerEditorWebview(
+      editorState,
+      webviewPanel.webview,
+    );
 
     const postState = () => {
       webviewPanel.webview.postMessage({
@@ -50,6 +54,7 @@ class PageEditorProvider {
         scriptNavigation: editorState.scriptNavigation,
         tableWizardRequest: editorState.tableWizardRequest,
         tableColumnsRequest: editorState.tableColumnsRequest,
+        dirtyTabs: editorState.getDirtyTabs(),
       });
     };
 
@@ -74,6 +79,7 @@ class PageEditorProvider {
     ];
     webviewPanel.onDidDispose(() => {
       subscription.dispose();
+      webviewRegistration.dispose();
       piniaSubscriptions.forEach((item) => item.dispose());
       piniaWatcher.dispose();
       this.state.release(document.uri, editorState);
@@ -151,6 +157,11 @@ class PageEditorProvider {
       if (message.type === "updatePiniaStore" && message.fsPath && message.definition) {
         try {
           await savePiniaStoreDefinition(message.fsPath, message.definition, document.uri);
+          webviewPanel.webview.postMessage({
+            type: "saved",
+            tab: "store",
+            fsPath: message.fsPath,
+          });
         } catch (error) {
           vscode.window.showErrorMessage(`Pinia Store 저장 실패: ${error.message}`);
         }
@@ -185,6 +196,16 @@ class PageEditorProvider {
       if (message.type === "updateScript") {
         console.log("[PageEditorProvider] updateScript");
         await editorState.updateScript(message.value);
+        webviewPanel.webview.postMessage({
+          type: "saved",
+          tab: "script",
+          value: message.value,
+        });
+      }
+
+      if (message.type === "saveScreen") {
+        const saved = await editorState.saveScreen();
+        if (saved) webviewPanel.webview.postMessage({ type: "saved", tab: "screen" });
       }
 
       if (message.type === "moveComponent") {
@@ -328,6 +349,10 @@ class PropertiesViewProvider {
         await this.state.updateSelectedProperty(message.name, message.value);
       }
 
+      if (message.type === "saveScreen") {
+        await this.state.saveScreen();
+      }
+
       if (message.type === "deleteSelected") {
         console.log("[PropertiesViewProvider] deleteSelected");
         await this.state.removeSelectedComponent();
@@ -364,6 +389,10 @@ class EventsViewProvider {
 
     view.webview.onDidReceiveMessage(async (message) => {
       if (message.type === "ready") postState();
+
+      if (message.type === "saveScreen") {
+        await this.state.saveScreen();
+      }
 
       if (message.type === "updateEvent") {
         await this.state.updateSelectedEvent(message.eventName, message.value);
@@ -407,6 +436,10 @@ class PageTreeViewProvider {
     view.webview.onDidReceiveMessage(async (message) => {
       if (message.type === "ready") {
         postState();
+      }
+
+      if (message.type === "saveScreen") {
+        await this.state.saveScreen();
       }
 
       if (message.type === "select") {
@@ -470,6 +503,7 @@ class DatasetViewProvider {
 
     view.webview.onDidReceiveMessage(async (message) => {
       if (message.type === "ready") postState();
+      if (message.type === "saveScreen") await this.state.saveScreen();
       if (message.type === "addField") await this.state.addDatasetField();
       if (message.type === "updateField")
         await this.state.updateDatasetField(

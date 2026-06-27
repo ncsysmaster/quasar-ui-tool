@@ -40,6 +40,7 @@ class PageEditorState {
     this.tableColumnsRequest = null;
     this.tableColumnsSequence = 0;
     this.componentClipboard = null;
+    this.dirtyTabs = { screen: false, script: false, store: false };
     this.lastModelBindingWarningKey = "";
     this.lastTableRowsBindingWarningKey = "";
   }
@@ -93,15 +94,17 @@ class PageEditorState {
   }
 
   getModel() {
-    if (!this.document) {
-      return createEmptyModel();
-    }
-
-    const model = parseModel(this.document.getText());
+    const model = this.document
+      ? parseModel(this.document.getText())
+      : createEmptyModel();
     model.script ||= {};
     model.script.src ||= basename(this.getScriptPath());
     model.script.setup = this.scriptContent;
     return model;
+  }
+
+  getDirtyTabs() {
+    return { ...this.dirtyTabs };
   }
 
   getScriptPath() {
@@ -186,10 +189,27 @@ class PageEditorState {
     const model = this.getModel();
     mutator(model);
 
+    this.dirtyTabs.screen = true;
     await replaceDocument(this.document, stringifyModel(model));
     this.warnMissingModelBindings(model);
     await this.warnInvalidTableRowsBindings(model);
-    this.scheduleGenerateVue(this.document);
+    this.fire();
+  }
+
+  async saveScreen() {
+    if (!this.document) return false;
+    return this.document.save();
+  }
+
+  async onDocumentSaved(document) {
+    if (!this.document) return;
+    if (document.uri.toString() !== this.document.uri.toString()) return;
+
+    const model = this.getModel();
+    this.dirtyTabs.screen = false;
+    this.warnMissingModelBindings(model);
+    await this.warnInvalidTableRowsBindings(model);
+    this.fire();
   }
 
   // 콤퍼넌트를 추가 이벤트
@@ -858,7 +878,17 @@ class PageEditorState {
     this.scriptContent = String(value ?? "");
     const scriptPath = this.getScriptPath();
     await mkdir(dirname(scriptPath), { recursive: true });
-    await writeFile(scriptPath, this.scriptContent, "utf8");
+    try {
+      await readFile(scriptPath, "utf8");
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+      await writeFile(scriptPath, "", "utf8");
+    }
+    const scriptDocument = await vscode.workspace.openTextDocument(
+      vscode.Uri.file(scriptPath),
+    );
+    await replaceDocument(scriptDocument, this.scriptContent);
+    await scriptDocument.save();
     this.fire();
     this.scheduleGenerateVue(this.document);
   }
@@ -1141,10 +1171,6 @@ function createTableComponent(model, item, options = {}) {
       ...baseProps,
       ...(!options.rowsBinding ? { rows: [] } : {}),
       rowKey: options.rowKey || "id",
-      flat: true,
-      bordered: true,
-      dense: true,
-      separator: "horizontal",
       noDataLabel: "데이터가 없습니다.",
       loadingLabel: "데이터를 불러오는 중입니다.",
       ...(selection !== "none" ? { selection } : {}),
@@ -1159,6 +1185,7 @@ function createTableComponent(model, item, options = {}) {
     table: {
       title: options.title || "Table",
       rowKey: options.rowKey || "id",
+      showModeColumn: options.showModeColumn !== false,
       selection,
       rowsBinding: options.rowsBinding || "",
       loadingBinding: options.loadingBinding || "",

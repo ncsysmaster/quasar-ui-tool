@@ -17,12 +17,9 @@
   "state": {
     "rows": {
       "state1": {
-        "state1": null,
-        "state2": null,
-        "state3": null
+        "state1": null
       },
       "state2": {
-        "state1": null,
         "state2": null
       }
     },
@@ -51,7 +48,7 @@
         "loading"
       ],
       "async": true,
-      "body": "this.entity.id = 'adf'\nthis.entity.name = 'en Name'\n\nconsole.log('selectList')\n\n",
+      "body": "this.entity.id = 'adf'\nthis.entity.name = 'en Name'\n\nconsole.log('selectList123')\n\n",
       "description": ""
     }
   ],

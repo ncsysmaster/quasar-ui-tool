@@ -67,6 +67,15 @@ function getPropertiesHtml(webview, htmlShell, getNonce) {
         render()
       })
 
+      window.addEventListener('keydown', (event) => {
+        if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey) return
+        if (event.key.toLowerCase() !== 's') return
+
+        event.preventDefault()
+        event.stopPropagation()
+        vscode.postMessage({ type: 'saveScreen' })
+      }, true)
+
       vscode.postMessage({ type: 'ready' })
 
       function render() {
@@ -147,10 +156,8 @@ function getPropertiesHtml(webview, htmlShell, getNonce) {
           field('row-key', 'table.rowKey', table.rowKey || props.rowKey || 'id') +
           fieldWithButton('Class', 'class', component.class || props.class || '', '...') +
           field('Style', 'style', componentStyle) +
-          checkField('dense', 'prop.dense', props.dense) +
-          checkField('flat', 'prop.flat', props.flat) +
-          checkField('bordered', 'prop.bordered', props.bordered) +
-          selectField('separator', 'prop.separator', props.separator || 'horizontal', ['horizontal', 'vertical', 'cell', 'none'])
+          field('Height', 'style.height', getStyleDeclaration(componentStyle, 'height')) +
+          checkField('mode column', 'table.showModeColumn', table.showModeColumn !== false)
         ) + propertySection('Data',
           field('rows binding', 'dynamic.rows', dynamicProps.rows || table.rowsBinding || '') +
           field('columns binding', 'dynamic.columns', dynamicProps.columns || '') +

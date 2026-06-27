@@ -5,12 +5,9 @@ export const useIndexUtilStore = defineStore('indexUtil', {
     // 참고사항은 주석으로 처리
     rows: {
       state1: {
-        state1: null,
-        state2: null,
-        state3: null
+        state1: null
       },
       state2: {
-        state1: null,
         state2: null
       }
     },
@@ -34,7 +31,7 @@ export const useIndexUtilStore = defineStore('indexUtil', {
       this.entity.id = 'adf'
       this.entity.name = 'en Name'
 
-      console.log('selectList')
+      console.log('selectList123')
 
 
     }

@@ -36,6 +36,15 @@ function getPageTreeHtml(webview, htmlShell, getNonce) {
         }
       })
 
+      window.addEventListener('keydown', (event) => {
+        if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey) return
+        if (event.key.toLowerCase() !== 's') return
+
+        event.preventDefault()
+        event.stopPropagation()
+        vscode.postMessage({ type: 'saveScreen' })
+      }, true)
+
       vscode.postMessage({ type: 'ready' })
 
       document.addEventListener('keydown', (event) => {

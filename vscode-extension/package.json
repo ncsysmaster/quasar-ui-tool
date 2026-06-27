@@ -25,6 +25,7 @@
   "activationEvents": [
     "onCustomEditor:quasarTool.pageEditor",
     "onCommand:quasarTool.openPageEditor",
+    "onCommand:quasarTool.saveActiveEditor",
     "onCommand:quasarTool.watchVue",
     "onCommand:quasarTool.createPiniaStore",
     "onStartupFinished",
@@ -46,6 +47,11 @@
         "title": "Quasar Tool: Open Page Editor"
       },
       {
+        "command": "quasarTool.saveActiveEditor",
+        "title": "Quasar Tool: Save Active Editor",
+        "icon": "$(save)"
+      },
+      {
         "command": "quasarTool.watchVue",
         "title": "Quasar Tool: Start Vue Watch",
         "icon": "$(run)"
@@ -54,6 +60,68 @@
         "command": "quasarTool.createPiniaStore",
         "title": "Quasar Tool: Pinia 파일 생성",
         "icon": "$(new-file)"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "quasarTool.saveActiveEditor",
+        "key": "ctrl+s",
+        "mac": "cmd+s",
+        "when": "activeCustomEditorId == quasarTool.pageEditor"
+      },
+      {
+        "command": "quasarTool.saveActiveEditor",
+        "key": "ctrl+s",
+        "mac": "cmd+s",
+        "when": "webviewId == 'quasarTool.pageEditor'"
+      },
+      {
+        "command": "quasarTool.saveActiveEditor",
+        "key": "ctrl+s",
+        "mac": "cmd+s",
+        "when": "focusedView == quasarTool.propertiesView"
+      },
+      {
+        "command": "quasarTool.saveActiveEditor",
+        "key": "ctrl+s",
+        "mac": "cmd+s",
+        "when": "webviewId == 'quasarTool.propertiesView'"
+      },
+      {
+        "command": "quasarTool.saveActiveEditor",
+        "key": "ctrl+s",
+        "mac": "cmd+s",
+        "when": "focusedView == quasarTool.eventsView"
+      },
+      {
+        "command": "quasarTool.saveActiveEditor",
+        "key": "ctrl+s",
+        "mac": "cmd+s",
+        "when": "webviewId == 'quasarTool.eventsView'"
+      },
+      {
+        "command": "quasarTool.saveActiveEditor",
+        "key": "ctrl+s",
+        "mac": "cmd+s",
+        "when": "focusedView == quasarTool.pageTreeView"
+      },
+      {
+        "command": "quasarTool.saveActiveEditor",
+        "key": "ctrl+s",
+        "mac": "cmd+s",
+        "when": "webviewId == 'quasarTool.pageTreeView'"
+      },
+      {
+        "command": "quasarTool.saveActiveEditor",
+        "key": "ctrl+s",
+        "mac": "cmd+s",
+        "when": "focusedView == quasarTool.datasetView"
+      },
+      {
+        "command": "quasarTool.saveActiveEditor",
+        "key": "ctrl+s",
+        "mac": "cmd+s",
+        "when": "webviewId == 'quasarTool.datasetView'"
       }
     ],
     "menus": {

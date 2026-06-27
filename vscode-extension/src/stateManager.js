@@ -6,6 +6,7 @@ class PageEditorStateManager {
     this.states = new Map();
     this.fallbackState = new PageEditorState();
     this.activeState = this.fallbackState;
+    this.editorWebviews = new Map();
     this.sharedComponentClipboard = null;
     this.changeEmitter = new vscode.EventEmitter();
     this.onDidChange = this.changeEmitter.event;
@@ -30,6 +31,7 @@ class PageEditorStateManager {
     const existing = this.states.get(key);
     if (existing) {
       existing.state.onTextDocumentChanged(document);
+      vscode.commands.executeCommand("setContext", "quasarTool.hasActivePageEditor", true);
       return existing.state;
     }
 
@@ -39,6 +41,7 @@ class PageEditorStateManager {
       if (this.activeState === state) this.changeEmitter.fire();
     });
     this.states.set(key, { state, subscription });
+    vscode.commands.executeCommand("setContext", "quasarTool.hasActivePageEditor", true);
     return state;
   }
 
@@ -55,17 +58,58 @@ class PageEditorStateManager {
 
     entry.subscription.dispose();
     this.states.delete(key);
+    this.editorWebviews.delete(state);
 
     if (this.activeState === state) {
       this.activeState = this.states.values().next().value?.state || this.fallbackState;
       this.changeEmitter.fire();
     }
+    vscode.commands.executeCommand(
+      "setContext",
+      "quasarTool.hasActivePageEditor",
+      this.states.size > 0,
+    );
+  }
+
+  registerEditorWebview(state, webview) {
+    if (!state || !webview) return { dispose() {} };
+
+    this.editorWebviews.set(state, webview);
+    return {
+      dispose: () => {
+        if (this.editorWebviews.get(state) === webview) {
+          this.editorWebviews.delete(state);
+        }
+      },
+    };
+  }
+
+  async saveActiveEditor() {
+    const webview = this.editorWebviews.get(this.activeState);
+    if (webview) {
+      await webview.postMessage({ type: "requestSave" });
+      return true;
+    }
+
+    if (this.activeState?.document) {
+      return this.activeState.saveScreen();
+    }
+
+    return false;
   }
 
   onTextDocumentChanged(document) {
     for (const { state } of this.states.values()) {
       state.onTextDocumentChanged(document);
     }
+  }
+
+  async onTextDocumentSaved(document) {
+    await Promise.all(
+      [...this.states.values()].map(({ state }) =>
+        state.onDocumentSaved(document),
+      ),
+    );
   }
 
   async onScriptFileChanged(uri) {

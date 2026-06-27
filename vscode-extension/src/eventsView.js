@@ -20,6 +20,15 @@ function getEventsHtml(webview, htmlShell, getNonce) {
         render()
       })
 
+      window.addEventListener('keydown', (event) => {
+        if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey) return
+        if (event.key.toLowerCase() !== 's') return
+
+        event.preventDefault()
+        event.stopPropagation()
+        vscode.postMessage({ type: 'saveScreen' })
+      }, true)
+
       vscode.postMessage({ type: 'ready' })
 
       function render() {

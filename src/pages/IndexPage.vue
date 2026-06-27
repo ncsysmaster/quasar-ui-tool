@@ -47,7 +47,7 @@
     </q-card>
     <q-card label="Card" flat bordered>
       <q-card-section label="Card Section">
-        <div class="qt-ag-table-wrap">
+        <div class="qt-ag-table-wrap" @paste.capture="Table001.handlePaste">
           <div class="row items-center q-gutter-sm full-width qt-table-toolbar-preview">
             <div class="text-subtitle1">tblList</div>
             <q-space />
@@ -57,19 +57,24 @@
             <q-btn outline unelevated class="qt-table-toolbar-btn" style="height: 24px; min-height: 24px; padding: 0 10px; background: rgba(255, 255, 255, 0.82); opacity: 0.72" color="grey-5" text-color="grey-8" label="새로고침" @click="onTableRefresh_Table001" />
           </div>
           <ag-grid-vue ref="Table001Ref"
-          class="ag-theme-quartz qt-ag-grid"
-          style="width: 100%; height: 360px"
+          class="qt-ag-grid"
+          style="width: 100%; height: 400px"
           :row-data="storeName.list"
           :column-defs="Table001_columnDefs"
-          :default-col-def="{ resizable: true, sortable: true, filter: true }"
+          :default-col-def="{ resizable: true, sortable: true, filter: true, minWidth: 70, suppressKeyboardEvent: (params) => Table001.suppressKeyboardEvent(params) }"
+          :header-height="48"
+          :row-height="42"
           :animate-rows="true"
-          :get-row-id="(params) => String(params.data?.['rowSn'] ?? '')"
+          :single-click-edit="true"
+          :get-row-id="(params) => String(params.data?.__qtRowId ?? params.data?.['rowSn'] ?? params.node?.rowIndex ?? '')"
           @grid-ready="(event) => Table001.setGridApi(event.api)"
+          @cell-key-down="(event) => Table001.handleCellKeyDown(event)"
+          @cell-value-changed="(event) => Table001.handleCellValueChanged(event)"
           :pagination="true"
-          :pagination-page-size="20"
+          :pagination-page-size="10"
           :pagination-page-size-selector="[10,20,50,0]"
-          :row-selection="{ mode: 'multiRow' }"
-          :loading="storeName.loading"
+          :row-selection="{ mode: 'multiRow', enableClickSelection: true }"
+          @selection-changed="(event) => Table001.setSelected(event.api.getSelectedRows())"
           @row-clicked="(event) => onRowClick_Table001(event.event, event.data)" />
         </div>
       </q-card-section>
@@ -84,8 +89,6 @@ import { useInStore } from 'src/store/in/inStore'
 import { createTableApi } from 'src/component/quasar-ui-api'
 import { AgGridVue } from 'ag-grid-vue3'
 import { ModuleRegistry, AllCommunityModule } from 'ag-grid-community'
-import 'ag-grid-community/styles/ag-grid.css'
-import 'ag-grid-community/styles/ag-theme-quartz.css'
 
 ModuleRegistry.registerModules([AllCommunityModule])
 
@@ -126,7 +129,7 @@ const search = {
 
 const classOptions = []
 
-const Table001_columnDefs = [{ "colId": "name", "headerName": "명칭", "field": "name", "sortable": true, "resizable": true, "editable": false, "cellStyle": { "textAlign": "left" } },{ "colId": "dtlDt", "headerName": "상세일자", "field": "dtlDt", "sortable": true, "resizable": true, "editable": false, "cellStyle": { "textAlign": "center" } },{ "colId": "actions", "headerName": "작업", "field": "actions", "sortable": false, "resizable": true, "editable": false, "cellStyle": { "textAlign": "center" }, "cellRenderer": () => '<button type="button" class="qt-ag-action-btn" style="margin-right:4px;padding:1px 7px;border:1px solid #cfd8dc;border-radius:3px;background:#fff;color:#455a64">편집</button><button type="button" class="qt-ag-action-btn qt-ag-action-danger" style="padding:1px 7px;border:1px solid #ffcdd2;border-radius:3px;background:#fff;color:#c62828">삭제</button>', "filter": false }]
+const Table001_columnDefs = [{ "colId": "mode", "headerName": "", "field": "mode", "sortable": true, "resizable": true, "editable": false, "width": 46, "cellStyle": { "textAlign": "center" }, "cellClass": "qt-table-mode-cell", "minWidth": 42, "maxWidth": 52 },{ "colId": "name", "headerName": "명칭", "field": "name", "sortable": true, "resizable": true, "editable": true, "flex": 1, "cellStyle": { "textAlign": "left" }, "headerClass": "qt-required-column" },{ "colId": "dtlDt", "headerName": "상세일자", "field": "dtlDt", "sortable": true, "resizable": true, "editable": true, "flex": 1, "cellStyle": { "textAlign": "center" }, "headerClass": "qt-required-column" },{ "colId": "actions", "headerName": "작업", "field": "actions", "sortable": false, "resizable": true, "editable": false, "flex": 1, "cellStyle": { "textAlign": "center" }, "cellRenderer": () => '<button type="button" class="qt-ag-action-btn" style="margin-right:4px;padding:1px 7px;border:1px solid #cfd8dc;border-radius:3px;background:#fff;color:#455a64">편집</button><button type="button" class="qt-ag-action-btn qt-ag-action-danger" style="padding:1px 7px;border:1px solid #ffcdd2;border-radius:3px;background:#fff;color:#c62828">삭제</button>', "filter": false },{ "colId": "add", "headerName": "주소", "field": "address", "sortable": true, "resizable": true, "editable": true, "flex": 1, "cellStyle": { "textAlign": "left" } }]
 
 const Table001Ref = ref(null)
 
@@ -137,8 +140,8 @@ const Table001 = createTableApi({
   rowKey: "rowSn",
   rows: { get: () => storeName.list, set: (value) => { storeName.list = value } },
   columns: { get: () => Table001_columnDefs },
-  pagination: { get: () => Table001Pagination.value, set: (value) => { Table001Pagination.value = value } },
-  loading: { get: () => storeName.loading, set: (value) => { storeName.loading = value } }
+  selected: { get: () => storeName.selectedRow, set: (value) => { storeName.selectedRow = value } },
+  pagination: { get: () => Table001Pagination.value, set: (value) => { Table001Pagination.value = value } }
 })
 
 function onSearch() {
@@ -156,7 +159,6 @@ function resetSearch() {
 
 }
 
-
 function onRowClick_Table001(event, row) {
   console.log('row-click', row)
 
@@ -172,8 +174,8 @@ function onTableAdd_Table001() {
     actions : '',
     key: 'abdc'
   }
+  
   Table001.addRow(newRow)
-
   
 }
 
@@ -184,11 +186,21 @@ function onTableSave_Table001() {
 
 
 function onTableDelete_Table001() {
+  
   console.log('table-delete')
+
+  const selIndex = Table001.getSelectedIndex()
+
+  console.log('selected index', selIndex)
+
+  Table001.delSelectedRow()
+  
 }
 
 
 function onTableRefresh_Table001() {
   console.log('table-refresh')
+
+  console.log('onRefre ', storeName.list)
 }
 </script>
