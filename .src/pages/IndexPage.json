@@ -358,6 +358,7 @@
             {
               "id": "cardsectionyicnl",
               "type": "CardSection",
+              "class": "q-pa-sm",
               "props": {},
               "label": "Card Section",
               "children": [
@@ -397,22 +398,22 @@
                       "editable": true
                     },
                     {
-                      "name": "actions",
-                      "label": "작업",
-                      "field": "actions",
-                      "type": "actions",
-                      "align": "center",
-                      "sortable": false,
-                      "required": false,
-                      "editable": true
-                    },
-                    {
                       "name": "add",
                       "label": "주소",
                       "field": "address",
                       "type": "text",
                       "align": "left",
                       "sortable": true,
+                      "required": false,
+                      "editable": true
+                    },
+                    {
+                      "name": "actions",
+                      "label": "작업",
+                      "field": "actions",
+                      "type": "actions",
+                      "align": "center",
+                      "sortable": false,
                       "required": false,
                       "editable": true
                     }
@@ -453,7 +454,8 @@
                       "loading": true,
                       "error": true
                     },
-                    "showModeColumn": true
+                    "showModeColumn": true,
+                    "excelCopy": false
                   },
                   "events": {
                     "row-click": "onRowClick_Table001"

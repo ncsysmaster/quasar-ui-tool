@@ -1186,6 +1186,7 @@ function createTableComponent(model, item, options = {}) {
       title: options.title || "Table",
       rowKey: options.rowKey || "id",
       showModeColumn: options.showModeColumn !== false,
+      excelCopy: options.excelCopy !== false,
       selection,
       rowsBinding: options.rowsBinding || "",
       loadingBinding: options.loadingBinding || "",

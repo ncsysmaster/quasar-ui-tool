@@ -157,7 +157,8 @@ function getPropertiesHtml(webview, htmlShell, getNonce) {
           fieldWithButton('Class', 'class', component.class || props.class || '', '...') +
           field('Style', 'style', componentStyle) +
           field('Height', 'style.height', getStyleDeclaration(componentStyle, 'height')) +
-          checkField('mode column', 'table.showModeColumn', table.showModeColumn !== false)
+          checkField('mode column', 'table.showModeColumn', table.showModeColumn !== false) +
+          checkField('excel copy', 'table.excelCopy', table.excelCopy !== false)
         ) + propertySection('Data',
           field('rows binding', 'dynamic.rows', dynamicProps.rows || table.rowsBinding || '') +
           field('columns binding', 'dynamic.columns', dynamicProps.columns || '') +

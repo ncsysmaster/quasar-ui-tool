@@ -38,9 +38,7 @@ body {
   --ag-selected-row-background-color: #dff0ff;
   --ag-range-selection-border-color: #1a73ff;
   --ag-input-focus-border-color: #1a73ff;
-  --ag-checkbox-checked-color: #1e8df1;
-  --ag-checkbox-unchecked-color: #aeb7c3;
-  --ag-checkbox-background-color: #ffffff;
+  --ag-checkbox-border-radius: 4px;
   border: 1px solid #aeb8c7;
   border-radius: 6px;
   overflow: hidden;
@@ -137,6 +135,15 @@ body {
   box-shadow: inset 0 0 0 1px #1a73ff !important;
 }
 
+.qt-ag-grid .ag-cell.qt-ag-copy-range-cell {
+  background: rgba(26, 115, 255, 0.16) !important;
+  box-shadow: inset 0 0 0 1px rgba(26, 115, 255, 0.38);
+}
+
+.qt-ag-grid .ag-cell.qt-ag-copy-range-anchor {
+  box-shadow: inset 0 0 0 2px #1a73ff !important;
+}
+
 .qt-ag-grid .ag-cell-inline-editing {
   background: #ffffff;
 }
@@ -158,175 +165,6 @@ body {
   background: transparent;
   box-shadow: none !important;
   padding-inline: 14px;
-}
-
-.qt-ag-grid .ag-selection-checkbox {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.qt-ag-grid .ag-checkbox-input-wrapper {
-  position: relative;
-  width: 15px;
-  height: 15px;
-  border: 1px solid #aeb7c3;
-  border-radius: 3px;
-  background: #ffffff;
-  box-shadow: none;
-}
-
-.qt-ag-grid .ag-header .ag-checkbox-input-wrapper {
-  border-color: rgba(255, 255, 255, 0.9);
-}
-
-.qt-ag-grid .ag-checkbox-input-wrapper:focus-within,
-.qt-ag-grid .ag-checkbox-input-wrapper:active {
-  box-shadow: none;
-}
-
-.qt-ag-grid .ag-checkbox-input-wrapper::before,
-.qt-ag-grid .ag-checkbox-input-wrapper::after {
-  display: none !important;
-}
-
-.qt-ag-grid .ag-checkbox-input-wrapper.ag-checked {
-  border-color: #1e8df1;
-  background: #1e8df1;
-}
-
-.qt-ag-grid .ag-header .ag-checkbox-input-wrapper.ag-checked {
-  border-color: #ffffff;
-  background: #ffffff;
-}
-
-.qt-ag-grid .ag-checkbox-input-wrapper.ag-checked::after {
-  content: "";
-  position: absolute;
-  display: block !important;
-  left: 4px;
-  top: 1px;
-  width: 4px;
-  height: 8px;
-  border: solid #ffffff;
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
-}
-
-.qt-ag-grid .ag-header .ag-checkbox-input-wrapper.ag-checked::after {
-  border-color: #1e8df1;
-}
-
-.qt-ag-grid .ag-row .ag-checkbox-input-wrapper.ag-indeterminate {
-  border-color: #1e8df1;
-  background: #1e8df1;
-}
-
-.qt-ag-grid .ag-row .ag-checkbox-input-wrapper.ag-indeterminate::after {
-  content: "";
-  position: absolute;
-  display: block !important;
-  left: 4px;
-  top: 1px;
-  width: 4px;
-  height: 8px;
-  background: transparent;
-  border: solid #ffffff;
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
-}
-
-.qt-ag-grid .ag-header .ag-checkbox-input-wrapper.ag-indeterminate {
-  border-color: #b8c0ca;
-  background: #b8c0ca;
-}
-
-.qt-ag-grid .ag-checkbox-input-wrapper.ag-indeterminate::after {
-  content: "";
-  position: absolute;
-  display: block !important;
-  left: 3px;
-  right: 3px;
-  top: 6px;
-  height: 2px;
-  background: #ffffff;
-}
-
-.qt-ag-grid .ag-header .ag-checkbox-input-wrapper.ag-indeterminate::after {
-  left: 3px;
-  right: 3px;
-  top: 6px;
-  width: auto;
-  height: 2px;
-  background: #ffffff;
-  border: 0;
-  transform: none;
-}
-
-.qt-ag-grid .ag-selection-checkbox .ag-checkbox-input-wrapper::before,
-.qt-ag-grid .ag-selection-checkbox .ag-checkbox-input-wrapper::after {
-  content: "" !important;
-  display: none !important;
-  background: none !important;
-  border: 0 !important;
-}
-
-.qt-ag-grid .ag-row .ag-selection-checkbox .ag-checkbox-input-wrapper {
-  border-color: #b8c0ca;
-  background: #ffffff;
-}
-
-.qt-ag-grid .ag-row-selected .ag-selection-checkbox .ag-checkbox-input-wrapper,
-.qt-ag-grid .ag-row .ag-selection-checkbox:has(.ag-checked) .ag-checkbox-input-wrapper,
-.qt-ag-grid .ag-row .ag-selection-checkbox:has(.ag-indeterminate) .ag-checkbox-input-wrapper {
-  border-color: #1e8df1;
-  background: #1e8df1;
-}
-
-.qt-ag-grid .ag-row-selected .ag-selection-checkbox::after,
-.qt-ag-grid .ag-row .ag-selection-checkbox:has(.ag-checked)::after,
-.qt-ag-grid .ag-row .ag-selection-checkbox:has(.ag-indeterminate)::after {
-  content: "";
-  position: absolute;
-  left: 6px;
-  top: 3px;
-  width: 5px;
-  height: 9px;
-  border: solid #ffffff;
-  border-width: 0 2px 2px 0;
-  pointer-events: none;
-  transform: rotate(45deg);
-}
-
-.qt-ag-grid .ag-header .ag-selection-checkbox .ag-checkbox-input-wrapper {
-  border-color: #c2cad4;
-  background: #c2cad4;
-}
-
-.qt-ag-grid .ag-header .ag-selection-checkbox:has(.ag-indeterminate)::after {
-  content: "";
-  position: absolute;
-  left: 4px;
-  right: 4px;
-  top: 7px;
-  height: 2px;
-  border-radius: 999px;
-  background: #ffffff;
-  pointer-events: none;
-}
-
-.qt-ag-grid .ag-header .ag-selection-checkbox:has(.ag-checked)::after {
-  content: "";
-  position: absolute;
-  left: 6px;
-  top: 3px;
-  width: 5px;
-  height: 9px;
-  border: solid #ffffff;
-  border-width: 0 2px 2px 0;
-  pointer-events: none;
-  transform: rotate(45deg);
 }
 
 .qt-ag-grid .ag-paging-panel {

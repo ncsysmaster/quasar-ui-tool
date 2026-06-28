@@ -1,4 +1,6 @@
-﻿function getTableHtml() {
+const { getTableStyles } = require("./tableStyles");
+
+function getTableHtml() {
   return `<div id="table-wizard-dialog" class="designer-dialog-backdrop hidden">
   <div class="designer-dialog table-wizard-dialog" role="dialog" aria-modal="true" aria-labelledby="table-wizard-title">
     <div class="designer-dialog-header">
@@ -14,6 +16,7 @@
       <label class="check table-wizard-check"><input type="checkbox" data-table-pagination checked><span>페이징 사용</span></label>
       <label class="check table-wizard-check"><input type="checkbox" data-table-filter><span>검색 필터 사용</span></label>
       <label class="check table-wizard-check"><input type="checkbox" data-table-mode-column checked><span>mode column</span></label>
+      <label class="check table-wizard-check"><input type="checkbox" data-table-excel-copy checked><span>Excel copy</span></label>
       <fieldset class="table-wizard-toolbar"><legend>상단 버튼</legend>
         <label class="check"><input type="checkbox" data-table-toolbar="search"><span>검색</span></label>
         <label class="check"><input type="checkbox" data-table-toolbar="add" checked><span>신규</span></label>
@@ -136,6 +139,7 @@ function showTableWizard(request = {}) {
   dialog.querySelector("[data-table-pagination]").checked = true;
   dialog.querySelector("[data-table-filter]").checked = false;
   dialog.querySelector("[data-table-mode-column]").checked = true;
+  dialog.querySelector("[data-table-excel-copy]").checked = true;
   dialog.querySelectorAll("[data-table-toolbar]").forEach((input) => {
     input.checked = ["add", "save", "delete", "refresh"].includes(
       input.dataset.tableToolbar,
@@ -180,6 +184,7 @@ function submitTableWizard() {
       pagination: dialog.querySelector("[data-table-pagination]").checked,
       filter: dialog.querySelector("[data-table-filter]").checked,
       showModeColumn: dialog.querySelector("[data-table-mode-column]").checked,
+      excelCopy: dialog.querySelector("[data-table-excel-copy]").checked,
       toolbar,
     },
   });
@@ -311,81 +316,6 @@ function findTableComponent(components, id) {
     if (child) return child;
   }
   return null;
-}
-
-function getTableStyles() {
-  return `.table-wizard-dialog { width: min(560px, calc(100vw - 32px)); }
-.table-wizard-body { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
-.table-wizard-body .field { margin: 0; }
-.table-wizard-check { align-self: center; }
-.table-wizard-toolbar { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 12px; padding: 10px; border: 1px solid var(--vscode-panel-border); }
-.table-wizard-toolbar legend { padding: 0 5px; color: var(--vscode-descriptionForeground); }
-.designer-dialog.table-columns-dialog { width: min(1500px, calc(100vw - 24px)); max-width: calc(100vw - 24px); height: min(720px, calc(100vh - 24px)); display: flex; flex-direction: column; }
-.table-columns-toolbar { padding: 6px 10px; border-bottom: 1px solid var(--vscode-panel-border); }
-.table-columns-toolbar button { min-height: 26px; padding: 3px 9px; border: 0; color: var(--vscode-button-foreground); background: var(--vscode-button-background); }
-.table-columns-body { flex: 1; min-height: 0; overflow: auto; padding: 8px; }
-.table-columns-grid { min-width: 1250px; border: 1px solid var(--vscode-panel-border); }
-.table-columns-head, .table-column-row { display: grid; grid-template-columns: 70px 130px 150px 130px 105px 90px 90px 70px 70px 70px 130px 44px; align-items: stretch; }
-.table-columns-head { position: sticky; z-index: 2; top: 0; color: var(--vscode-button-foreground); background: var(--vscode-button-background); font-weight: 600; }
-.table-columns-head span { padding: 6px 4px; text-align: center; border-right: 1px solid var(--vscode-panel-border); }
-.table-column-row > input, .table-column-row > select, .table-column-row > button, .table-column-order { min-width: 0; min-height: 28px; border-width: 0 1px 1px 0; }
-.table-column-row > input[type="checkbox"] { width: auto; justify-self: center; align-self: center; }
-.table-column-order { display: flex; align-items: center; justify-content: center; }
-.table-column-order button { width: 27px; height: 24px; padding: 0; border: 0; color: var(--vscode-icon-foreground); background: transparent; }
-.qt-table-toolbar-preview { display: flex; width: 100%; gap: 6px; align-items: center; }
-.qt-table-toolbar-preview .qt-table-title { font-weight: 600; }
-.qt-table-toolbar-preview .qt-table-filter-preview { max-width: 240px; }
-.qt-table-toolbar-preview .qt-table-toolbar-btn { height: 24px; min-height: 24px; padding: 0 10px; background: rgba(255, 255, 255, 0.82); box-shadow: none; opacity: 0.72; }
-.qt-table-toolbar-spacer { flex: 1 1 auto; min-width: 8px; }
-.qt-ag-table-preview { display: flex; flex-direction: column; gap: 6px; width: 100%; min-height: 220px; }
-.qt-ag-grid { --ag-font-family: "Inter", "Segoe UI", Arial, sans-serif; --ag-font-size: 14px; --ag-border-radius: 6px; --ag-wrapper-border-radius: 6px; --ag-header-height: 48px; --ag-row-height: 42px; --ag-header-background-color: #3f94d9; --ag-header-foreground-color: #ffffff; --ag-background-color: #ffffff; --ag-foreground-color: #111827; --ag-border-color: #cfd7e3; --ag-row-border-color: #d9dee7; --ag-secondary-border-color: rgba(255,255,255,.18); --ag-odd-row-background-color: #ffffff; --ag-row-hover-color: #eef7ff; --ag-selected-row-background-color: #dff0ff; --ag-checkbox-checked-color: #1e8df1; --ag-checkbox-unchecked-color: #aeb7c3; --ag-checkbox-background-color: #ffffff; width: 100%; min-height: 220px; border: 1px solid #aeb8c7; border-radius: 6px; overflow: hidden; }
-.qt-ag-grid .ag-root-wrapper { border: 0; border-radius: 6px; }
-.qt-ag-grid .ag-header, .qt-ag-grid .ag-header-row, .qt-ag-grid .ag-header-cell, .qt-ag-grid .ag-header-group-cell { background-color: #3f94d9; color: #ffffff; }
-.qt-ag-grid .ag-header { border-bottom: 0; }
-.qt-ag-grid .ag-header-cell { padding-inline: 16px; border-right: 1px solid rgba(255,255,255,.18); }
-.qt-ag-grid .ag-header-cell-label { color: #ffffff; font-weight: 700; }
-.qt-ag-grid .ag-header-cell-text, .qt-ag-grid .ag-header-cell .ag-icon, .qt-ag-grid .ag-header-cell-menu-button, .qt-ag-grid .ag-header-cell-filter-button { color: #ffffff; }
-.qt-ag-grid .ag-row { color: #111827; border-bottom: 1px solid #d9dee7; }
-.qt-ag-grid .ag-row-even { background: #ffffff; }
-.qt-ag-grid .ag-row-odd { background: #eef8ff; }
-.qt-ag-grid .ag-row-hover, .qt-ag-grid .ag-row-selected { background: #dff0ff !important; }
-.qt-ag-grid .ag-row-selected::before { background-color: #dff0ff !important; opacity: 1 !important; }
-.qt-ag-grid .ag-row-hover::before { background-color: #eef7ff !important; opacity: 1 !important; }
-.qt-ag-grid .ag-cell { display: flex; align-items: center; padding-inline: 16px; border-right: 0; }
-.qt-ag-grid .qt-table-mode-cell { justify-content: center; color: #2563eb; font-weight: 700; }
-.qt-ag-grid .ag-cell-focus, .qt-ag-grid .ag-cell-inline-editing { border: 0 !important; outline: none !important; box-shadow: inset 0 0 0 1px #1a73ff !important; }
-.qt-ag-grid .ag-cell-inline-editing { background: #ffffff; }
-.qt-ag-grid .ag-cell-inline-editing .ag-cell-edit-wrapper, .qt-ag-grid .ag-cell-inline-editing .ag-cell-editor, .qt-ag-grid .ag-cell-inline-editing .ag-input-wrapper, .qt-ag-grid .ag-cell-inline-editing .ag-text-field-input-wrapper { width: 100%; height: 100%; }
-.qt-ag-grid .ag-cell-inline-editing input[class^="ag-"], .qt-ag-grid .ag-cell-inline-editing input[class*=" ag-"] { width: 100%; height: 100%; border: 0 !important; outline: none !important; background: transparent; box-shadow: none !important; padding-inline: 14px; }
-.qt-ag-grid .ag-selection-checkbox { position: relative; display: inline-flex; align-items: center; justify-content: center; }
-.qt-ag-grid .ag-checkbox-input-wrapper { position: relative; width: 15px; height: 15px; border: 1px solid #aeb7c3; border-radius: 3px; background: #ffffff; box-shadow: none; }
-.qt-ag-grid .ag-header .ag-checkbox-input-wrapper { border-color: rgba(255,255,255,.9); }
-.qt-ag-grid .ag-checkbox-input-wrapper:focus-within, .qt-ag-grid .ag-checkbox-input-wrapper:active { box-shadow: none; }
-.qt-ag-grid .ag-checkbox-input-wrapper::before, .qt-ag-grid .ag-checkbox-input-wrapper::after { display: none !important; }
-.qt-ag-grid .ag-checkbox-input-wrapper.ag-checked { border-color: #1e8df1; background: #1e8df1; }
-.qt-ag-grid .ag-header .ag-checkbox-input-wrapper.ag-checked { border-color: #ffffff; background: #ffffff; }
-.qt-ag-grid .ag-checkbox-input-wrapper.ag-checked::after { content: ""; position: absolute; display: block !important; left: 4px; top: 1px; width: 4px; height: 8px; border: solid #ffffff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
-.qt-ag-grid .ag-header .ag-checkbox-input-wrapper.ag-checked::after { border-color: #1e8df1; }
-.qt-ag-grid .ag-row .ag-checkbox-input-wrapper.ag-indeterminate { border-color: #1e8df1; background: #1e8df1; }
-.qt-ag-grid .ag-row .ag-checkbox-input-wrapper.ag-indeterminate::after { content: ""; position: absolute; display: block !important; left: 4px; top: 1px; width: 4px; height: 8px; background: transparent; border: solid #ffffff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
-.qt-ag-grid .ag-header .ag-checkbox-input-wrapper.ag-indeterminate { border-color: #b8c0ca; background: #b8c0ca; }
-.qt-ag-grid .ag-checkbox-input-wrapper.ag-indeterminate::after { content: ""; position: absolute; display: block !important; left: 3px; right: 3px; top: 6px; height: 2px; background: #ffffff; }
-.qt-ag-grid .ag-header .ag-checkbox-input-wrapper.ag-indeterminate::after { left: 3px; right: 3px; top: 6px; width: auto; height: 2px; background: #ffffff; border: 0; transform: none; }
-.qt-ag-grid .ag-selection-checkbox .ag-checkbox-input-wrapper::before, .qt-ag-grid .ag-selection-checkbox .ag-checkbox-input-wrapper::after { content: "" !important; display: none !important; background: none !important; border: 0 !important; }
-.qt-ag-grid .ag-row .ag-selection-checkbox .ag-checkbox-input-wrapper { border-color: #b8c0ca; background: #ffffff; }
-.qt-ag-grid .ag-row-selected .ag-selection-checkbox .ag-checkbox-input-wrapper, .qt-ag-grid .ag-row .ag-selection-checkbox:has(.ag-checked) .ag-checkbox-input-wrapper, .qt-ag-grid .ag-row .ag-selection-checkbox:has(.ag-indeterminate) .ag-checkbox-input-wrapper { border-color: #1e8df1; background: #1e8df1; }
-.qt-ag-grid .ag-row-selected .ag-selection-checkbox::after, .qt-ag-grid .ag-row .ag-selection-checkbox:has(.ag-checked)::after, .qt-ag-grid .ag-row .ag-selection-checkbox:has(.ag-indeterminate)::after { content: ""; position: absolute; left: 6px; top: 3px; width: 5px; height: 9px; border: solid #ffffff; border-width: 0 2px 2px 0; pointer-events: none; transform: rotate(45deg); }
-.qt-ag-grid .ag-header .ag-selection-checkbox .ag-checkbox-input-wrapper { border-color: #c2cad4; background: #c2cad4; }
-.qt-ag-grid .ag-header .ag-selection-checkbox:has(.ag-indeterminate)::after { content: ""; position: absolute; left: 4px; right: 4px; top: 7px; height: 2px; border-radius: 999px; background: #ffffff; pointer-events: none; }
-.qt-ag-grid .ag-header .ag-selection-checkbox:has(.ag-checked)::after { content: ""; position: absolute; left: 6px; top: 3px; width: 5px; height: 9px; border: solid #ffffff; border-width: 0 2px 2px 0; pointer-events: none; transform: rotate(45deg); }
-.qt-ag-grid .ag-paging-panel { min-height: 48px; padding: 0 18px; color: #111827; background: #ffffff; border-top: 1px solid #d9dee7; font-size: 14px; }
-.qt-ag-grid .ag-paging-page-size .ag-picker-field-wrapper { min-height: 30px; border-color: #cfd7e3; border-radius: 4px; }
-.qt-ag-grid .ag-paging-button { color: #1f2937; }
-.qt-ag-grid .ag-paging-button.ag-disabled { color: #b9c0cb; }
-.qt-ag-action-btn { margin-right: 4px; padding: 1px 7px; border: 1px solid #cfd8dc; border-radius: 3px; background: #fff; color: #455a64; }
-.qt-ag-action-danger { border-color: #ffcdd2; color: #c62828; }
-.qt-table-empty-preview { padding: 18px; color: var(--vscode-descriptionForeground); text-align: center; }
-@media (max-width: 700px) { .table-wizard-body { grid-template-columns: 1fr; } .table-wizard-toolbar { grid-column: 1; } }`;
 }
 
 module.exports = { getTableHtml, getTableScript, getTableStyles };

@@ -46,8 +46,8 @@
       </q-card-section>
     </q-card>
     <q-card label="Card" flat bordered>
-      <q-card-section label="Card Section">
-        <div class="qt-ag-table-wrap" @paste.capture="Table001.handlePaste">
+      <q-card-section class="q-pa-sm" label="Card Section">
+        <div class="qt-ag-table-wrap" @paste.capture="Table001.handlePaste" @copy.capture="Table001.handleCopy">
           <div class="row items-center q-gutter-sm full-width qt-table-toolbar-preview">
             <div class="text-subtitle1">tblList</div>
             <q-space />
@@ -61,19 +61,21 @@
           style="width: 100%; height: 400px"
           :row-data="storeName.list"
           :column-defs="Table001_columnDefs"
-          :default-col-def="{ resizable: true, sortable: true, filter: true, minWidth: 70, suppressKeyboardEvent: (params) => Table001.suppressKeyboardEvent(params) }"
+          :default-col-def="{ resizable: true, sortable: true, filter: true, minWidth: 70, suppressKeyboardEvent: (params) => Table001.suppressKeyboardEvent(params), cellClassRules: { 'qt-ag-copy-range-cell': (params) => Table001.isCellInCopyRange(params), 'qt-ag-copy-range-anchor': (params) => Table001.isCellCopyRangeAnchor(params) } }"
           :header-height="48"
           :row-height="42"
           :animate-rows="true"
-          :single-click-edit="true"
+          :single-click-edit="false"
           :get-row-id="(params) => String(params.data?.__qtRowId ?? params.data?.['rowSn'] ?? params.node?.rowIndex ?? '')"
           @grid-ready="(event) => Table001.setGridApi(event.api)"
+          @cell-mouse-down="(event) => Table001.handleCellMouseDown(event)"
+          @cell-mouse-over="(event) => Table001.handleCellMouseOver(event)"
           @cell-key-down="(event) => Table001.handleCellKeyDown(event)"
           @cell-value-changed="(event) => Table001.handleCellValueChanged(event)"
           :pagination="true"
           :pagination-page-size="10"
           :pagination-page-size-selector="[10,20,50,0]"
-          :row-selection="{ mode: 'multiRow', enableClickSelection: true }"
+          :row-selection="{ mode: 'multiRow', checkboxes: true, headerCheckbox: true, enableClickSelection: false }"
           @selection-changed="(event) => Table001.setSelected(event.api.getSelectedRows())"
           @row-clicked="(event) => onRowClick_Table001(event.event, event.data)" />
         </div>
@@ -129,7 +131,7 @@ const search = {
 
 const classOptions = []
 
-const Table001_columnDefs = [{ "colId": "mode", "headerName": "", "field": "mode", "sortable": true, "resizable": true, "editable": false, "width": 46, "cellStyle": { "textAlign": "center" }, "cellClass": "qt-table-mode-cell", "minWidth": 42, "maxWidth": 52 },{ "colId": "name", "headerName": "명칭", "field": "name", "sortable": true, "resizable": true, "editable": true, "flex": 1, "cellStyle": { "textAlign": "left" }, "headerClass": "qt-required-column" },{ "colId": "dtlDt", "headerName": "상세일자", "field": "dtlDt", "sortable": true, "resizable": true, "editable": true, "flex": 1, "cellStyle": { "textAlign": "center" }, "headerClass": "qt-required-column" },{ "colId": "actions", "headerName": "작업", "field": "actions", "sortable": false, "resizable": true, "editable": false, "flex": 1, "cellStyle": { "textAlign": "center" }, "cellRenderer": () => '<button type="button" class="qt-ag-action-btn" style="margin-right:4px;padding:1px 7px;border:1px solid #cfd8dc;border-radius:3px;background:#fff;color:#455a64">편집</button><button type="button" class="qt-ag-action-btn qt-ag-action-danger" style="padding:1px 7px;border:1px solid #ffcdd2;border-radius:3px;background:#fff;color:#c62828">삭제</button>', "filter": false },{ "colId": "add", "headerName": "주소", "field": "address", "sortable": true, "resizable": true, "editable": true, "flex": 1, "cellStyle": { "textAlign": "left" } }]
+const Table001_columnDefs = [{ "colId": "mode", "headerName": "", "field": "mode", "sortable": true, "resizable": true, "editable": false, "width": 46, "cellStyle": { "textAlign": "center" }, "cellClass": "qt-table-mode-cell", "minWidth": 42, "maxWidth": 52 },{ "colId": "name", "headerName": "명칭", "field": "name", "sortable": true, "resizable": true, "editable": true, "flex": 1, "cellStyle": { "textAlign": "left" }, "headerClass": "qt-required-column" },{ "colId": "dtlDt", "headerName": "상세일자", "field": "dtlDt", "sortable": true, "resizable": true, "editable": true, "flex": 1, "cellStyle": { "textAlign": "center" }, "headerClass": "qt-required-column" },{ "colId": "add", "headerName": "주소", "field": "address", "sortable": true, "resizable": true, "editable": true, "flex": 1, "cellStyle": { "textAlign": "left" } },{ "colId": "actions", "headerName": "작업", "field": "actions", "sortable": false, "resizable": true, "editable": false, "flex": 1, "cellStyle": { "textAlign": "center" }, "cellRenderer": () => '<button type="button" class="qt-ag-action-btn" style="margin-right:4px;padding:1px 7px;border:1px solid #cfd8dc;border-radius:3px;background:#fff;color:#455a64">편집</button><button type="button" class="qt-ag-action-btn qt-ag-action-danger" style="padding:1px 7px;border:1px solid #ffcdd2;border-radius:3px;background:#fff;color:#c62828">삭제</button>', "filter": false }]
 
 const Table001Ref = ref(null)
 
@@ -138,6 +140,7 @@ const Table001 = createTableApi({
   type: "Table",
   componentRef: Table001Ref,
   rowKey: "rowSn",
+  excelCopy: false,
   rows: { get: () => storeName.list, set: (value) => { storeName.list = value } },
   columns: { get: () => Table001_columnDefs },
   selected: { get: () => storeName.selectedRow, set: (value) => { storeName.selectedRow = value } },

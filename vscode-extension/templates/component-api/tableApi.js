@@ -132,6 +132,24 @@ function parseClipboardText(text) {
   return rows
 }
 
+function normalizeClipboardValue(value) {
+  if (value === undefined || value === null) return ''
+  if (value instanceof Date) return value.toISOString()
+  if (typeof value === 'object') {
+    try {
+      return JSON.stringify(value)
+    } catch {
+      return String(value)
+    }
+  }
+  return String(value)
+}
+
+function serializeClipboardCell(value) {
+  const text = normalizeClipboardValue(value)
+  return /[\t\r\n"]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
+}
+
 function isEditableColumnDef(columnDef, params = {}) {
   if (typeof columnDef?.editable === 'function') return Boolean(columnDef.editable(params))
   return columnDef?.editable === true
@@ -191,11 +209,15 @@ export function createTableApi(options = {}) {
     pagination = null,
     loading = null,
     rowKey = 'id',
+    excelCopy = true,
   } = options
   let gridApi = null
   let internalRowSequence = 0
   let generatedRowKeySequence = 0
   const pendingBlankRows = new WeakSet()
+  let copyRange = null
+  let copyRangeDragging = false
+  const isExcelCopyEnabled = () => excelCopy !== false
 
   const ensureRowIdentity = (row) => {
     if (!row || typeof row !== 'object') return row
@@ -353,6 +375,56 @@ export function createTableApi(options = {}) {
         colDef: columnDef,
       })
     })
+  }
+
+  const getCopyColumns = (eventApi) =>
+    getDisplayedColumns(eventApi).filter((column) => {
+      const columnDef = column?.getColDef?.() || {}
+      return !isNonDataColumn(columnDef)
+    })
+
+  const getCopyRangeBounds = (eventApi = gridApi) => {
+    if (!isExcelCopyEnabled() || !eventApi || !copyRange) return null
+
+    const columns = getCopyColumns(eventApi)
+    const startColumnIndex = columns.findIndex((column) => column?.getColId?.() === copyRange.startColumnId)
+    const endColumnIndex = columns.findIndex((column) => column?.getColId?.() === copyRange.endColumnId)
+    if (startColumnIndex < 0 || endColumnIndex < 0) return null
+
+    const displayedRowCount = Number(eventApi.getDisplayedRowCount?.() ?? api.getRows().length)
+    if (displayedRowCount <= 0) return null
+
+    return {
+      startRowIndex: Math.max(0, Math.min(copyRange.startRowIndex, copyRange.endRowIndex)),
+      endRowIndex: Math.min(displayedRowCount - 1, Math.max(copyRange.startRowIndex, copyRange.endRowIndex)),
+      startColumnIndex: Math.min(startColumnIndex, endColumnIndex),
+      endColumnIndex: Math.max(startColumnIndex, endColumnIndex),
+      columns,
+    }
+  }
+
+  const refreshCopyRangeCells = (eventApi = gridApi) => {
+    eventApi?.refreshCells?.({ force: true })
+  }
+
+  const stopCopyRangeDragging = () => {
+    copyRangeDragging = false
+  }
+
+  const attachCopyRangeMouseUp = () => {
+    if (typeof document === 'undefined') return
+    document.removeEventListener('mouseup', stopCopyRangeDragging)
+    document.addEventListener('mouseup', stopCopyRangeDragging, { once: true })
+  }
+
+  const getCopyMouseCell = (event) => {
+    const eventApi = event?.api || gridApi
+    const column = event?.column
+    const columnDef = column?.getColDef?.() || event?.colDef || {}
+    const columnId = column?.getColId?.() || columnDef.colId || columnDef.field
+    const rowIndex = Number(event?.node?.rowIndex)
+    if (!eventApi || !columnId || !Number.isInteger(rowIndex) || isNonDataColumn(columnDef)) return null
+    return { eventApi, rowIndex, columnId }
   }
 
   const moveToAdjacentEditableCell = (params, key) => {
@@ -579,6 +651,93 @@ export function createTableApi(options = {}) {
       if (!isDataRowBlank(nextRow)) pendingBlankRows.delete(nextRow)
       syncRows(nextRows, { updateGrid: false })
       gridApi?.refreshCells?.({ rowNodes: event?.node ? [event.node] : undefined, force: true })
+      return true
+    },
+    handleCellMouseDown(event) {
+      if (!isExcelCopyEnabled()) return false
+      const mouseEvent = event?.event
+      if (mouseEvent && mouseEvent.button !== 0) return false
+
+      const target = mouseEvent?.target
+      if (target?.closest?.('button,input,textarea,select,a,[role="button"]')) return false
+
+      const cell = getCopyMouseCell(event)
+      if (!cell) return false
+
+      copyRangeDragging = true
+      copyRange = {
+        startRowIndex: cell.rowIndex,
+        endRowIndex: cell.rowIndex,
+        startColumnId: cell.columnId,
+        endColumnId: cell.columnId,
+      }
+
+      cell.eventApi.setFocusedCell?.(cell.rowIndex, cell.columnId)
+      refreshCopyRangeCells(cell.eventApi)
+      attachCopyRangeMouseUp()
+      return true
+    },
+    handleCellMouseOver(event) {
+      if (!isExcelCopyEnabled() || !copyRangeDragging || !copyRange) return false
+
+      const cell = getCopyMouseCell(event)
+      if (!cell) return false
+      if (copyRange.endRowIndex === cell.rowIndex && copyRange.endColumnId === cell.columnId) return true
+
+      copyRange.endRowIndex = cell.rowIndex
+      copyRange.endColumnId = cell.columnId
+      refreshCopyRangeCells(cell.eventApi)
+      return true
+    },
+    isCellInCopyRange(params = {}) {
+      const bounds = getCopyRangeBounds(params.api || gridApi)
+      if (!bounds) return false
+
+      const rowIndex = Number(params.node?.rowIndex)
+      const columnId = params.column?.getColId?.() || params.colDef?.colId || params.colDef?.field
+      const columnIndex = bounds.columns.findIndex((column) => column?.getColId?.() === columnId)
+
+      return Number.isInteger(rowIndex) &&
+        rowIndex >= bounds.startRowIndex &&
+        rowIndex <= bounds.endRowIndex &&
+        columnIndex >= bounds.startColumnIndex &&
+        columnIndex <= bounds.endColumnIndex
+    },
+    isCellCopyRangeAnchor(params = {}) {
+      if (!isExcelCopyEnabled() || !copyRange) return false
+      const rowIndex = Number(params.node?.rowIndex)
+      const columnId = params.column?.getColId?.() || params.colDef?.colId || params.colDef?.field
+      return rowIndex === copyRange.startRowIndex && columnId === copyRange.startColumnId
+    },
+    getCopyRangeText() {
+      if (!isExcelCopyEnabled()) return null
+      const eventApi = gridApi
+      const bounds = getCopyRangeBounds(eventApi)
+      if (!bounds) return null
+
+      const selectedColumns = bounds.columns.slice(bounds.startColumnIndex, bounds.endColumnIndex + 1)
+      const lines = []
+
+      for (let rowIndex = bounds.startRowIndex; rowIndex <= bounds.endRowIndex; rowIndex += 1) {
+        const rowNode = eventApi.getDisplayedRowAtIndex?.(rowIndex)
+        const row = rowNode?.data || {}
+        lines.push(selectedColumns
+          .map((column) => serializeClipboardCell(row[getColumnField(column)]))
+          .join('\t'))
+      }
+
+      return lines.join('\r\n')
+    },
+    handleCopy(event) {
+      if (!isExcelCopyEnabled()) return false
+      if (gridApi?.getEditingCells?.()?.length) return false
+
+      const text = api.getCopyRangeText()
+      if (text === null) return false
+
+      event?.clipboardData?.setData?.('text/plain', text)
+      event?.preventDefault?.()
+      event?.stopPropagation?.()
       return true
     },
     pasteText(text) {

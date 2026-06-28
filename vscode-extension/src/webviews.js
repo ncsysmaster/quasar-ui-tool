@@ -1066,7 +1066,7 @@ function getEditorHtml(webview, runtimeUris) {
           headerHeight: 48,
           rowHeight: 42,
           animateRows: true,
-          singleClickEdit: true,
+          singleClickEdit: false,
           getRowId: (params) => String(params.data?.__qtRowId ?? params.data?.[rowKey] ?? params.node?.rowIndex ?? ''),
           onRowClicked: (event) => {
             event.event?.stopPropagation?.()
@@ -1085,7 +1085,9 @@ function getEditorHtml(webview, runtimeUris) {
         if (selection === 'single' || selection === 'multiple') {
           props.rowSelection = {
             mode: selection === 'multiple' ? 'multiRow' : 'singleRow',
-            enableClickSelection: true
+            checkboxes: true,
+            headerCheckbox: selection === 'multiple',
+            enableClickSelection: false
           }
           props.onSelectionChanged = (event) => {
             if (component.models?.selected) {
