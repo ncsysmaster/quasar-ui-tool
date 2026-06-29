@@ -286,7 +286,12 @@ class PageEditorProvider {
       }
 
       if (message.type === "updateTableColumns") {
-        await editorState.updateTableColumns(message.id, message.columns);
+        await editorState.updateTableColumns(message.id, message.columns, {
+          headerRows: message.headerRows,
+          rowRows: message.rowRows,
+          headerLayout: message.headerLayout,
+          bodyRows: message.bodyRows,
+        });
       }
     });
   }

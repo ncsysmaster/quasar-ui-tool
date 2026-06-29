@@ -151,8 +151,13 @@ function serializeClipboardCell(value) {
 }
 
 function isEditableColumnDef(columnDef, params = {}) {
+  if (columnDef?.qtGroupRowCell === true) return true
   if (typeof columnDef?.editable === 'function') return Boolean(columnDef.editable(params))
   return columnDef?.editable === true
+}
+
+function isGroupRowCellColumnDef(columnDef) {
+  return columnDef?.qtGroupRowCell === true
 }
 
 function getTextInputFromEvent(event) {
@@ -347,6 +352,30 @@ export function createTableApi(options = {}) {
     return columnDef.field || columnDef.name || columnDef.colId || column?.getColId?.()
   }
 
+  const focusGroupRowCellInput = (eventApi, rowIndex, columnId, inputIndex = 0) => {
+    if (!eventApi || columnId === undefined || columnId === null) return false
+    eventApi.ensureIndexVisible?.(rowIndex)
+    eventApi.ensureColumnVisible?.(columnId)
+    eventApi.setFocusedCell?.(rowIndex, columnId)
+
+    setTimeout(() => {
+      if (typeof document === 'undefined') return
+      const rows = Array.from(document.querySelectorAll('.ag-row'))
+      const row = rows.find((element) => element.getAttribute('row-index') === String(rowIndex))
+      const cells = row ? Array.from(row.querySelectorAll('.ag-cell')) : []
+      const cell = cells.find((element) => element.getAttribute('col-id') === String(columnId))
+      const input = cell?.querySelector?.(
+        `.qt-ag-group-input[data-qt-ag-group-input-index="${Number(inputIndex) || 0}"]`,
+      ) || cell?.querySelector?.(
+        `.qt-ag-layout-input[data-qt-ag-layout-input-index="${Number(inputIndex) || 0}"]`,
+      )
+      input?.focus?.()
+      input?.select?.()
+    }, 0)
+
+    return true
+  }
+
   const getFocusedCellInfo = (eventApi) => {
     const focusedCell = eventApi?.getFocusedCell?.()
     const displayedRowCount = Number(eventApi?.getDisplayedRowCount?.() ?? api.getRows().length)
@@ -430,11 +459,27 @@ export function createTableApi(options = {}) {
   const moveToAdjacentEditableCell = (params, key) => {
     const eventApi = params.api || gridApi
     const moveKey = getCellMoveKey({ key })
-    const shouldStartEditingAfterMove = key !== 'Enter'
+    const movingFromEditor = params.editing === true
+    const shouldStartEditingAfterMove = movingFromEditor && key !== 'Enter'
     if (!eventApi || !moveKey) return false
 
     const columns = getDisplayedColumns(eventApi)
     if (columns.length === 0) return false
+
+    const isNavigableColumn = (column, rowIndex) => {
+      const rowNode = eventApi.getDisplayedRowAtIndex?.(rowIndex)
+      const columnDef = column?.getColDef?.() || {}
+      if (isNonDataColumn(columnDef)) return false
+      if (!movingFromEditor) return true
+      return isEditableColumnDef(columnDef, {
+        ...params,
+        api: eventApi,
+        node: rowNode,
+        data: rowNode?.data,
+        column,
+        colDef: columnDef,
+      })
+    }
 
     const currentColumnId = params.column?.getColId?.() || params.colDef?.colId || params.colDef?.field
     const currentColumnIndex = columns.findIndex((column) => column?.getColId?.() === currentColumnId)
@@ -455,16 +500,7 @@ export function createTableApi(options = {}) {
       const direction = moveKey === 'ArrowLeft' ? -1 : 1
       nextColumnIndex += direction
       while (nextColumnIndex >= 0 && nextColumnIndex < columns.length) {
-        const rowNode = eventApi.getDisplayedRowAtIndex?.(nextRowIndex)
-        const columnDef = columns[nextColumnIndex]?.getColDef?.() || {}
-        if (isEditableColumnDef(columnDef, {
-          ...params,
-          api: eventApi,
-          node: rowNode,
-          data: rowNode?.data,
-          column: columns[nextColumnIndex],
-          colDef: columnDef,
-        })) break
+        if (isNavigableColumn(columns[nextColumnIndex], nextRowIndex)) break
         nextColumnIndex += direction
       }
     }
@@ -474,27 +510,21 @@ export function createTableApi(options = {}) {
 
     const targetColumn = columns[nextColumnIndex]
     const targetColumnId = targetColumn?.getColId?.()
-    const targetRowNode = eventApi.getDisplayedRowAtIndex?.(nextRowIndex)
     const targetColumnDef = targetColumn?.getColDef?.() || {}
-    if (!targetColumnId || !isEditableColumnDef(targetColumnDef, {
-      ...params,
-      api: eventApi,
-      node: targetRowNode,
-      data: targetRowNode?.data,
-      column: targetColumn,
-      colDef: targetColumnDef,
-    })) return false
+    if (!targetColumnId || !isNavigableColumn(targetColumn, nextRowIndex)) return false
 
     params.event?.preventDefault?.()
     params.event?.stopPropagation?.()
-    eventApi.stopEditing?.(false)
+    if (movingFromEditor) eventApi.stopEditing?.(false)
 
     setTimeout(() => {
       eventApi.ensureIndexVisible?.(nextRowIndex)
       eventApi.ensureColumnVisible?.(targetColumnId)
       eventApi.setFocusedCell?.(nextRowIndex, targetColumnId)
-      if (shouldStartEditingAfterMove) {
-        eventApi.startEditingCell?.({ rowIndex: nextRowIndex, colKey: targetColumnId })
+      if (isGroupRowCellColumnDef(targetColumnDef)) {
+        focusGroupRowCellInput(eventApi, nextRowIndex, targetColumnId, 0)
+      } else if (shouldStartEditingAfterMove) {
+          eventApi.startEditingCell?.({ rowIndex: nextRowIndex, colKey: targetColumnId })
       }
     }, 0)
 
@@ -588,7 +618,8 @@ export function createTableApi(options = {}) {
     },
     handleCellKeyDown(event) {
       const keyboardEvent = event?.event
-      if (keyboardEvent?.key !== 'ArrowDown' && keyboardEvent?.key !== 'ArrowUp') return false
+      const moveKey = getCellMoveKey(keyboardEvent)
+      if (!moveKey) return false
 
       const eventApi = event?.api || gridApi
       const rowIndex = Number(event?.node?.rowIndex)
@@ -596,12 +627,15 @@ export function createTableApi(options = {}) {
       const isLastDisplayedRow =
         Number.isInteger(rowIndex) && rowIndex >= Math.max(0, displayedRowCount - 1)
 
-      if (!isLastDisplayedRow) return false
-
       if (delCreatedBlankLastRowOnArrowUp({ ...event, event: keyboardEvent })) return true
 
-      if (keyboardEvent.key !== 'ArrowDown') return false
-      if (event?.data && pendingBlankRows.has(event.data) && isDataRowBlank(event.data)) return false
+      if (!isLastDisplayedRow || keyboardEvent.key !== 'ArrowDown') {
+        return moveToAdjacentEditableCell({ ...event, event: keyboardEvent, editing: false }, keyboardEvent.key)
+      }
+
+      if (event?.data && pendingBlankRows.has(event.data) && isDataRowBlank(event.data)) {
+        return moveToAdjacentEditableCell({ ...event, event: keyboardEvent, editing: false }, keyboardEvent.key)
+      }
 
       keyboardEvent.preventDefault?.()
       const newRow = api.addEmptyRow()

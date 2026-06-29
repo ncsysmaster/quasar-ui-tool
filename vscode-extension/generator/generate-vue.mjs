@@ -11,6 +11,8 @@ import {
   getComponentApiName,
   getComponentRefName,
   getRenderableTableColumns,
+  getTableHeaderRows,
+  getTableRowRows,
   getTableColumnsVariableName,
   getTableRowKey,
   getTableRowsExpression,
@@ -289,7 +291,8 @@ function renderScriptSetup(
     .map((item) => `const ${item.variableName} = ${item.name}()`)
   const setupCode = typeof customSetup === 'string' ? customSetup.trim() : ''
   const tableColumnStatements = tableColumnDefinitions.map(
-    ({ name, columns }) => `const ${name} = ${renderTableColumnsExpression(columns)}`
+    ({ name, columns, headerRows, rowRows, headerLayout, bodyRows }) =>
+      `const ${name} = ${renderTableColumnsExpression(columns, headerRows, rowRows, headerLayout, bodyRows)}`
   )
   const tableLocalRefStatements = tableLocalRefs.map(
     ({ name, value }) => `const ${name} = ref(${JSON.stringify(value, null, 2)})`
@@ -355,7 +358,11 @@ function collectTableColumnDefinitions(components, result = []) {
     ) {
       result.push({
         name: getTableColumnsVariableName(component),
-        columns: getRenderableTableColumns(component)
+        headerRows: getTableHeaderRows(component),
+        rowRows: getTableRowRows(component),
+        columns: getRenderableTableColumns(component),
+        headerLayout: component.headerRows,
+        bodyRows: component.bodyRows
       })
     }
     collectTableColumnDefinitions(component.children, result)

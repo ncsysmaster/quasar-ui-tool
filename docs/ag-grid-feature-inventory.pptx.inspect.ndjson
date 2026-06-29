@@ -1,0 +1,383 @@
+{"kind":"deck","id":"pr/w3le1k","name":"Deck"}
+{"kind":"layout","layoutId":"cb966ed0-cd54-4d52-9ec3-c121ccc0eb21","name":"Master","type":"master"}
+{"kind":"layout","layoutId":"2f2b1298-3c3e-4d89-8dd4-aaceaf2fd9f1","name":"Title Slide","type":"title"}
+{"kind":"slide","id":"sl/9p36v1","slide":1,"title":"Quasar UI Builder","textShapes":9}
+{"kind":"textbox","id":"sh/p0bi9s36","slide":1,"text":"Quasar UI Builder","textPreview":"Quasar UI Builder","textChars":17,"textLines":1,"bbox":[52,56,650,54]}
+{"kind":"textbox","id":"sh/i9s36hcr","slide":1,"text":"ag-grid 기능 정리용 PPT","textPreview":"ag-grid 기능 정리용 PPT","textChars":18,"textLines":1,"bbox":[52,142,980,86]}
+{"kind":"textbox","id":"sh/bulwval8","slide":1,"text":"현재 구현된 테이블 기능을 다시 검토하고, 이후 Codex 작업 지시로 재사용하기 위한 편집 가능한 산출물입니다.","textPreview":"현재 구현된 테이블 기능을 다시 검토하고, 이후 Codex 작업 지시로 재사용하기 위한 편집 가능한 산출물입니다.","textChars":63,"textLines":1,"bbox":[56,252,850,70]}
+{"kind":"shape","id":"sh/032lszqt","slide":1,"bbox":[56,390,560,160]}
+{"kind":"textbox","id":"sh/tovahoza","slide":1,"text":"사용 방법","textPreview":"사용 방법","textChars":5,"textLines":1,"bbox":[74,406,524,28]}
+{"kind":"textbox","id":"sh/ixczed8v","slide":1,"text":"1. 각 기능 ID(AG-xxx)를 유지합니다.\n2. 원하는 동작을 '정리할 내용'에 추가합니다.\n3. 수정 후 PPT 또는 해당 슬라이드 내용을 Codex에 전달합니다.","textPreview":"1. 각 기능 ID(AG-xxx)를 유지합니다. | 2. 원하는 동작을 '정리할 내용'에 추가합니다. | 3. 수정 후 PPT 또는 해당 슬라이드 내용을 Codex에 전달합니다.","textChars":95,"textLines":3,"bbox":[74,442,524,94]}
+{"kind":"shape","id":"sh/bi9s36hc","slide":1,"bbox":[660,390,520,160]}
+{"kind":"textbox","id":"sh/0rqd4vmt","slide":1,"text":"산출물 위치","textPreview":"산출물 위치","textChars":6,"textLines":1,"bbox":[678,406,484,28]}
+{"kind":"textbox","id":"sh/tcj6tova","slide":1,"text":"docs/ag-grid-feature-inventory.pptx\n\n기준 파일: vscode-extension, generator, src/component/quasar-ui-api, src/css/app.scss","textPreview":"docs/ag-grid-feature-inventory.pptx |  | 기준 파일: vscode-extension, generator, src/component/quasar-ui-api, src/css/app.scss","textChars":118,"textLines":3,"bbox":[678,442,484,94]}
+{"kind":"textbox","id":"sh/hwfyxobm","slide":1,"text":"quasar_tool / docs / ag-grid-feature-inventory","textPreview":"quasar_tool / docs / ag-grid-feature-inventory","textChars":46,"textLines":1,"bbox":[52,678,780,22]}
+{"kind":"textbox","id":"sh/obm58z25","slide":1,"text":"01","textPreview":"01","textChars":2,"textLines":1,"bbox":[1168,675,60,26]}
+{"kind":"notes","id":"nt/9p36v1","slide":1,"text":""}
+{"kind":"slide","id":"sl/lml2nn","slide":2,"title":"AG-GRID FEATURE INVENTORY","textShapes":10}
+{"kind":"textbox","id":"sh/twra5gbq","slide":2,"text":"AG-GRID FEATURE INVENTORY","textPreview":"AG-GRID FEATURE INVENTORY","textChars":25,"textLines":1,"bbox":[52,34,430,28]}
+{"kind":"textbox","id":"sh/m58z25kb","slide":2,"text":"Codex 재입력 규칙","textPreview":"Codex 재입력 규칙","textChars":12,"textLines":1,"bbox":[52,70,980,70]}
+{"kind":"shape","id":"sh/bq1oryts","slide":2,"bbox":[52,148,1176,1]}
+{"kind":"shape","id":"sh/4nap4r65","slide":2,"bbox":[56,182,470,260]}
+{"kind":"textbox","id":"sh/t83itgfm","slide":2,"text":"AG 기능 카드 규칙","textPreview":"AG 기능 카드 규칙","textChars":11,"textLines":1,"bbox":[74,198,434,28]}
+{"kind":"textbox","id":"sh/mhk3q5o7","slide":2,"text":"- 기능 ID는 AG-001 형식으로 유지\n- 현재 동작과 원하는 동작을 분리해서 작성\n- JSON 필드명과 관련 파일명을 같이 적기\n- 수정 후 성공 기준을 한 줄로 명확히 작성","textPreview":"- 기능 ID는 AG-001 형식으로 유지 | - 현재 동작과 원하는 동작을 분리해서 작성 | - JSON 필드명과 관련 파일명을 같이 적기 | - 수정 후 성공 기준을 한 줄로 명확히 작성","textChars":100,"textLines":4,"bbox":[74,234,434,194]}
+{"kind":"shape","id":"sh/b2hwfyxo","slide":2,"bbox":[570,182,610,310]}
+{"kind":"textbox","id":"sh/4vmtwra5","slide":2,"text":"Codex 전달용 YAML 템플릿","textPreview":"Codex 전달용 YAML 템플릿","textChars":18,"textLines":1,"bbox":[586,194,578,24]}
+{"kind":"textbox","id":"sh/tgfmlkjm","slide":2,"text":"agGridChange:\n  id: AG-000\n  title: 기능명\n  current: 현재 동작\n  desired: 원하는 동작\n  jsonFields: [table.headerRows]\n  sourceFiles: [vscode-extension/src/tableView.js]\n  acceptance: 저장 후 브라우저와 Screen이 동일","textPreview":"agGridChange: |   id: AG-000 |   title: 기능명 |   current: 현재 동작 |   desired: 원하는 동작 |   jsonFields: [table.headerRows] |   sourceFiles: [v...","textChars":194,"textLines":8,"bbox":[586,224,578,256]}
+{"kind":"shape","id":"sh/xc3ylc7u","slide":2,"bbox":[56,480,1124,110]}
+{"kind":"textbox","id":"sh/4r65wjud","slide":2,"text":"이 PPT의 역할","textPreview":"이 PPT의 역할","textChars":9,"textLines":1,"bbox":[74,496,1088,28]}
+{"kind":"textbox","id":"sh/f6dcbulw","slide":2,"text":"기능 명세 초안이자 재작업용 체크리스트입니다. 화면 설명, JSON 구조, 생성 Vue, API, CSS가 서로 맞는지 검토하는 데 초점을 둡니다.","textPreview":"기능 명세 초안이자 재작업용 체크리스트입니다. 화면 설명, JSON 구조, 생성 Vue, API, CSS가 서로 맞는지 검토하는 데 초점을 둡니다.","textChars":82,"textLines":1,"bbox":[74,532,1088,44]}
+{"kind":"textbox","id":"sh/mlkjm1cf","slide":2,"text":"quasar_tool / docs / ag-grid-feature-inventory","textPreview":"quasar_tool / docs / ag-grid-feature-inventory","textChars":46,"textLines":1,"bbox":[52,678,780,22]}
+{"kind":"textbox","id":"sh/xkf6dcbu","slide":2,"text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[1168,675,60,26]}
+{"kind":"notes","id":"nt/lml2nn","slide":2,"text":""}
+{"kind":"slide","id":"sl/xo9j89","slide":3,"title":"AG-GRID FEATURE INVENTORY","textShapes":12}
+{"kind":"textbox","id":"sh/1cfa9w3m","slide":3,"text":"AG-GRID FEATURE INVENTORY","textPreview":"AG-GRID FEATURE INVENTORY","textChars":25,"textLines":1,"bbox":[52,34,430,28]}
+{"kind":"textbox","id":"sh/ulwval87","slide":3,"text":"전체 구조","textPreview":"전체 구조","textChars":5,"textLines":1,"bbox":[52,70,980,70]}
+{"kind":"shape","id":"sh/j6tovaho","slide":3,"bbox":[52,148,1176,1]}
+{"kind":"shape","id":"sh/c3ylc7u5","slide":3,"bbox":[56,190,330,230]}
+{"kind":"textbox","id":"sh/1kre1w7m","slide":3,"text":"1. 편집 JSON","textPreview":"1. 편집 JSON","textChars":10,"textLines":1,"bbox":[74,206,294,28]}
+{"kind":"textbox","id":"sh/uxc3ylc7","slide":3,"text":".src/pages/*.json\nTable 컴포넌트 정의, columns, table 옵션, models, events 저장","textPreview":".src/pages/*.json | Table 컴포넌트 정의, columns, table 옵션, models, events 저장","textChars":69,"textLines":2,"bbox":[74,242,294,164]}
+{"kind":"shape","id":"sh/ji5snelo","slide":3,"bbox":[474,190,330,230]}
+{"kind":"textbox","id":"sh/8bat47y1","slide":3,"text":"2. VS Code Webview","textPreview":"2. VS Code Webview","textChars":18,"textLines":1,"bbox":[492,206,294,28]}
+{"kind":"textbox","id":"sh/1w7mp0bi","slide":3,"text":"Screen 미리보기, Properties, Columns Popup, Table Wizard, 이벤트 패널","textPreview":"Screen 미리보기, Properties, Columns Popup, Table Wizard, 이벤트 패널","textChars":60,"textLines":1,"bbox":[492,242,294,164]}
+{"kind":"shape","id":"sh/d0z61032","slide":3,"bbox":[892,190,330,230]}
+{"kind":"textbox","id":"sh/kf6dcbul","slide":3,"text":"3. Vue 생성/런타임","textPreview":"3. Vue 생성/런타임","textChars":13,"textLines":1,"bbox":[910,206,294,28]}
+{"kind":"textbox","id":"sh/vu9knih4","slide":3,"text":"generate-vue -> src/pages/*.vue\nag-grid-vue + createTableApi + app.scss 스타일","textPreview":"generate-vue -> src/pages/*.vue | ag-grid-vue + createTableApi + app.scss 스타일","textChars":75,"textLines":2,"bbox":[910,242,294,164]}
+{"kind":"shape","id":"sh/29gr2p8n","slide":3,"bbox":[398,292,52,2]}
+{"kind":"shape","id":"sh/d8bat47y","slide":3,"bbox":[816,292,52,2]}
+{"kind":"shape","id":"sh/knih4byh","slide":3,"bbox":[126,462,1028,150]}
+{"kind":"textbox","id":"sh/v6psfil0","slide":3,"text":"핵심 파일","textPreview":"핵심 파일","textChars":5,"textLines":1,"bbox":[142,474,996,24]}
+{"kind":"textbox","id":"sh/2lszqtcj","slide":3,"text":"vscode-extension/src/tableView.js\nvscode-extension/src/propertiesView.js\nvscode-extension/src/webviews.js\nvscode-extension/src/state.js\nvscode-extension/generator/table-renderer.mjs\nsrc/component/quasar-ui-api/tableApi.js\nsrc/css/app.scss","textPreview":"vscode-extension/src/tableView.js | vscode-extension/src/propertiesView.js | vscode-extension/src/webviews.js | vscode-extension/src/stat...","textChars":238,"textLines":7,"bbox":[142,504,996,96]}
+{"kind":"textbox","id":"sh/dcbulwva","slide":3,"text":"quasar_tool / docs / ag-grid-feature-inventory","textPreview":"quasar_tool / docs / ag-grid-feature-inventory","textChars":46,"textLines":1,"bbox":[52,678,780,22]}
+{"kind":"textbox","id":"sh/kre1w7mp","slide":3,"text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[1168,675,60,26]}
+{"kind":"notes","id":"nt/xo9j89","slide":3,"text":""}
+{"kind":"slide","id":"sl/4ejo6l","slide":4,"title":"AG-GRID FEATURE INVENTORY","textShapes":10}
+{"kind":"textbox","id":"sh/o7qpg3ex","slide":4,"text":"AG-GRID FEATURE INVENTORY","textPreview":"AG-GRID FEATURE INVENTORY","textChars":25,"textLines":1,"bbox":[52,34,430,28]}
+{"kind":"textbox","id":"sh/vmtwra5g","slide":4,"text":"AG-001 Table Wizard","textPreview":"AG-001 Table Wizard","textChars":19,"textLines":1,"bbox":[52,70,980,70]}
+{"kind":"shape","id":"sh/61032lsz","slide":4,"bbox":[52,148,1176,1]}
+{"kind":"shape","id":"sh/d4vmtwra","slide":4,"bbox":[56,186,520,320]}
+{"kind":"textbox","id":"sh/oj2t83it","slide":4,"text":"현재 생성 옵션","textPreview":"현재 생성 옵션","textChars":8,"textLines":1,"bbox":[74,202,484,28]}
+{"kind":"textbox","id":"sh/vy90je9c","slide":4,"text":"- 테이블명, row-key, rows/loading binding 입력\n- selection: none / single / multiple\n- pagination, filter, mode column, excel copy 옵션\n- toolbar 버튼: 검색/신규/저장/삭제/엑셀/새로고침","textPreview":"- 테이블명, row-key, rows/loading binding 입력 | - selection: none / single / multiple | - pagination, filter, mode column, excel copy 옵션 | - t...","textChars":161,"textLines":4,"bbox":[74,238,484,254]}
+{"kind":"shape","id":"sh/6dcbulwv","slide":4,"bbox":[620,186,560,320]}
+{"kind":"textbox","id":"sh/d8v6psfi","slide":4,"text":"JSON 저장 위치","textPreview":"JSON 저장 위치","textChars":10,"textLines":1,"bbox":[636,198,528,24]}
+{"kind":"textbox","id":"sh/onyd0z61","slide":4,"text":"component.type = \"Table\"\ncomponent.columns = [...]\ncomponent.table = {\n  title, rowKey, showModeColumn, excelCopy,\n  headerRows, rowRows, selection,\n  rowsBinding, loadingBinding, toolbar,\n  pagination, states\n}","textPreview":"component.type = \"Table\" | component.columns = [...] | component.table = { |   title, rowKey, showModeColumn, excelCopy, |   headerRows, ...","textChars":211,"textLines":8,"bbox":[636,228,528,266]}
+{"kind":"shape","id":"sh/epkzupwb","slide":4,"bbox":[56,535,1124,70]}
+{"kind":"textbox","id":"sh/7adsji5s","slide":4,"text":"정리할 내용","textPreview":"정리할 내용","textChars":6,"textLines":1,"bbox":[74,551,1088,28]}
+{"kind":"textbox","id":"sh/wval87ed","slide":4,"text":"Wizard에서 신규 생성 시 기본 컬럼/기본 rowRows/headerRows 값을 어떤 기준으로 둘지 결정 필요.","textPreview":"Wizard에서 신규 생성 시 기본 컬럼/기본 rowRows/headerRows 값을 어떤 기준으로 둘지 결정 필요.","textChars":65,"textLines":1,"bbox":[74,587,1088,4]}
+{"kind":"textbox","id":"sh/pg3ex0nu","slide":4,"text":"quasar_tool / docs / ag-grid-feature-inventory","textPreview":"quasar_tool / docs / ag-grid-feature-inventory","textChars":46,"textLines":1,"bbox":[52,678,780,22]}
+{"kind":"textbox","id":"sh/e1w7mp0b","slide":4,"text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[1168,675,60,26]}
+{"kind":"notes","id":"nt/4ejo6l","slide":4,"text":""}
+{"kind":"slide","id":"sl/n8syxq","slide":5,"title":"AG-GRID FEATURE INVENTORY","textShapes":21}
+{"kind":"textbox","id":"sh/lszqtcj6","slide":5,"text":"AG-GRID FEATURE INVENTORY","textPreview":"AG-GRID FEATURE INVENTORY","textChars":25,"textLines":1,"bbox":[52,34,430,28]}
+{"kind":"textbox","id":"sh/a5gbq1or","slide":5,"text":"AG-002 Properties 패널","textPreview":"AG-002 Properties 패널","textChars":20,"textLines":1,"bbox":[52,70,980,70]}
+{"kind":"shape","id":"sh/3m94fu18","slide":5,"bbox":[52,148,1176,1]}
+{"kind":"textbox","id":"sh/sji5snel","slide":5,"text":"속성 그룹","textPreview":"속성 그룹","textChars":5,"textLines":1,"bbox":[70,180,1120,26]}
+{"kind":"shape","id":"sh/h4byhgn2","slide":5,"bbox":[70,210,1120,54]}
+{"kind":"textbox","id":"sh/adsji5sn","slide":5,"text":"Basic","textPreview":"Basic","textChars":5,"textLines":1,"bbox":[82,218,262,39]}
+{"kind":"textbox","id":"sh/3ylc7u54","slide":5,"text":"id, title, row-key, header rows, row rows, class, style, height, mode column, excel copy","textPreview":"id, title, row-key, header rows, row rows, class, style, height, mode column, excel copy","textChars":88,"textLines":1,"bbox":[358,218,820,39]}
+{"kind":"shape","id":"sh/svu9knih","slide":5,"bbox":[70,265,1120,54]}
+{"kind":"textbox","id":"sh/hgn29gr2","slide":5,"text":"Data","textPreview":"Data","textChars":4,"textLines":1,"bbox":[82,273,262,39]}
+{"kind":"textbox","id":"sh/tgfmlkjm","slide":5,"text":"rows binding, columns binding, loading binding, error binding, selected binding","textPreview":"rows binding, columns binding, loading binding, error binding, selected binding","textChars":79,"textLines":1,"bbox":[358,273,820,39]}
+{"kind":"shape","id":"sh/4vmtwra5","slide":5,"bbox":[70,320,1120,54]}
+{"kind":"textbox","id":"sh/bat47y1k","slide":5,"text":"Columns","textPreview":"Columns","textChars":7,"textLines":1,"bbox":[82,328,262,39]}
+{"kind":"textbox","id":"sh/mp0bi9s3","slide":5,"text":"컬럼 목록 표시 + [...] 버튼으로 컬럼 편집 팝업 호출","textPreview":"컬럼 목록 표시 + [...] 버튼으로 컬럼 편집 팝업 호출","textChars":33,"textLines":1,"bbox":[358,328,820,39]}
+{"kind":"shape","id":"sh/tsvu9kni","slide":5,"bbox":[70,375,1120,54]}
+{"kind":"textbox","id":"sh/47y1kre1","slide":5,"text":"Selection","textPreview":"Selection","textChars":9,"textLines":1,"bbox":[82,383,262,39]}
+{"kind":"textbox","id":"sh/bm58z25k","slide":5,"text":"none/single/multiple, row-click event, selectedRow binding","textPreview":"none/single/multiple, row-click event, selectedRow binding","textChars":58,"textLines":1,"bbox":[358,383,820,39]}
+{"kind":"shape","id":"sh/m1cfa9w3","slide":5,"bbox":[70,430,1120,54]}
+{"kind":"textbox","id":"sh/twra5gbq","slide":5,"text":"Toolbar","textPreview":"Toolbar","textChars":7,"textLines":1,"bbox":[82,438,262,39]}
+{"kind":"textbox","id":"sh/4byhgn29","slide":5,"text":"filter/search/add/save/delete/excel/refresh 버튼 표시 여부","textPreview":"filter/search/add/save/delete/excel/refresh 버튼 표시 여부","textChars":52,"textLines":1,"bbox":[358,438,820,39]}
+{"kind":"shape","id":"sh/0je9cvix","slide":5,"bbox":[70,485,1120,54]}
+{"kind":"textbox","id":"sh/t47y1kre","slide":5,"text":"Pagination","textPreview":"Pagination","textChars":10,"textLines":1,"bbox":[82,493,262,39]}
+{"kind":"textbox","id":"sh/idonyd0z","slide":5,"text":"client/server/none, rowsPerPage, rowsPerPageOptions","textPreview":"client/server/none, rowsPerPage, rowsPerPageOptions","textChars":51,"textLines":1,"bbox":[358,493,820,39]}
+{"kind":"shape","id":"sh/byhgn29g","slide":5,"bbox":[70,575,540,60]}
+{"kind":"textbox","id":"sh/0rqd4vmt","slide":5,"text":"관련 파일","textPreview":"관련 파일","textChars":5,"textLines":1,"bbox":[88,591,504,28]}
+{"kind":"textbox","id":"sh/tcj6tova","slide":5,"text":"vscode-extension/src/propertiesView.js\nvscode-extension/src/state.js","textPreview":"vscode-extension/src/propertiesView.js | vscode-extension/src/state.js","textChars":68,"textLines":2,"bbox":[88,627,504,-6]}
+{"kind":"shape","id":"sh/il0rqd4v","slide":5,"bbox":[650,575,540,60]}
+{"kind":"textbox","id":"sh/b6xkf6dc","slide":5,"text":"정리할 내용","textPreview":"정리할 내용","textChars":6,"textLines":1,"bbox":[668,591,504,28]}
+{"kind":"textbox","id":"sh/032lszqt","slide":5,"text":"q-table 전용 속성은 제거했고 ag-grid 기준 속성만 유지. 추가로 필요한 ag-grid 옵션을 여기서 선별.","textPreview":"q-table 전용 속성은 제거했고 ag-grid 기준 속성만 유지. 추가로 필요한 ag-grid 옵션을 여기서 선별.","textChars":66,"textLines":1,"bbox":[668,627,504,-6]}
+{"kind":"textbox","id":"sh/tovahoza","slide":5,"text":"quasar_tool / docs / ag-grid-feature-inventory","textPreview":"quasar_tool / docs / ag-grid-feature-inventory","textChars":46,"textLines":1,"bbox":[52,678,780,22]}
+{"kind":"textbox","id":"sh/z61032ls","slide":5,"text":"05","textPreview":"05","textChars":2,"textLines":1,"bbox":[1168,675,60,26]}
+{"kind":"notes","id":"nt/n8syxq","slide":5,"text":""}
+{"kind":"slide","id":"sl/uhfglg","slide":6,"title":"AG-GRID FEATURE INVENTORY","textShapes":10}
+{"kind":"textbox","id":"sh/fyxobm58","slide":6,"text":"AG-GRID FEATURE INVENTORY","textPreview":"AG-GRID FEATURE INVENTORY","textChars":25,"textLines":1,"bbox":[52,34,430,28]}
+{"kind":"textbox","id":"sh/8jqh0fep","slide":6,"text":"AG-003 컬럼 편집 팝업","textPreview":"AG-003 컬럼 편집 팝업","textChars":15,"textLines":1,"bbox":[52,70,980,70]}
+{"kind":"shape","id":"sh/x4nap4r6","slide":6,"bbox":[52,148,1176,1]}
+{"kind":"shape","id":"sh/qpg3ex0n","slide":6,"bbox":[56,184,570,360]}
+{"kind":"textbox","id":"sh/fa9w3m94","slide":6,"text":"현재 기능","textPreview":"현재 기능","textChars":5,"textLines":1,"bbox":[74,200,534,28]}
+{"kind":"textbox","id":"sh/8v6psfil","slide":6,"text":"- 컬럼 tree: parent header / child column 구조 표시\n- + Column으로 컬럼 추가\n- child 선택 시 name, label, field, type, align, width, sortable, required, editable, format, render 편집\n- parent 선택 시 별도 컬럼 속성만 표시하고 Label / Field 편집\n- 적용 시 updateTableColumns 메시지로 JSON 반영","textPreview":"- 컬럼 tree: parent header / child column 구조 표시 | - + Column으로 컬럼 추가 | - child 선택 시 name, label, field, type, align, width, sortable, requi...","textChars":250,"textLines":5,"bbox":[74,236,534,294]}
+{"kind":"shape","id":"sh/xczed8v6","slide":6,"bbox":[670,184,510,220]}
+{"kind":"textbox","id":"sh/qtcj6tov","slide":6,"text":"parent field 개념","textPreview":"parent field 개념","textChars":15,"textLines":1,"bbox":[686,196,478,24]}
+{"kind":"textbox","id":"sh/je9cvixc","slide":6,"text":"headers[0]      = \"참조사항\"\nheaderFields[0] = \"remark\"\n\nbody rowRows = 2이면\n1줄: row.remark\n2줄: child field(row.actions, row.address)","textPreview":"headers[0]      = \"참조사항\" | headerFields[0] = \"remark\" |  | body rowRows = 2이면 | 1줄: row.remark | 2줄: child field(row.actions, row.address)","textChars":128,"textLines":6,"bbox":[686,226,478,166]}
+{"kind":"shape","id":"sh/nih4byhg","slide":6,"bbox":[670,420,510,130]}
+{"kind":"textbox","id":"sh/yxobm58z","slide":6,"text":"관련 파일","textPreview":"관련 파일","textChars":5,"textLines":1,"bbox":[688,436,474,28]}
+{"kind":"textbox","id":"sh/5o7qpg3e","slide":6,"text":"vscode-extension/src/tableView.js\nvscode-extension/src/tableStyles.js\nvscode-extension/src/state.js","textPreview":"vscode-extension/src/tableView.js | vscode-extension/src/tableStyles.js | vscode-extension/src/state.js","textChars":99,"textLines":3,"bbox":[688,472,474,64]}
+{"kind":"textbox","id":"sh/g3ex0nux","slide":6,"text":"quasar_tool / docs / ag-grid-feature-inventory","textPreview":"quasar_tool / docs / ag-grid-feature-inventory","textChars":46,"textLines":1,"bbox":[52,678,780,22]}
+{"kind":"textbox","id":"sh/r65wjudg","slide":6,"text":"06","textPreview":"06","textChars":2,"textLines":1,"bbox":[1168,675,60,26]}
+{"kind":"notes","id":"nt/uhfglg","slide":6,"text":""}
+{"kind":"slide","id":"sl/kyb4vk","slide":7,"title":"AG-GRID FEATURE INVENTORY","textShapes":12}
+{"kind":"textbox","id":"sh/5o7qpg3e","slide":7,"text":"AG-GRID FEATURE INVENTORY","textPreview":"AG-GRID FEATURE INVENTORY","textChars":25,"textLines":1,"bbox":[52,34,430,28]}
+{"kind":"textbox","id":"sh/yxobm58z","slide":7,"text":"AG-004 Header Rows / Body Rows","textPreview":"AG-004 Header Rows / Body Rows","textChars":30,"textLines":1,"bbox":[52,70,980,70]}
+{"kind":"shape","id":"sh/nih4byhg","slide":7,"bbox":[52,148,1176,1]}
+{"kind":"shape","id":"sh/gr2p8nqx","slide":7,"bbox":[56,180,520,120]}
+{"kind":"textbox","id":"sh/9cvixcze","slide":7,"text":"headerRows","textPreview":"headerRows","textChars":10,"textLines":1,"bbox":[74,196,484,28]}
+{"kind":"textbox","id":"sh/ylc7u54z","slide":7,"text":"ag-grid header를 1~3줄까지 구성합니다. 2줄 이상이면 columnDefs가 group header 구조로 생성됩니다.","textPreview":"ag-grid header를 1~3줄까지 구성합니다. 2줄 이상이면 columnDefs가 group header 구조로 생성됩니다.","textChars":73,"textLines":1,"bbox":[74,232,484,54]}
+{"kind":"shape","id":"sh/r65wjudg","slide":7,"bbox":[56,330,520,150]}
+{"kind":"textbox","id":"sh/gfmlkjm1","slide":7,"text":"rowRows","textPreview":"rowRows","textChars":7,"textLines":1,"bbox":[74,346,484,28]}
+{"kind":"textbox","id":"sh/90je9cvi","slide":7,"text":"body 한 행을 1~3줄로 표현합니다. parent header field와 child column field가 같은 세로 구조로 움직이도록 설계했습니다.","textPreview":"body 한 행을 1~3줄로 표현합니다. parent header field와 child column field가 같은 세로 구조로 움직이도록 설계했습니다.","textChars":87,"textLines":1,"bbox":[74,382,484,84]}
+{"kind":"shape","id":"sh/lc7u54zi","slide":7,"bbox":[620,180,560,300]}
+{"kind":"textbox","id":"sh/wra5gbq1","slide":7,"text":"관련 JSON","textPreview":"관련 JSON","textChars":7,"textLines":1,"bbox":[636,192,528,24]}
+{"kind":"textbox","id":"sh/36hcrmhk","slide":7,"text":"table: {\n  headerRows: 2,\n  rowRows: 2\n}\ncolumns: [\n  { label: \"작업\", field: \"actions\",\n    headers: [\"참조사항\"],\n    headerFields: [\"remark\"] }\n]","textPreview":"table: { |   headerRows: 2, |   rowRows: 2 | } | columns: [ |   { label: \"작업\", field: \"actions\", |     headers: [\"참조사항\"], |     headerFie...","textChars":142,"textLines":9,"bbox":[636,222,528,246]}
+{"kind":"shape","id":"sh/eloj2t83","slide":7,"bbox":[620,510,560,70]}
+{"kind":"textbox","id":"sh/l0rqd4vm","slide":7,"text":"정리할 내용","textPreview":"정리할 내용","textChars":6,"textLines":1,"bbox":[638,526,524,28]}
+{"kind":"textbox","id":"sh/wfyxobm5","slide":7,"text":"headerRows와 rowRows가 서로 다를 때 병합/표시 규칙을 더 명확히 정의해야 함.","textPreview":"headerRows와 rowRows가 서로 다를 때 병합/표시 규칙을 더 명확히 정의해야 함.","textChars":52,"textLines":1,"bbox":[638,562,524,4]}
+{"kind":"textbox","id":"sh/7u54zido","slide":7,"text":"quasar_tool / docs / ag-grid-feature-inventory","textPreview":"quasar_tool / docs / ag-grid-feature-inventory","textChars":46,"textLines":1,"bbox":[52,678,780,22]}
+{"kind":"textbox","id":"sh/ed8bat47","slide":7,"text":"07","textPreview":"07","textChars":2,"textLines":1,"bbox":[1168,675,60,26]}
+{"kind":"notes","id":"nt/kyb4vk","slide":7,"text":""}
+{"kind":"slide","id":"sl/c4b00e","slide":8,"title":"AG-GRID FEATURE INVENTORY","textShapes":10}
+{"kind":"textbox","id":"sh/kjm1cfa9","slide":8,"text":"AG-GRID FEATURE INVENTORY","textPreview":"AG-GRID FEATURE INVENTORY","textChars":25,"textLines":1,"bbox":[52,34,430,28]}
+{"kind":"textbox","id":"sh/r2p8nqxs","slide":8,"text":"AG-005 Vue 생성과 columnDefs","textPreview":"AG-005 Vue 생성과 columnDefs","textChars":25,"textLines":1,"bbox":[52,70,980,70]}
+{"kind":"shape","id":"sh/2hwfyxob","slide":8,"bbox":[52,148,1176,1]}
+{"kind":"shape","id":"sh/9gr2p8nq","slide":8,"bbox":[56,184,560,300]}
+{"kind":"textbox","id":"sh/gvy90je9","slide":8,"text":"생성 원칙","textPreview":"생성 원칙","textChars":5,"textLines":1,"bbox":[74,200,524,28]}
+{"kind":"textbox","id":"sh/ra5gbq1o","slide":8,"text":"- q-table이 아니라 ag-grid-vue 태그 생성\n- :column-defs는 inline이 아니라 const TableID_columnDefs로 분리\n- headerRows > 1이면 { headerName, children } 그룹 컬럼 생성\n- rowRows > 1이면 qtGroupRowCell renderer로 parent/child body 표현","textPreview":"- q-table이 아니라 ag-grid-vue 태그 생성 | - :column-defs는 inline이 아니라 const TableID_columnDefs로 분리 | - headerRows > 1이면 { headerName, children }...","textChars":204,"textLines":4,"bbox":[74,236,524,234]}
+{"kind":"shape","id":"sh/2p8nqxs7","slide":8,"bbox":[660,184,520,250]}
+{"kind":"textbox","id":"sh/9knih4by","slide":8,"text":"생성 예","textPreview":"생성 예","textChars":4,"textLines":1,"bbox":[676,196,488,24]}
+{"kind":"textbox","id":"sh/kzupwb2h","slide":8,"text":"const Table001_columnDefs = [\n  { headerName: \"참조사항\", children: [\n    { colId: \"actions\", field: \"actions\",\n      qtGroupRowCell: true,\n      cellRenderer: (...) => group row editor }\n  ]}\n]","textPreview":"const Table001_columnDefs = [ |   { headerName: \"참조사항\", children: [ |     { colId: \"actions\", field: \"actions\", |       qtGroupRowCell: t...","textChars":190,"textLines":7,"bbox":[676,226,488,196]}
+{"kind":"shape","id":"sh/ulwval87","slide":8,"bbox":[56,530,1124,80]}
+{"kind":"textbox","id":"sh/j6tovaho","slide":8,"text":"관련 파일","textPreview":"관련 파일","textChars":5,"textLines":1,"bbox":[74,546,1088,28]}
+{"kind":"textbox","id":"sh/crmhk3q5","slide":8,"text":"vscode-extension/generator/generate-vue.mjs\nvscode-extension/generator/table-renderer.mjs\nsrc/pages/*.vue","textPreview":"vscode-extension/generator/generate-vue.mjs | vscode-extension/generator/table-renderer.mjs | src/pages/*.vue","textChars":105,"textLines":3,"bbox":[74,582,1088,14]}
+{"kind":"textbox","id":"sh/1cfa9w3m","slide":8,"text":"quasar_tool / docs / ag-grid-feature-inventory","textPreview":"quasar_tool / docs / ag-grid-feature-inventory","textChars":46,"textLines":1,"bbox":[52,678,780,22]}
+{"kind":"textbox","id":"sh/uxc3ylc7","slide":8,"text":"08","textPreview":"08","textChars":2,"textLines":1,"bbox":[1168,675,60,26]}
+{"kind":"notes","id":"nt/c4b00e","slide":8,"text":""}
+{"kind":"slide","id":"sl/ydznux","slide":9,"title":"AG-GRID FEATURE INVENTORY","textShapes":19}
+{"kind":"textbox","id":"sh/adsji5sn","slide":9,"text":"AG-GRID FEATURE INVENTORY","textPreview":"AG-GRID FEATURE INVENTORY","textChars":25,"textLines":1,"bbox":[52,34,430,28]}
+{"kind":"textbox","id":"sh/h4byhgn2","slide":9,"text":"AG-006 Data Binding","textPreview":"AG-006 Data Binding","textChars":19,"textLines":1,"bbox":[52,70,980,70]}
+{"kind":"shape","id":"sh/sji5snel","slide":9,"bbox":[52,148,1176,1]}
+{"kind":"textbox","id":"sh/3m94fu18","slide":9,"text":"바인딩 항목","textPreview":"바인딩 항목","textChars":6,"textLines":1,"bbox":[70,180,1120,26]}
+{"kind":"shape","id":"sh/a5gbq1or","slide":9,"bbox":[70,210,1120,59]}
+{"kind":"textbox","id":"sh/lszqtcj6","slide":9,"text":"rows","textPreview":"rows","textChars":4,"textLines":1,"bbox":[82,218,262,44]}
+{"kind":"textbox","id":"sh/s72x4nap","slide":9,"text":"dynamic.rows 또는 table.rowsBinding. 배열이 아니면 저장 시 오류 메시지 대상.","textPreview":"dynamic.rows 또는 table.rowsBinding. 배열이 아니면 저장 시 오류 메시지 대상.","textChars":58,"textLines":1,"bbox":[358,218,820,44]}
+{"kind":"shape","id":"sh/zidonyd0","slide":9,"bbox":[70,270,1120,59]}
+{"kind":"textbox","id":"sh/a1gvy90j","slide":9,"text":"columns","textPreview":"columns","textChars":7,"textLines":1,"bbox":[82,278,262,44]}
+{"kind":"textbox","id":"sh/8nqxs72x","slide":9,"text":"dynamic.columns가 있으면 JSON columns 대신 외부 컬럼 바인딩 사용 가능.","textPreview":"dynamic.columns가 있으면 JSON columns 대신 외부 컬럼 바인딩 사용 가능.","textChars":53,"textLines":1,"bbox":[358,278,820,44]}
+{"kind":"shape","id":"sh/18jqh0fe","slide":9,"bbox":[70,330,1120,59]}
+{"kind":"textbox","id":"sh/qh0fepkz","slide":9,"text":"loading","textPreview":"loading","textChars":7,"textLines":1,"bbox":[82,338,262,44]}
+{"kind":"textbox","id":"sh/j2t83itg","slide":9,"text":"table.loadingBinding 또는 dynamic.loading.","textPreview":"table.loadingBinding 또는 dynamic.loading.","textChars":40,"textLines":1,"bbox":[358,338,820,44]}
+{"kind":"shape","id":"sh/8bat47y1","slide":9,"bbox":[70,390,1120,59]}
+{"kind":"textbox","id":"sh/1w7mp0bi","slide":9,"text":"selected","textPreview":"selected","textChars":8,"textLines":1,"bbox":[82,398,262,44]}
+{"kind":"textbox","id":"sh/q5o7qpg3","slide":9,"text":"models.selected. single/multiple 선택 결과 저장.","textPreview":"models.selected. single/multiple 선택 결과 저장.","textChars":42,"textLines":1,"bbox":[358,398,820,44]}
+{"kind":"shape","id":"sh/jqh0fepk","slide":9,"bbox":[70,450,1120,59]}
+{"kind":"textbox","id":"sh/c3ylc7u5","slide":9,"text":"pagination","textPreview":"pagination","textChars":10,"textLines":1,"bbox":[82,458,262,44]}
+{"kind":"textbox","id":"sh/1kre1w7m","slide":9,"text":"models.pagination. rowsPerPage와 page 상태 저장.","textPreview":"models.pagination. rowsPerPage와 page 상태 저장.","textChars":43,"textLines":1,"bbox":[358,458,820,44]}
+{"kind":"shape","id":"sh/58z25kb6","slide":9,"bbox":[70,550,520,90]}
+{"kind":"textbox","id":"sh/gn29gr2p","slide":9,"text":"Pinia 예","textPreview":"Pinia 예","textChars":7,"textLines":1,"bbox":[86,562,488,24]}
+{"kind":"textbox","id":"sh/n29gr2p8","slide":9,"text":":row-data=\"storeName.list\"\nselected: { get: () => storeName.selectedRow }\nloading: { get: () => storeName.loading }","textPreview":":row-data=\"storeName.list\" | selected: { get: () => storeName.selectedRow } | loading: { get: () => storeName.loading }","textChars":115,"textLines":3,"bbox":[86,592,488,36]}
+{"kind":"shape","id":"sh/yhgn29gr","slide":9,"bbox":[640,550,550,90]}
+{"kind":"textbox","id":"sh/5wjudg7a","slide":9,"text":"정리할 내용","textPreview":"정리할 내용","textChars":6,"textLines":1,"bbox":[658,566,514,28]}
+{"kind":"textbox","id":"sh/gbq1oryt","slide":9,"text":"rows binding은 반드시 Array여야 함. Store state tree에서 드래그해 rows binding으로 넣는 UX 필요 여부 검토.","textPreview":"rows binding은 반드시 Array여야 함. Store state tree에서 드래그해 rows binding으로 넣는 UX 필요 여부 검토.","textChars":83,"textLines":1,"bbox":[658,602,514,24]}
+{"kind":"textbox","id":"sh/nuxc3ylc","slide":9,"text":"quasar_tool / docs / ag-grid-feature-inventory","textPreview":"quasar_tool / docs / ag-grid-feature-inventory","textChars":46,"textLines":1,"bbox":[52,678,780,22]}
+{"kind":"textbox","id":"sh/y90je9cv","slide":9,"text":"09","textPreview":"09","textChars":2,"textLines":1,"bbox":[1168,675,60,26]}
+{"kind":"notes","id":"nt/ydznux","slide":9,"text":""}
+{"kind":"slide","id":"sl/ulruw4","slide":10,"title":"AG-GRID FEATURE INVENTORY","textShapes":10}
+{"kind":"textbox","id":"sh/vmtwra5g","slide":10,"text":"AG-GRID FEATURE INVENTORY","textPreview":"AG-GRID FEATURE INVENTORY","textChars":25,"textLines":1,"bbox":[52,34,430,28]}
+{"kind":"textbox","id":"sh/o7qpg3ex","slide":10,"text":"AG-007 Table API","textPreview":"AG-007 Table API","textChars":16,"textLines":1,"bbox":[52,70,980,70]}
+{"kind":"shape","id":"sh/dsji5sne","slide":10,"bbox":[52,148,1176,1]}
+{"kind":"shape","id":"sh/6dcbulwv","slide":10,"bbox":[56,186,560,330]}
+{"kind":"textbox","id":"sh/vy90je9c","slide":10,"text":"현재 API","textPreview":"현재 API","textChars":6,"textLines":1,"bbox":[74,202,524,28]}
+{"kind":"textbox","id":"sh/oj2t83it","slide":10,"text":"- addRow(row), delRow(index), delSelectedRow(), delSelectedRows()\n- getSelectedIndex(), getRows(), setRows(), getColumns()\n- handlePaste(), handleCopy(), pasteText()\n- handleCellKeyDown(), suppressKeyboardEvent()\n- setGridApi(), setSelected(), setPagination()","textPreview":"- addRow(row), delRow(index), delSelectedRow(), delSelectedRows() | - getSelectedIndex(), getRows(), setRows(), getColumns() | - handlePa...","textChars":259,"textLines":5,"bbox":[74,238,524,264]}
+{"kind":"shape","id":"sh/d4vmtwra","slide":10,"bbox":[660,186,520,280]}
+{"kind":"textbox","id":"sh/6hcrmhk3","slide":10,"text":"개발자 사용 예","textPreview":"개발자 사용 예","textChars":8,"textLines":1,"bbox":[676,198,488,24]}
+{"kind":"textbox","id":"sh/z25kb6xk","slide":10,"text":"function onTableDelete_Table001() {\n  const index = Table001.getSelectedIndex()\n  if (index >= 0) Table001.delSelectedRow()\n}\n\nfunction onTableAdd_Table001() {\n  Table001.addRow({ name: \"\", mode: \"C\" })\n}","textPreview":"function onTableDelete_Table001() { |   const index = Table001.getSelectedIndex() |   if (index >= 0) Table001.delSelectedRow() | } |  | ...","textChars":204,"textLines":8,"bbox":[676,228,488,226]}
+{"kind":"shape","id":"sh/vy90je9c","slide":10,"bbox":[660,500,520,70]}
+{"kind":"textbox","id":"sh/6dcbulwv","slide":10,"text":"관련 파일","textPreview":"관련 파일","textChars":5,"textLines":1,"bbox":[678,516,484,28]}
+{"kind":"textbox","id":"sh/d4vmtwra","slide":10,"text":"src/component/quasar-ui-api/tableApi.js\nsrc/component/quasar-ui-api/index.js","textPreview":"src/component/quasar-ui-api/tableApi.js | src/component/quasar-ui-api/index.js","textChars":76,"textLines":2,"bbox":[678,552,484,4]}
+{"kind":"textbox","id":"sh/oj2t83it","slide":10,"text":"quasar_tool / docs / ag-grid-feature-inventory","textPreview":"quasar_tool / docs / ag-grid-feature-inventory","textChars":46,"textLines":1,"bbox":[52,678,780,22]}
+{"kind":"textbox","id":"sh/vmtwra5g","slide":10,"text":"10","textPreview":"10","textChars":2,"textLines":1,"bbox":[1168,675,60,26]}
+{"kind":"notes","id":"nt/ulruw4","slide":10,"text":""}
+{"kind":"slide","id":"sl/cdozte","slide":11,"title":"AG-GRID FEATURE INVENTORY","textShapes":17}
+{"kind":"textbox","id":"sh/lkjm1cfa","slide":11,"text":"AG-GRID FEATURE INVENTORY","textPreview":"AG-GRID FEATURE INVENTORY","textChars":25,"textLines":1,"bbox":[52,34,430,28]}
+{"kind":"textbox","id":"sh/at47y1kr","slide":11,"text":"AG-008 Row Mode RCUD","textPreview":"AG-008 Row Mode RCUD","textChars":20,"textLines":1,"bbox":[52,70,980,70]}
+{"kind":"shape","id":"sh/3ex0nuxc","slide":11,"bbox":[52,148,1176,1]}
+{"kind":"shape","id":"sh/sneloj2t","slide":11,"bbox":[56,184,520,130]}
+{"kind":"textbox","id":"sh/l87ed8ba","slide":11,"text":"mode 컬럼","textPreview":"mode 컬럼","textChars":7,"textLines":1,"bbox":[74,200,484,28]}
+{"kind":"textbox","id":"sh/ahoza1gv","slide":11,"text":"모든 row에 mode 필드를 두고 R/C/U/D 상태를 관리합니다. 속성에서 mode column 표시 여부를 선택할 수 있습니다.","textPreview":"모든 row에 mode 필드를 두고 R/C/U/D 상태를 관리합니다. 속성에서 mode column 표시 여부를 선택할 수 있습니다.","textChars":74,"textLines":1,"bbox":[74,236,484,64]}
+{"kind":"textbox","id":"sh/32lszqtc","slide":11,"text":"상태 의미","textPreview":"상태 의미","textChars":5,"textLines":1,"bbox":[620,180,560,26]}
+{"kind":"shape","id":"sh/wb2hwfyx","slide":11,"bbox":[620,210,560,59]}
+{"kind":"textbox","id":"sh/lwval87e","slide":11,"text":"R","textPreview":"R","textChars":1,"textLines":1,"bbox":[632,218,122,44]}
+{"kind":"textbox","id":"sh/hoza1gvy","slide":11,"text":"기존 데이터. 최초 로딩 또는 변경 없음.","textPreview":"기존 데이터. 최초 로딩 또는 변경 없음.","textChars":23,"textLines":1,"bbox":[768,218,400,44]}
+{"kind":"shape","id":"sh/s36hcrmh","slide":11,"bbox":[620,270,560,59]}
+{"kind":"textbox","id":"sh/zidonyd0","slide":11,"text":"C","textPreview":"C","textChars":1,"textLines":1,"bbox":[632,278,122,44]}
+{"kind":"textbox","id":"sh/a1gvy90j","slide":11,"text":"신규 추가 row. 마지막 행 아래 방향키 또는 addRow로 생성.","textPreview":"신규 추가 row. 마지막 행 아래 방향키 또는 addRow로 생성.","textChars":38,"textLines":1,"bbox":[768,278,400,44]}
+{"kind":"shape","id":"sh/hgn29gr2","slide":11,"bbox":[620,330,560,59]}
+{"kind":"textbox","id":"sh/svu9knih","slide":11,"text":"U","textPreview":"U","textChars":1,"textLines":1,"bbox":[632,338,122,44]}
+{"kind":"textbox","id":"sh/za1gvy90","slide":11,"text":"기존 row 수정됨. C/D가 아니면 cell edit 시 U로 변경.","textPreview":"기존 row 수정됨. C/D가 아니면 cell edit 시 U로 변경.","textChars":39,"textLines":1,"bbox":[768,338,400,44]}
+{"kind":"shape","id":"sh/ap4r65wj","slide":11,"bbox":[620,390,560,59]}
+{"kind":"textbox","id":"sh/h4byhgn2","slide":11,"text":"D","textPreview":"D","textChars":1,"textLines":1,"bbox":[632,398,122,44]}
+{"kind":"textbox","id":"sh/sji5snel","slide":11,"text":"삭제 대상 row. 실제 삭제/표시 정책은 추가 정리 필요.","textPreview":"삭제 대상 row. 실제 삭제/표시 정책은 추가 정리 필요.","textChars":33,"textLines":1,"bbox":[768,398,400,44]}
+{"kind":"shape","id":"sh/87ed8bat","slide":11,"bbox":[56,500,1124,80]}
+{"kind":"textbox","id":"sh/xs72x4na","slide":11,"text":"정리할 내용","textPreview":"정리할 내용","textChars":6,"textLines":1,"bbox":[74,516,1088,28]}
+{"kind":"textbox","id":"sh/q1orytsv","slide":11,"text":"D 상태를 즉시 제거할지, 숨김 처리 후 저장 시 삭제 요청으로 보낼지 결정 필요.","textPreview":"D 상태를 즉시 제거할지, 숨김 처리 후 저장 시 삭제 요청으로 보낼지 결정 필요.","textChars":46,"textLines":1,"bbox":[74,552,1088,14]}
+{"kind":"textbox","id":"sh/fmlkjm1c","slide":11,"text":"quasar_tool / docs / ag-grid-feature-inventory","textPreview":"quasar_tool / docs / ag-grid-feature-inventory","textChars":46,"textLines":1,"bbox":[52,678,780,22]}
+{"kind":"textbox","id":"sh/8z25kb6x","slide":11,"text":"11","textPreview":"11","textChars":2,"textLines":1,"bbox":[1168,675,60,26]}
+{"kind":"notes","id":"nt/cdozte","slide":11,"text":""}
+{"kind":"slide","id":"sl/8i1fzp","slide":12,"title":"AG-GRID FEATURE INVENTORY","textShapes":10}
+{"kind":"textbox","id":"sh/cfa9w3m9","slide":12,"text":"AG-GRID FEATURE INVENTORY","textPreview":"AG-GRID FEATURE INVENTORY","textChars":25,"textLines":1,"bbox":[52,34,430,28]}
+{"kind":"textbox","id":"sh/judg7ads","slide":12,"text":"AG-009 키보드와 편집","textPreview":"AG-009 키보드와 편집","textChars":14,"textLines":1,"bbox":[52,70,980,70]}
+{"kind":"shape","id":"sh/u9knih4b","slide":12,"bbox":[52,148,1176,1]}
+{"kind":"shape","id":"sh/1orytsvu","slide":12,"bbox":[56,184,660,360]}
+{"kind":"textbox","id":"sh/c7u54zid","slide":12,"text":"현재 동작","textPreview":"현재 동작","textChars":5,"textLines":1,"bbox":[74,200,624,28]}
+{"kind":"textbox","id":"sh/jm1cfa9w","slide":12,"text":"- 마우스 클릭은 선택만, 더블클릭 시 편집모드 진입\n- Enter는 아래 셀로 단순 이동. Shift+Enter는 편집 완료만 수행\n- 방향키는 편집 완료 후 인접 editable 셀로 이동\n- 좌/우 방향키는 입력 커서가 문자열 내부에 있으면 커서 이동 유지\n- IME 조합 이벤트는 자동 편집 시작을 억제해 한글 첫 글자 문제를 완화","textPreview":"- 마우스 클릭은 선택만, 더블클릭 시 편집모드 진입 | - Enter는 아래 셀로 단순 이동. Shift+Enter는 편집 완료만 수행 | - 방향키는 편집 완료 후 인접 editable 셀로 이동 | - 좌/우 방향키는 입력 커서가 문자열 내...","textChars":189,"textLines":5,"bbox":[74,236,624,294]}
+{"kind":"shape","id":"sh/u18jqh0f","slide":12,"bbox":[760,184,420,210]}
+{"kind":"textbox","id":"sh/5gbq1ory","slide":12,"text":"관련 함수","textPreview":"관련 함수","textChars":5,"textLines":1,"bbox":[776,196,388,24]}
+{"kind":"textbox","id":"sh/cvixczed","slide":12,"text":"shouldKeepHorizontalArrowInEditor()\nmoveToAdjacentEditableCell()\nhandleCellKeyDown()\nsuppressKeyboardEvent()\nisImeKeyboardEvent()","textPreview":"shouldKeepHorizontalArrowInEditor() | moveToAdjacentEditableCell() | handleCellKeyDown() | suppressKeyboardEvent() | isImeKeyboardEvent()","textChars":129,"textLines":5,"bbox":[776,226,388,156]}
+{"kind":"shape","id":"sh/m1cfa9w3","slide":12,"bbox":[760,440,420,100]}
+{"kind":"textbox","id":"sh/bm58z25k","slide":12,"text":"정리할 내용","textPreview":"정리할 내용","textChars":6,"textLines":1,"bbox":[778,456,384,28]}
+{"kind":"textbox","id":"sh/47y1kre1","slide":12,"text":"한글 입력 UX는 AG Grid 기본 편집 흐름과 충돌 가능. 업무 기준으로 Enter-first 편집을 유지할지 결정.","textPreview":"한글 입력 UX는 AG Grid 기본 편집 흐름과 충돌 가능. 업무 기준으로 Enter-first 편집을 유지할지 결정.","textChars":67,"textLines":1,"bbox":[778,492,384,34]}
+{"kind":"textbox","id":"sh/tsvu9kni","slide":12,"text":"quasar_tool / docs / ag-grid-feature-inventory","textPreview":"quasar_tool / docs / ag-grid-feature-inventory","textChars":46,"textLines":1,"bbox":[52,678,780,22]}
+{"kind":"textbox","id":"sh/mp0bi9s3","slide":12,"text":"12","textPreview":"12","textChars":2,"textLines":1,"bbox":[1168,675,60,26]}
+{"kind":"notes","id":"nt/8i1fzp","slide":12,"text":""}
+{"kind":"slide","id":"sl/ysg0uc","slide":13,"title":"AG-GRID FEATURE INVENTORY","textShapes":12}
+{"kind":"textbox","id":"sh/z25kb6xk","slide":13,"text":"AG-GRID FEATURE INVENTORY","textPreview":"AG-GRID FEATURE INVENTORY","textChars":25,"textLines":1,"bbox":[52,34,430,28]}
+{"kind":"textbox","id":"sh/onyd0z61","slide":13,"text":"AG-010 Excel Copy / Paste","textPreview":"AG-010 Excel Copy / Paste","textChars":25,"textLines":1,"bbox":[52,70,980,70]}
+{"kind":"shape","id":"sh/d8v6psfi","slide":13,"bbox":[52,148,1176,1]}
+{"kind":"shape","id":"sh/6tovahoz","slide":13,"bbox":[56,184,520,260]}
+{"kind":"textbox","id":"sh/vahoza1g","slide":13,"text":"붙여넣기","textPreview":"붙여넣기","textChars":4,"textLines":1,"bbox":[74,200,484,28]}
+{"kind":"textbox","id":"sh/ovahoza1","slide":13,"text":"- Ctrl+V로 TSV/Excel clipboard 파싱\n- 현재 focused cell 기준으로 editable 컬럼에 값 채움\n- 필요하면 부족한 row를 자동 생성\n- 붙여넣은 신규 row는 mode C 또는 U 처리","textPreview":"- Ctrl+V로 TSV/Excel clipboard 파싱 | - 현재 focused cell 기준으로 editable 컬럼에 값 채움 | - 필요하면 부족한 row를 자동 생성 | - 붙여넣은 신규 row는 mode C 또는 U 처리","textChars":125,"textLines":4,"bbox":[74,236,484,194]}
+{"kind":"shape","id":"sh/dg7adsji","slide":13,"bbox":[660,184,520,260]}
+{"kind":"textbox","id":"sh/61032lsz","slide":13,"text":"복사","textPreview":"복사","textChars":2,"textLines":1,"bbox":[678,200,484,28]}
+{"kind":"textbox","id":"sh/vmtwra5g","slide":13,"text":"- 마우스 드래그로 복사 범위 선택\n- Ctrl+C로 선택 범위를 TSV로 clipboard에 기록\n- excel copy 속성으로 사용 여부 제어\n- mode/actions/row-key 같은 비데이터 컬럼은 제외 대상","textPreview":"- 마우스 드래그로 복사 범위 선택 | - Ctrl+C로 선택 범위를 TSV로 clipboard에 기록 | - excel copy 속성으로 사용 여부 제어 | - mode/actions/row-key 같은 비데이터 컬럼은 제외 대상","textChars":123,"textLines":4,"bbox":[678,236,484,194]}
+{"kind":"shape","id":"sh/b2hwfyxo","slide":13,"bbox":[56,500,360,90]}
+{"kind":"textbox","id":"sh/mhk3q5o7","slide":13,"text":"JSON","textPreview":"JSON","textChars":4,"textLines":1,"bbox":[72,512,328,24]}
+{"kind":"textbox","id":"sh/t83itgfm","slide":13,"text":"table: {\n  excelCopy: true\n}","textPreview":"table: { |   excelCopy: true | }","textChars":28,"textLines":3,"bbox":[72,542,328,36]}
+{"kind":"shape","id":"sh/4nap4r65","slide":13,"bbox":[460,500,720,90]}
+{"kind":"textbox","id":"sh/bq1oryts","slide":13,"text":"정리할 내용","textPreview":"정리할 내용","textChars":6,"textLines":1,"bbox":[478,516,684,28]}
+{"kind":"textbox","id":"sh/m58z25kb","slide":13,"text":"복사 범위 표시 색상, header 포함 여부, hidden column 포함 여부를 정책화하면 좋음.","textPreview":"복사 범위 표시 색상, header 포함 여부, hidden column 포함 여부를 정책화하면 좋음.","textChars":57,"textLines":1,"bbox":[478,552,684,24]}
+{"kind":"textbox","id":"sh/twra5gbq","slide":13,"text":"quasar_tool / docs / ag-grid-feature-inventory","textPreview":"quasar_tool / docs / ag-grid-feature-inventory","textChars":46,"textLines":1,"bbox":[52,678,780,22]}
+{"kind":"textbox","id":"sh/4byhgn29","slide":13,"text":"13","textPreview":"13","textChars":2,"textLines":1,"bbox":[1168,675,60,26]}
+{"kind":"notes","id":"nt/ysg0uc","slide":13,"text":""}
+{"kind":"slide","id":"sl/beyaw1","slide":14,"title":"AG-GRID FEATURE INVENTORY","textShapes":17}
+{"kind":"textbox","id":"sh/bi9s36hc","slide":14,"text":"AG-GRID FEATURE INVENTORY","textPreview":"AG-GRID FEATURE INVENTORY","textChars":25,"textLines":1,"bbox":[52,34,430,28]}
+{"kind":"textbox","id":"sh/032lszqt","slide":14,"text":"AG-011 Selection / Events","textPreview":"AG-011 Selection / Events","textChars":25,"textLines":1,"bbox":[52,70,980,70]}
+{"kind":"shape","id":"sh/tovahoza","slide":14,"bbox":[52,148,1176,1]}
+{"kind":"textbox","id":"sh/i9s36hcr","slide":14,"text":"선택/이벤트","textPreview":"선택/이벤트","textChars":6,"textLines":1,"bbox":[70,180,1120,26]}
+{"kind":"shape","id":"sh/bulwval8","slide":14,"bbox":[70,210,1120,64]}
+{"kind":"textbox","id":"sh/0fepkzup","slide":14,"text":"selection","textPreview":"selection","textChars":9,"textLines":1,"bbox":[82,218,262,49]}
+{"kind":"textbox","id":"sh/p0bi9s36","slide":14,"text":"none / single / multiple. checkbox selection 사용, row click으로 checkbox 변경 방지.","textPreview":"none / single / multiple. checkbox selection 사용, row click으로 checkbox 변경 방지.","textChars":76,"textLines":1,"bbox":[358,218,820,49]}
+{"kind":"shape","id":"sh/idonyd0z","slide":14,"bbox":[70,275,1120,64]}
+{"kind":"textbox","id":"sh/byhgn29g","slide":14,"text":"row-click","textPreview":"row-click","textChars":9,"textLines":1,"bbox":[82,283,262,49]}
+{"kind":"textbox","id":"sh/ra5gbq1o","slide":14,"text":"event 패널에서 자동 생성. selectedRow 저장과 병행 가능.","textPreview":"event 패널에서 자동 생성. selectedRow 저장과 병행 가능.","textChars":40,"textLines":1,"bbox":[358,283,820,49]}
+{"kind":"shape","id":"sh/2p8nqxs7","slide":14,"bbox":[70,340,1120,64]}
+{"kind":"textbox","id":"sh/9gr2p8nq","slide":14,"text":"toolbar","textPreview":"toolbar","textChars":7,"textLines":1,"bbox":[82,348,262,49]}
+{"kind":"textbox","id":"sh/gvy90je9","slide":14,"text":"신규/저장/삭제/새로고침 버튼은 각각 handler 이름 자동 생성.","textPreview":"신규/저장/삭제/새로고침 버튼은 각각 handler 이름 자동 생성.","textChars":38,"textLines":1,"bbox":[358,348,820,49]}
+{"kind":"shape","id":"sh/r2p8nqxs","slide":14,"bbox":[70,405,1120,64]}
+{"kind":"textbox","id":"sh/2hwfyxob","slide":14,"text":"dblclick","textPreview":"dblclick","textChars":8,"textLines":1,"bbox":[82,413,262,49]}
+{"kind":"textbox","id":"sh/94fu18jq","slide":14,"text":"Screen에서 버튼을 더블클릭하면 해당 버튼 이벤트로 이동.","textPreview":"Screen에서 버튼을 더블클릭하면 해당 버튼 이벤트로 이동.","textChars":34,"textLines":1,"bbox":[358,413,820,49]}
+{"kind":"shape","id":"sh/kjm1cfa9","slide":14,"bbox":[70,520,420,110]}
+{"kind":"textbox","id":"sh/rqd4vmtw","slide":14,"text":"이벤트 후보","textPreview":"이벤트 후보","textChars":6,"textLines":1,"bbox":[86,532,388,24]}
+{"kind":"textbox","id":"sh/25kb6xkf","slide":14,"text":"row-click\nrow-dblclick\nselection\nrequest\nupdate:pagination","textPreview":"row-click | row-dblclick | selection | request | update:pagination","textChars":58,"textLines":5,"bbox":[86,562,388,56]}
+{"kind":"shape","id":"sh/a5gbq1or","slide":14,"bbox":[540,520,650,110]}
+{"kind":"textbox","id":"sh/3m94fu18","slide":14,"text":"관련 파일","textPreview":"관련 파일","textChars":5,"textLines":1,"bbox":[558,536,614,28]}
+{"kind":"textbox","id":"sh/s72x4nap","slide":14,"text":"vscode-extension/src/eventsView.js\nvscode-extension/src/webviews.js\nvscode-extension/src/tableView.js","textPreview":"vscode-extension/src/eventsView.js | vscode-extension/src/webviews.js | vscode-extension/src/tableView.js","textChars":101,"textLines":3,"bbox":[558,572,614,44]}
+{"kind":"textbox","id":"sh/lszqtcj6","slide":14,"text":"quasar_tool / docs / ag-grid-feature-inventory","textPreview":"quasar_tool / docs / ag-grid-feature-inventory","textChars":46,"textLines":1,"bbox":[52,678,780,22]}
+{"kind":"textbox","id":"sh/adsji5sn","slide":14,"text":"14","textPreview":"14","textChars":2,"textLines":1,"bbox":[1168,675,60,26]}
+{"kind":"notes","id":"nt/beyaw1","slide":14,"text":""}
+{"kind":"slide","id":"sl/ebf780","slide":15,"title":"AG-GRID FEATURE INVENTORY","textShapes":10}
+{"kind":"textbox","id":"sh/mtwra5gb","slide":15,"text":"AG-GRID FEATURE INVENTORY","textPreview":"AG-GRID FEATURE INVENTORY","textChars":25,"textLines":1,"bbox":[52,34,430,28]}
+{"kind":"textbox","id":"sh/xkf6dcbu","slide":15,"text":"AG-012 Styling","textPreview":"AG-012 Styling","textChars":14,"textLines":1,"bbox":[52,70,980,70]}
+{"kind":"shape","id":"sh/4zidonyd","slide":15,"bbox":[52,148,1176,1]}
+{"kind":"shape","id":"sh/f6dcbulw","slide":15,"bbox":[56,184,600,340]}
+{"kind":"textbox","id":"sh/mlkjm1cf","slide":15,"text":"현재 스타일","textPreview":"현재 스타일","textChars":6,"textLines":1,"bbox":[74,200,564,28]}
+{"kind":"textbox","id":"sh/xc3ylc7u","slide":15,"text":"- ag-grid quartz 계열 CSS를 공통 CSS에 import\n- 헤더 배경색은 파란색 계열, body는 zebra row\n- checkbox는 AG Grid 순수 checkbox 사용, radius를 작게 조정\n- toolbar 버튼은 outline/unelevated/연한 색상\n- 테이블 height는 ag-grid wrapper div style에 적용","textPreview":"- ag-grid quartz 계열 CSS를 공통 CSS에 import | - 헤더 배경색은 파란색 계열, body는 zebra row | - checkbox는 AG Grid 순수 checkbox 사용, radius를 작게 조정 | - toolb...","textChars":206,"textLines":5,"bbox":[74,236,564,274]}
+{"kind":"shape","id":"sh/4r65wjud","slide":15,"bbox":[700,184,480,180]}
+{"kind":"textbox","id":"sh/fu18jqh0","slide":15,"text":"주요 CSS","textPreview":"주요 CSS","textChars":6,"textLines":1,"bbox":[716,196,448,24]}
+{"kind":"textbox","id":"sh/m94fu18j","slide":15,"text":".qt-ag-grid\n.qt-ag-grid .ag-header\n.qt-ag-grid .ag-row-selected\n.qt-ag-grid .qt-ag-group-row-editor\n.qt-table-toolbar-preview","textPreview":".qt-ag-grid | .qt-ag-grid .ag-header | .qt-ag-grid .ag-row-selected | .qt-ag-grid .qt-ag-group-row-editor | .qt-table-toolbar-preview","textChars":125,"textLines":5,"bbox":[716,226,448,126]}
+{"kind":"shape","id":"sh/sji5snel","slide":15,"bbox":[700,410,480,90]}
+{"kind":"textbox","id":"sh/h4byhgn2","slide":15,"text":"관련 파일","textPreview":"관련 파일","textChars":5,"textLines":1,"bbox":[718,426,444,28]}
+{"kind":"textbox","id":"sh/adsji5sn","slide":15,"text":"src/css/app.scss\nvscode-extension/src/tableStyles.js","textPreview":"src/css/app.scss | vscode-extension/src/tableStyles.js","textChars":52,"textLines":2,"bbox":[718,462,444,24]}
+{"kind":"textbox","id":"sh/3ylc7u54","slide":15,"text":"quasar_tool / docs / ag-grid-feature-inventory","textPreview":"quasar_tool / docs / ag-grid-feature-inventory","textChars":46,"textLines":1,"bbox":[52,678,780,22]}
+{"kind":"textbox","id":"sh/s72x4nap","slide":15,"text":"15","textPreview":"15","textChars":2,"textLines":1,"bbox":[1168,675,60,26]}
+{"kind":"notes","id":"nt/ebf780","slide":15,"text":""}
+{"kind":"slide","id":"sl/nxaeoc","slide":16,"title":"AG-GRID FEATURE INVENTORY","textShapes":10}
+{"kind":"textbox","id":"sh/knih4byh","slide":16,"text":"AG-GRID FEATURE INVENTORY","textPreview":"AG-GRID FEATURE INVENTORY","textChars":25,"textLines":1,"bbox":[52,34,430,28]}
+{"kind":"textbox","id":"sh/v6psfil0","slide":16,"text":"AG-013 Multi Header Editing","textPreview":"AG-013 Multi Header Editing","textChars":27,"textLines":1,"bbox":[52,70,980,70]}
+{"kind":"shape","id":"sh/2lszqtcj","slide":16,"bbox":[52,148,1176,1]}
+{"kind":"shape","id":"sh/d0z61032","slide":16,"bbox":[56,184,620,330]}
+{"kind":"textbox","id":"sh/kf6dcbul","slide":16,"text":"현재 구현","textPreview":"현재 구현","textChars":5,"textLines":1,"bbox":[74,200,584,28]}
+{"kind":"textbox","id":"sh/vu9knih4","slide":16,"text":"- Screen ag-grid header cell 클릭 시 선택 표시\n- header parent/child를 column popup tree에서 편집\n- headerRows 2 이상이면 group header 생성\n- parent Label은 headers[], parent Field는 headerFields[]에 저장\n- 병합 취소는 동일 group을 개별 column label로 분해","textPreview":"- Screen ag-grid header cell 클릭 시 선택 표시 | - header parent/child를 column popup tree에서 편집 | - headerRows 2 이상이면 group header 생성 | - parent ...","textChars":220,"textLines":5,"bbox":[74,236,584,264]}
+{"kind":"shape","id":"sh/29gr2p8n","slide":16,"bbox":[720,184,460,210]}
+{"kind":"textbox","id":"sh/donyd0z6","slide":16,"text":"정리할 데이터 모델","textPreview":"정리할 데이터 모델","textChars":10,"textLines":1,"bbox":[736,196,428,24]}
+{"kind":"textbox","id":"sh/k3q5o7qp","slide":16,"text":"column = {\n  name: \"actions\",\n  label: \"작업\",\n  field: \"actions\",\n  headers: [\"참조사항\"],\n  headerFields: [\"remark\"]\n}","textPreview":"column = { |   name: \"actions\", |   label: \"작업\", |   field: \"actions\", |   headers: [\"참조사항\"], |   headerFields: [\"remark\"] | }","textChars":114,"textLines":7,"bbox":[736,226,428,156]}
+{"kind":"shape","id":"sh/at47y1kr","slide":16,"bbox":[720,420,460,120]}
+{"kind":"textbox","id":"sh/3ex0nuxc","slide":16,"text":"정리할 내용","textPreview":"정리할 내용","textChars":6,"textLines":1,"bbox":[738,436,424,28]}
+{"kind":"textbox","id":"sh/szqtcj6t","slide":16,"text":"headerRows 3일 때 parent-of-parent field를 body 3줄과 어떻게 연결할지 추가 정의 필요.","textPreview":"headerRows 3일 때 parent-of-parent field를 body 3줄과 어떻게 연결할지 추가 정의 필요.","textChars":67,"textLines":1,"bbox":[738,472,424,54]}
+{"kind":"textbox","id":"sh/lkjm1cfa","slide":16,"text":"quasar_tool / docs / ag-grid-feature-inventory","textPreview":"quasar_tool / docs / ag-grid-feature-inventory","textChars":46,"textLines":1,"bbox":[52,678,780,22]}
+{"kind":"textbox","id":"sh/ahoza1gv","slide":16,"text":"16","textPreview":"16","textChars":2,"textLines":1,"bbox":[1168,675,60,26]}
+{"kind":"notes","id":"nt/nxaeoc","slide":16,"text":""}
+{"kind":"slide","id":"sl/y4y5q9","slide":17,"title":"AG-GRID FEATURE INVENTORY","textShapes":12}
+{"kind":"textbox","id":"sh/xobm58z2","slide":17,"text":"AG-GRID FEATURE INVENTORY","textPreview":"AG-GRID FEATURE INVENTORY","textChars":25,"textLines":1,"bbox":[52,34,430,28]}
+{"kind":"textbox","id":"sh/qxs72x4n","slide":17,"text":"AG-014 저장/검증 흐름","textPreview":"AG-014 저장/검증 흐름","textChars":15,"textLines":1,"bbox":[52,70,980,70]}
+{"kind":"shape","id":"sh/fil0rqd4","slide":17,"bbox":[52,148,1176,1]}
+{"kind":"shape","id":"sh/4fu18jqh","slide":17,"bbox":[56,184,500,130]}
+{"kind":"textbox","id":"sh/x0nuxc3y","slide":17,"text":"Screen/Store/Script 저장","textPreview":"Screen/Store/Script 저장","textChars":22,"textLines":1,"bbox":[74,200,464,28]}
+{"kind":"textbox","id":"sh/m94fu18j","slide":17,"text":"실시간 저장 대신 수정 탭에 * 표시. Ctrl+S로 저장하면 * 제거. Script도 동일하게 저장 처리됨.","textPreview":"실시간 저장 대신 수정 탭에 * 표시. Ctrl+S로 저장하면 * 제거. Script도 동일하게 저장 처리됨.","textChars":61,"textLines":1,"bbox":[74,236,464,64]}
+{"kind":"shape","id":"sh/fu18jqh0","slide":17,"bbox":[56,340,500,130]}
+{"kind":"textbox","id":"sh/4r65wjud","slide":17,"text":"Table rows binding 검증","textPreview":"Table rows binding 검증","textChars":21,"textLines":1,"bbox":[74,356,464,28]}
+{"kind":"textbox","id":"sh/xc3ylc7u","slide":17,"text":"rows binding이 배열이 아니면 Vue 런타임 오류가 발생하므로 저장 시 오류 메시지 대상으로 관리합니다.","textPreview":"rows binding이 배열이 아니면 Vue 런타임 오류가 발생하므로 저장 시 오류 메시지 대상으로 관리합니다.","textChars":63,"textLines":1,"bbox":[74,392,464,64]}
+{"kind":"shape","id":"sh/9cvixcze","slide":17,"bbox":[620,184,560,120]}
+{"kind":"textbox","id":"sh/gr2p8nqx","slide":17,"text":"검증 명령","textPreview":"검증 명령","textChars":5,"textLines":1,"bbox":[636,196,528,24]}
+{"kind":"textbox","id":"sh/r65wjudg","slide":17,"text":"npm run validate:screens\nnpm run generate:vue -- .src/pages/IndexPage.json\nnpm run build","textPreview":"npm run validate:screens | npm run generate:vue -- .src/pages/IndexPage.json | npm run build","textChars":88,"textLines":3,"bbox":[636,226,528,66]}
+{"kind":"shape","id":"sh/ylc7u54z","slide":17,"bbox":[620,340,560,130]}
+{"kind":"textbox","id":"sh/5o7qpg3e","slide":17,"text":"정리할 내용","textPreview":"정리할 내용","textChars":6,"textLines":1,"bbox":[638,356,524,28]}
+{"kind":"textbox","id":"sh/g3ex0nux","slide":17,"text":"검증 메시지를 사용자 친화적으로 표시할 위치: VS Code notification, Problems, 또는 Webview inline alert 중 선택.","textPreview":"검증 메시지를 사용자 친화적으로 표시할 위치: VS Code notification, Problems, 또는 Webview inline alert 중 선택.","textChars":87,"textLines":1,"bbox":[638,392,524,64]}
+{"kind":"textbox","id":"sh/nih4byhg","slide":17,"text":"quasar_tool / docs / ag-grid-feature-inventory","textPreview":"quasar_tool / docs / ag-grid-feature-inventory","textChars":46,"textLines":1,"bbox":[52,678,780,22]}
+{"kind":"textbox","id":"sh/yxobm58z","slide":17,"text":"17","textPreview":"17","textChars":2,"textLines":1,"bbox":[1168,675,60,26]}
+{"kind":"notes","id":"nt/y4y5q9","slide":17,"text":""}
+{"kind":"slide","id":"sl/2bmxpm","slide":18,"title":"AG-GRID FEATURE INVENTORY","textShapes":21}
+{"kind":"textbox","id":"sh/w7mp0bi9","slide":18,"text":"AG-GRID FEATURE INVENTORY","textPreview":"AG-GRID FEATURE INVENTORY","textChars":25,"textLines":1,"bbox":[52,34,430,28]}
+{"kind":"textbox","id":"sh/7mp0bi9s","slide":18,"text":"AG-015 관련 파일 맵","textPreview":"AG-015 관련 파일 맵","textChars":14,"textLines":1,"bbox":[52,70,980,70]}
+{"kind":"shape","id":"sh/e1w7mp0b","slide":18,"bbox":[52,148,1176,1]}
+{"kind":"textbox","id":"sh/pg3ex0nu","slide":18,"text":"파일별 책임","textPreview":"파일별 책임","textChars":6,"textLines":1,"bbox":[60,160,1160,26]}
+{"kind":"shape","id":"sh/wval87ed","slide":18,"bbox":[60,190,1160,50.43]}
+{"kind":"textbox","id":"sh/7adsji5s","slide":18,"text":"tableView.js","textPreview":"tableView.js","textChars":12,"textLines":1,"bbox":[72,198,272,35.43]}
+{"kind":"textbox","id":"sh/epkzupwb","slide":18,"text":"Table Wizard, Column Popup, parent/child tree, header field 편집","textPreview":"Table Wizard, Column Popup, parent/child tree, header field 편집","textChars":62,"textLines":1,"bbox":[358,198,850,35.43]}
+{"kind":"shape","id":"sh/lc7u54zi","slide":18,"bbox":[60,241.43,1160,50.43]}
+{"kind":"textbox","id":"sh/wra5gbq1","slide":18,"text":"propertiesView.js","textPreview":"propertiesView.js","textChars":17,"textLines":1,"bbox":[72,249.43,272,35.43]}
+{"kind":"textbox","id":"sh/upwb2hwf","slide":18,"text":"Table 속성 패널: Basic/Data/Columns/Selection/Toolbar/Pagination","textPreview":"Table 속성 패널: Basic/Data/Columns/Selection/Toolbar/Pagination","textChars":60,"textLines":1,"bbox":[358,249.43,850,35.43]}
+{"kind":"shape","id":"sh/nap4r65w","slide":18,"bbox":[60,292.86,1160,50.43]}
+{"kind":"textbox","id":"sh/cvixczed","slide":18,"text":"webviews.js","textPreview":"webviews.js","textChars":11,"textLines":1,"bbox":[72,300.86,272,35.43]}
+{"kind":"textbox","id":"sh/5gbq1ory","slide":18,"text":"Screen runtime preview, ag-grid preview props, header selection, body renderer","textPreview":"Screen runtime preview, ag-grid preview props, header selection, body renderer","textChars":78,"textLines":1,"bbox":[358,300.86,850,35.43]}
+{"kind":"shape","id":"sh/udg7adsj","slide":18,"bbox":[60,344.29,1160,50.43]}
+{"kind":"textbox","id":"sh/nyd0z610","slide":18,"text":"state.js","textPreview":"state.js","textChars":8,"textLines":1,"bbox":[72,352.29,272,35.43]}
+{"kind":"textbox","id":"sh/cj6tovah","slide":18,"text":"JSON 모델 갱신, normalizeTableColumns, rows binding 검증","textPreview":"JSON 모델 갱신, normalizeTableColumns, rows binding 검증","textChars":50,"textLines":1,"bbox":[358,352.29,850,35.43]}
+{"kind":"shape","id":"sh/54zidony","slide":18,"bbox":[60,395.71,1160,50.43]}
+{"kind":"textbox","id":"sh/u9knih4b","slide":18,"text":"table-renderer.mjs","textPreview":"table-renderer.mjs","textChars":18,"textLines":1,"bbox":[72,403.71,272,35.43]}
+{"kind":"textbox","id":"sh/judg7ads","slide":18,"text":"Vue 생성 시 ag-grid-vue 태그와 columnDefs 생성","textPreview":"Vue 생성 시 ag-grid-vue 태그와 columnDefs 생성","textChars":38,"textLines":1,"bbox":[358,403.71,850,35.43]}
+{"kind":"shape","id":"sh/fil0rqd4","slide":18,"bbox":[60,447.14,1160,50.43]}
+{"kind":"textbox","id":"sh/qxs72x4n","slide":18,"text":"tableApi.js","textPreview":"tableApi.js","textChars":11,"textLines":1,"bbox":[72,455.14,272,35.43]}
+{"kind":"textbox","id":"sh/xobm58z2","slide":18,"text":"런타임 API, RCUD, keyboard, copy/paste, selection","textPreview":"런타임 API, RCUD, keyboard, copy/paste, selection","textChars":46,"textLines":1,"bbox":[358,455.14,850,35.43]}
+{"kind":"shape","id":"sh/83itgfml","slide":18,"bbox":[60,498.57,1160,50.43]}
+{"kind":"textbox","id":"sh/fu18jqh0","slide":18,"text":"app.scss","textPreview":"app.scss","textChars":8,"textLines":1,"bbox":[72,506.57,272,35.43]}
+{"kind":"textbox","id":"sh/m94fu18j","slide":18,"text":"브라우저 ag-grid 스타일","textPreview":"브라우저 ag-grid 스타일","textChars":16,"textLines":1,"bbox":[358,506.57,850,35.43]}
+{"kind":"shape","id":"sh/x0nuxc3y","slide":18,"bbox":[60,590,1160,60]}
+{"kind":"textbox","id":"sh/4fu18jqh","slide":18,"text":"유지보수 메모","textPreview":"유지보수 메모","textChars":7,"textLines":1,"bbox":[78,606,1124,28]}
+{"kind":"textbox","id":"sh/f6dcbulw","slide":18,"text":"큰 기능은 tableView.js/webviews.js/tableApi.js에 집중되어 있음. 다음 리팩토링 때 기능별 모듈 분리 후보로 관리.","textPreview":"큰 기능은 tableView.js/webviews.js/tableApi.js에 집중되어 있음. 다음 리팩토링 때 기능별 모듈 분리 후보로 관리.","textChars":80,"textLines":1,"bbox":[78,642,1124,-6]}
+{"kind":"textbox","id":"sh/mlkjm1cf","slide":18,"text":"quasar_tool / docs / ag-grid-feature-inventory","textPreview":"quasar_tool / docs / ag-grid-feature-inventory","textChars":46,"textLines":1,"bbox":[52,678,780,22]}
+{"kind":"textbox","id":"sh/wra5gbq1","slide":18,"text":"18","textPreview":"18","textChars":2,"textLines":1,"bbox":[1168,675,60,26]}
+{"kind":"notes","id":"nt/2bmxpm","slide":18,"text":""}
+{"kind":"slide","id":"sl/fcc054","slide":19,"title":"AG-GRID FEATURE INVENTORY","textShapes":10}
+{"kind":"textbox","id":"sh/18jqh0fe","slide":19,"text":"AG-GRID FEATURE INVENTORY","textPreview":"AG-GRID FEATURE INVENTORY","textChars":25,"textLines":1,"bbox":[52,34,430,28]}
+{"kind":"textbox","id":"sh/qh0fepkz","slide":19,"text":"AG-016 다음 정리용 체크리스트","textPreview":"AG-016 다음 정리용 체크리스트","textChars":19,"textLines":1,"bbox":[52,70,980,70]}
+{"kind":"shape","id":"sh/j2t83itg","slide":19,"bbox":[52,148,1176,1]}
+{"kind":"shape","id":"sh/8bat47y1","slide":19,"bbox":[56,184,600,330]}
+{"kind":"textbox","id":"sh/1w7mp0bi","slide":19,"text":"사용자가 결정할 항목","textPreview":"사용자가 결정할 항목","textChars":11,"textLines":1,"bbox":[74,200,564,28]}
+{"kind":"textbox","id":"sh/q5o7qpg3","slide":19,"text":"- headerRows와 rowRows가 다를 때 body 표현 규칙\n- 3줄 header/body의 parent field 매핑 방식\n- D mode 삭제 row 표시/숨김/즉시삭제 정책\n- Excel copy에서 header 포함 여부\n- server pagination과 request 이벤트의 표준 payload\n- actions 컬럼 버튼 구성과 이벤트 이름 규칙","textPreview":"- headerRows와 rowRows가 다를 때 body 표현 규칙 | - 3줄 header/body의 parent field 매핑 방식 | - D mode 삭제 row 표시/숨김/즉시삭제 정책 | - Excel copy에서 header 포함 ...","textChars":208,"textLines":6,"bbox":[74,236,564,264]}
+{"kind":"shape","id":"sh/jqh0fepk","slide":19,"bbox":[700,184,480,180]}
+{"kind":"textbox","id":"sh/c3ylc7u5","slide":19,"text":"다음 Codex 요청 예시","textPreview":"다음 Codex 요청 예시","textChars":14,"textLines":1,"bbox":[716,196,448,24]}
+{"kind":"textbox","id":"sh/1kre1w7m","slide":19,"text":"이 PPT의 AG-013 기준으로\nheaderRows=3,rowRows=3일 때\nparent field 매핑 규칙을 확정하고\ntable-renderer.mjs와 webviews.js에 반영해줘.","textPreview":"이 PPT의 AG-013 기준으로 | headerRows=3,rowRows=3일 때 | parent field 매핑 규칙을 확정하고 | table-renderer.mjs와 webviews.js에 반영해줘.","textChars":108,"textLines":4,"bbox":[716,226,448,126]}
+{"kind":"shape","id":"sh/5o7qpg3e","slide":19,"bbox":[700,410,480,100]}
+{"kind":"textbox","id":"sh/g3ex0nux","slide":19,"text":"권장 진행","textPreview":"권장 진행","textChars":5,"textLines":1,"bbox":[718,426,444,28]}
+{"kind":"textbox","id":"sh/nih4byhg","slide":19,"text":"먼저 이 PPT에서 기능별 정책을 확정한 뒤, AG-xxx 단위로 하나씩 구현하면 회귀를 줄일 수 있습니다.","textPreview":"먼저 이 PPT에서 기능별 정책을 확정한 뒤, AG-xxx 단위로 하나씩 구현하면 회귀를 줄일 수 있습니다.","textChars":60,"textLines":1,"bbox":[718,462,444,34]}
+{"kind":"textbox","id":"sh/yxobm58z","slide":19,"text":"quasar_tool / docs / ag-grid-feature-inventory","textPreview":"quasar_tool / docs / ag-grid-feature-inventory","textChars":46,"textLines":1,"bbox":[52,678,780,22]}
+{"kind":"textbox","id":"sh/9cvixcze","slide":19,"text":"19","textPreview":"19","textChars":2,"textLines":1,"bbox":[1168,675,60,26]}
+{"kind":"notes","id":"nt/fcc054","slide":19,"text":""}

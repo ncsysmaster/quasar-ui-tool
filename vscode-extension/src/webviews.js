@@ -83,6 +83,13 @@ function getEditorHtml(webview, runtimeUris) {
       let lastTableWizardRequest = 0
       let tableColumnsComponentId = ''
       let tableColumnsDraft = []
+      let tableColumnsHeaderRows = 1
+      let tableColumnsHeaderLayout = []
+      let tableColumnsBodyRows = []
+      let tableColumnsActiveTab = 'columns'
+      let tableColumnsSelectedNode = null
+      let selectedTableHeaderMergeCells = []
+      let selectedTableBodyMergeCells = []
       let lastTableColumnsRequest = 0
       let pendingScriptMethod = ''
       let lastScriptNavigationRequest = 0
@@ -968,6 +975,34 @@ function getEditorHtml(webview, runtimeUris) {
           onClick: (event) => {
             event.stopPropagation()
             event.currentTarget.focus()
+            const headerInfo = getTableHeaderEventInfo(event, component)
+            if (headerInfo) {
+              markTableHeaderDomSelection(event.currentTarget, headerInfo)
+              if (event.ctrlKey || event.metaKey) {
+                event.preventDefault()
+                handleTableHeaderCtrlClick(component, headerInfo)
+                return
+              }
+              selectedTableHeaderMergeCells = [{
+                componentId: component.id,
+                rowIndex: headerInfo.rowIndex,
+                columnIndex: headerInfo.columnIndex
+              }]
+            }
+            const bodyInfo = getTableBodyLayoutEventInfo(event, component)
+            if (bodyInfo) {
+              if (event.ctrlKey || event.metaKey) {
+                event.preventDefault()
+                handleTableBodyCtrlClick(component, bodyInfo)
+                return
+              }
+              selectedTableBodyMergeCells = [{
+                componentId: component.id,
+                rowIndex: bodyInfo.rowIndex,
+                cellIndex: bodyInfo.cellIndex,
+                columnIndex: bodyInfo.columnIndex
+              }]
+            }
             if (component.id !== selectedId || selectedCellIds.length > 0) {
               vscode.postMessage({ type: 'select', id: component.id })
             }
@@ -975,12 +1010,34 @@ function getEditorHtml(webview, runtimeUris) {
           onDblclick: (event) => {
             event.preventDefault()
             event.stopPropagation()
+            const headerInfo = getTableHeaderEventInfo(event, component)
+            if (headerInfo) {
+              markTableHeaderDomSelection(event.currentTarget, headerInfo)
+              showTableColumnsDialog(component.id, false, tableHeaderInfoToColumnEditorNode(headerInfo, component))
+              return
+            }
+            const bodyInfo = getTableBodyLayoutEventInfo(event, component)
+            if (bodyInfo) {
+              showTableColumnsDialog(component.id, false, tableBodyInfoToColumnEditorNode(bodyInfo, component))
+              return
+            }
             vscode.postMessage({ type: 'openFirstEventMethod', id: component.id })
           },
           onContextmenu: (event) => {
             event.preventDefault()
             event.stopPropagation()
             vscode.postMessage({ type: 'select', id: component.id })
+            const headerInfo = getTableHeaderEventInfo(event, component)
+            if (headerInfo) {
+              markTableHeaderDomSelection(event.currentTarget, headerInfo)
+              showTableColumnsDialog(component.id, false, tableHeaderInfoToColumnEditorNode(headerInfo, component))
+              return
+            }
+            const bodyInfo = getTableBodyLayoutEventInfo(event, component)
+            if (bodyInfo) {
+              showTableColumnsDialog(component.id, false, tableBodyInfoToColumnEditorNode(bodyInfo, component))
+              return
+            }
             showTableContextMenu(event.clientX, event.clientY, component.id)
           },
           onDragstart: (event) => {
@@ -1051,11 +1108,15 @@ function getEditorHtml(webview, runtimeUris) {
         const rows = resolveValue(component.dynamicProps?.rows || component.table?.rowsBinding, scope)
         const rowData = Array.isArray(rows) ? rows : (Array.isArray(component.props?.rows) ? component.props.rows : [])
         const rowKey = component.table?.rowKey || component.props?.rowKey || 'id'
+        const headerRows = getTableHeaderRows(component)
+        const headerHeight = headerRows > 1 ? 32 : 48
+        const rowRows = getTableRowRows(component)
+        const rowHeight = 42 * rowRows
         const props = {
           class: 'qt-ag-grid',
           style: getAgGridPreviewStyle(component),
           rowData: normalizeTablePreviewRows(rowData),
-          columnDefs: getTablePreviewColumns(component).map(toAgGridPreviewColumnDef),
+          columnDefs: buildTablePreviewColumnDefs(component),
           defaultColDef: {
             resizable: true,
             sortable: true,
@@ -1063,8 +1124,8 @@ function getEditorHtml(webview, runtimeUris) {
             minWidth: 70,
             suppressKeyboardEvent: suppressAgGridKeyboardEvent
           },
-          headerHeight: 48,
-          rowHeight: 42,
+          headerHeight,
+          rowHeight,
           animateRows: true,
           singleClickEdit: false,
           getRowId: (params) => String(params.data?.__qtRowId ?? params.data?.[rowKey] ?? params.node?.rowIndex ?? ''),
@@ -1073,6 +1134,7 @@ function getEditorHtml(webview, runtimeUris) {
             if (component.id !== selectedId) vscode.postMessage({ type: 'select', id: component.id })
           }
         }
+        if (headerRows > 1) props.groupHeaderHeight = 32
 
         if (pagination.mode !== 'none') {
           props.pagination = true
@@ -1150,8 +1212,13 @@ function getEditorHtml(webview, runtimeUris) {
       }
 
       function isEditableAgGridColumnDef(columnDef, params = {}) {
+        if (columnDef?.qtGroupRowCell === true) return true
         if (typeof columnDef?.editable === 'function') return Boolean(columnDef.editable(params))
         return columnDef?.editable === true
+      }
+
+      function isGroupRowCellAgGridColumnDef(columnDef) {
+        return columnDef?.qtGroupRowCell === true
       }
 
       function getTextInputFromEvent(event) {
@@ -1183,6 +1250,21 @@ function getEditorHtml(webview, runtimeUris) {
         if (Array.isArray(allColumns) && allColumns.length > 0) return allColumns
         const centerColumns = eventApi?.getDisplayedCenterColumns?.()
         return Array.isArray(centerColumns) ? centerColumns : []
+      }
+
+      function focusAgGridGroupRowCellInput(eventApi, rowIndex, columnId, inputIndex = 0) {
+        eventApi?.ensureIndexVisible?.(rowIndex)
+        eventApi?.ensureColumnVisible?.(columnId)
+        eventApi?.setFocusedCell?.(rowIndex, columnId)
+        setTimeout(() => {
+          const rows = Array.from(document.querySelectorAll('.ag-row'))
+          const row = rows.find((element) => element.getAttribute('row-index') === String(rowIndex))
+          const cells = row ? Array.from(row.querySelectorAll('.ag-cell')) : []
+          const cell = cells.find((element) => element.getAttribute('col-id') === String(columnId))
+          const input = cell?.querySelector?.('.qt-ag-group-input[data-qt-ag-group-input-index="' + (Number(inputIndex) || 0) + '"]')
+          input?.focus?.()
+          input?.select?.()
+        }, 0)
       }
 
       function moveAgGridEditingCell(params, key) {
@@ -1252,7 +1334,11 @@ function getEditorHtml(webview, runtimeUris) {
           eventApi.ensureColumnVisible?.(targetColumnId)
           eventApi.setFocusedCell?.(nextRowIndex, targetColumnId)
           if (shouldStartEditingAfterMove) {
-            eventApi.startEditingCell?.({ rowIndex: nextRowIndex, colKey: targetColumnId })
+            if (isGroupRowCellAgGridColumnDef(targetColumnDef)) {
+              focusAgGridGroupRowCellInput(eventApi, nextRowIndex, targetColumnId, 0)
+            } else {
+              eventApi.startEditingCell?.({ rowIndex: nextRowIndex, colKey: targetColumnId })
+            }
           }
         }, 0)
 
@@ -1300,10 +1386,12 @@ function getEditorHtml(webview, runtimeUris) {
         return declaration ? declaration.slice(declaration.indexOf(':') + 1).trim() : ''
       }
 
-      function toAgGridPreviewColumnDef(column) {
+      function toAgGridPreviewColumnDef(column, options = {}) {
         const sizing = getAgGridPreviewColumnSizing(column)
         const align = ['left', 'center', 'right'].includes(column?.align) ? column.align : ''
         const type = column?.type || 'text'
+        const groupRowCell = options.groupRowCell || null
+        const bodyRegion = options.bodyRegion || null
         const def = {
           colId: String(column?.name || column?.field || 'column'),
           headerName: String(column?.label || column?.name || column?.field || 'Column'),
@@ -1328,7 +1416,1037 @@ function getEditorHtml(webview, runtimeUris) {
           def.sortable = false
           def.filter = false
         }
+        if (groupRowCell) {
+          delete def.cellRenderer
+          def.editable = false
+          def.qtGroupRowCell = true
+          def.cellClass = mergeAgGridPreviewCellClass(def.cellClass, 'qt-ag-group-row-cell')
+          def.colSpan = (params) => params.node?.rowPinned ? 1 : groupRowCell.span
+          def.cellRenderer = createAgGridPreviewGroupRowCellRenderer(groupRowCell)
+        }
+        if (bodyRegion) {
+          delete def.cellRenderer
+          def.editable = false
+          def.qtGroupRowCell = true
+          def.cellClass = mergeAgGridPreviewCellClass(def.cellClass, 'qt-ag-group-row-cell')
+          def.colSpan = (params) => params.node?.rowPinned ? 1 : bodyRegion.span
+          def.cellRenderer = createAgGridPreviewBodyLayoutCellRenderer(bodyRegion)
+        }
         return def
+      }
+
+      function buildTablePreviewColumnDefs(component) {
+        const groupDepth = getTableHeaderRows(component) - 1
+        const sourceColumns = Array.isArray(component?.headerRows) || Array.isArray(component?.bodyRows)
+          ? applyTablePreviewHeaderLayoutToColumns(getTablePreviewColumns(component), component.headerRows, getTableHeaderRows(component))
+          : getTablePreviewColumns(component)
+        const bodyRegions = createTablePreviewBodyLayoutRegions(sourceColumns, component.bodyRows, getTableRowRows(component))
+        const columns = groupDepth > 0
+          ? prepareTablePreviewColumnsForHeaderRows(sourceColumns, groupDepth)
+          : sourceColumns
+        const rowRows = getTableRowRows(component)
+        if (groupDepth <= 0) {
+          return columns.map((column, index) =>
+            toAgGridPreviewColumnDef(column, { bodyRegion: bodyRegions.get(getTablePreviewColumnKey(column)) || bodyRegions.get(index) })
+          )
+        }
+        return buildTablePreviewColumnGroups(columns, groupDepth, 0, rowRows, bodyRegions)
+      }
+
+      function countTablePreviewLeafColumns(columns) {
+        return (Array.isArray(columns) ? columns : []).reduce(
+          (count, column) => count + (Array.isArray(column?.columns) ? countTablePreviewLeafColumns(column.columns) : 1),
+          0
+        )
+      }
+
+      function buildTablePreviewColumnGroups(columns, groupDepth, depth, rowRows, bodyRegions = new Map(), startIndex = 0) {
+        if (depth >= groupDepth) {
+          return columns.map((column, index) => {
+            const globalIndex = startIndex + index
+            return toAgGridPreviewColumnDef(column, {
+              bodyRegion: bodyRegions.get(getTablePreviewColumnKey(column)) || bodyRegions.get(globalIndex)
+            })
+          })
+        }
+        const groups = []
+        let index = 0
+        while (index < (columns || []).length) {
+          if (shouldRenderPreviewColumnLeafAtDepth(columns, index, depth, groupDepth)) {
+            groups.push({ leaf: columns[index] })
+            index += 1
+            continue
+          }
+          const column = columns[index]
+          const headerName = getTablePreviewColumnGroupName(column, depth)
+          const key = headerName || '__blank_' + depth + '_' + index
+          const groupColumns = [column]
+          index += 1
+          while (
+            index < columns.length &&
+            !shouldRenderPreviewColumnLeafAtDepth(columns, index, depth, groupDepth) &&
+            getTablePreviewColumnGroupName(columns[index], depth) === headerName
+          ) {
+            groupColumns.push(columns[index])
+            index += 1
+          }
+          groups.push({ key, headerName, columns: groupColumns })
+        }
+        let leafOffset = startIndex
+        return groups.map((group) => {
+          const groupStartIndex = leafOffset
+          const groupLeafCount = group.leaf ? 1 : countTablePreviewLeafColumns(group.columns)
+          leafOffset += groupLeafCount
+          if (group.leaf) {
+            return toAgGridPreviewColumnDef(group.leaf, {
+              bodyRegion: bodyRegions.get(getTablePreviewColumnKey(group.leaf)) || bodyRegions.get(groupStartIndex)
+            })
+          }
+          const shouldRenderGroupBodyCell = bodyRegions.size === 0 && rowRows > 1 && depth === groupDepth - 1 && group.columns.length > 0
+          return {
+            headerName: group.headerName,
+            marryChildren: true,
+            children: shouldRenderGroupBodyCell
+              ? buildTablePreviewGroupBodyChildren(group, depth)
+              : buildTablePreviewColumnGroups(group.columns, groupDepth, depth + 1, rowRows, bodyRegions, groupStartIndex)
+          }
+        })
+      }
+
+      function buildTablePreviewGroupBodyChildren(group, depth) {
+        const groupField = getTablePreviewColumnGroupFieldName(group.columns[0], depth, group.headerName)
+        const children = group.columns.map((column) => ({
+          field: String(column?.field || column?.name || 'column'),
+          label: String(column?.label || column?.name || column?.field || 'Column'),
+          editable: column?.editable !== false
+        }))
+        return group.columns.map((column, index) => toAgGridPreviewColumnDef(
+          column,
+          index === 0
+            ? {
+                groupRowCell: {
+                  span: group.columns.length,
+                  groupField,
+                  groupLabel: group.headerName,
+                  children
+                }
+              }
+            : {}
+        ))
+      }
+
+      function applyTablePreviewHeaderLayoutToColumns(columns, headerLayout, headerRows) {
+        const nextColumns = (Array.isArray(columns) ? columns : []).map((column) => ({ ...column }))
+        const visibleRows = getTableHeaderRows({ table: { headerRows } })
+        const groupRows = Math.max(0, visibleRows - 1)
+        const layoutRows = normalizeTablePreviewLayoutRows(headerLayout, nextColumns, visibleRows, 'header')
+        layoutRows.forEach((row, rowIndex) => {
+          row.forEach((cell) => {
+            getTablePreviewLayoutColumnIndexes(nextColumns, cell).forEach((columnIndex) => {
+              if (rowIndex >= groupRows) {
+                nextColumns[columnIndex].label = String(cell.label || nextColumns[columnIndex].label || nextColumns[columnIndex].name || '')
+              } else {
+                const headers = Array.isArray(nextColumns[columnIndex].headers) ? [...nextColumns[columnIndex].headers] : []
+                headers[rowIndex] = String(cell.label || nextColumns[columnIndex].label || nextColumns[columnIndex].name || '')
+                nextColumns[columnIndex].headers = headers
+                nextColumns[columnIndex].__qtForceHeaderRows = true
+              }
+            })
+          })
+        })
+        return nextColumns
+      }
+
+      function normalizeTablePreviewLayoutRows(rows, columns, rowCount = 1, kind = 'body') {
+        const columnKeys = (columns || []).map(getTablePreviewColumnKey)
+        const count = Math.min(3, Math.max(1, Math.round(Number(rowCount) || 1)))
+        const defaults = createDefaultTablePreviewLayoutRows(columns, count, kind)
+        const source = Array.isArray(rows) && rows.length > 0 ? rows.slice(0, count) : []
+        while (source.length < count) source.push(defaults[source.length] || defaults[0] || [])
+        return source.map((row) => {
+          const cells = Array.isArray(row) ? row : []
+          const normalized = []
+          let cursor = 0
+          cells.forEach((cell) => {
+            const rawKeys = Array.isArray(cell?.columns)
+              ? cell.columns.map(String).filter(Boolean)
+              : (cell?.field ? [String(cell.field)] : [])
+            const startKey = rawKeys.find((key) => columnKeys.includes(key)) || columnKeys[cursor] || ''
+            const start = columnKeys.indexOf(startKey)
+            if (start < 0) return
+            const span = Math.max(1, Math.min(columnKeys.length - start, Number(cell?.colspan || rawKeys.length || 1)))
+            const keys = columnKeys.slice(start, start + span)
+            cursor = start + span
+            normalized.push({
+              label: String(cell?.label || keys[0] || ''),
+              field: String(cell?.field || keys[0] || ''),
+              columns: keys,
+              colspan: span,
+              rowspan: Math.max(1, Math.min(count, Number(cell?.rowspan || 1)))
+            })
+          })
+          return normalized.length > 0 ? normalized : createDefaultTablePreviewLayoutRows(columns, 1, kind)[0]
+        })
+      }
+
+      function createDefaultTablePreviewLayoutRows(columns, rowCount = 1, kind = 'body') {
+        return Array.from({ length: Math.min(3, Math.max(1, Number(rowCount) || 1)) }, (_, rowIndex) =>
+          (columns || []).map((column, columnIndex) => ({
+            label: kind === 'header' && rowIndex > 0
+              ? 'title' + (columnIndex + 1)
+              : String(column?.label || column?.name || column?.field || 'Column'),
+            field: getTablePreviewColumnKey(column),
+            columns: [getTablePreviewColumnKey(column)],
+            colspan: 1,
+            rowspan: 1
+          }))
+        )
+      }
+
+      function getTablePreviewColumnKey(column) {
+        return String(column?.field || column?.name || '').trim()
+      }
+
+      function getTablePreviewLayoutColumnIndexes(columns, cell) {
+        const keys = Array.isArray(cell?.columns) ? cell.columns.map(String) : [String(cell?.field || '')]
+        return keys
+          .map((key) => columns.findIndex((column) => getTablePreviewColumnKey(column) === key))
+          .filter((index) => index >= 0)
+      }
+
+      function createTablePreviewBodyLayoutRegions(columns, bodyLayout, rowRows) {
+        const regions = new Map()
+        const rowCount = getTableRowRows({ table: { rowRows } })
+        if (rowCount <= 1 && !Array.isArray(bodyLayout)) return regions
+        const layoutRows = normalizeTablePreviewLayoutRows(bodyLayout, columns, rowCount)
+        const consumed = new Set()
+        const layoutCells = []
+
+        layoutRows.forEach((row, rowIndex) => {
+          row.forEach((cell) => {
+            const indexes = getTablePreviewLayoutColumnIndexes(columns, cell)
+            if (indexes.length === 0) return
+            const start = Math.min(...indexes)
+            const end = Math.max(...indexes)
+            layoutCells.push({
+              rowIndex,
+              start,
+              end,
+              span: Math.max(1, end - start + 1),
+              rowspan: Math.max(1, Number(cell.rowspan || 1)),
+              field: String(cell.field || getTablePreviewColumnKey(columns[start]) || ''),
+              label: String(cell.label || cell.field || ''),
+              editable: columns[start]?.editable !== false
+            })
+          })
+        })
+
+        for (let columnIndex = 0; columnIndex < columns.length; columnIndex += 1) {
+          if (consumed.has(columnIndex) || isTablePreviewModeColumn(columns[columnIndex])) continue
+          let regionEnd = columnIndex
+          let changed = true
+          const cells = []
+          const cellKeys = new Set()
+
+          while (changed) {
+            changed = false
+            layoutCells.forEach((cell) => {
+              if (cell.end < columnIndex || cell.start > regionEnd) return
+              const key = cell.rowIndex + ':' + cell.start + ':' + cell.end + ':' + cell.field
+              if (!cellKeys.has(key)) {
+                cellKeys.add(key)
+                cells.push(cell)
+                changed = true
+              }
+              if (cell.end > regionEnd) {
+                regionEnd = cell.end
+                changed = true
+              }
+            })
+          }
+
+          if (cells.length === 0) continue
+          const regionSpan = regionEnd - columnIndex + 1
+          const needsRenderer = regionSpan > 1 || rowCount > 1 || cells.length > 1
+          if (!needsRenderer) continue
+          for (let index = columnIndex + 1; index <= regionEnd; index += 1) consumed.add(index)
+          const region = {
+            span: regionSpan,
+            rowCount,
+            cells: cells
+              .slice()
+              .sort((left, right) => left.rowIndex - right.rowIndex || left.start - right.start)
+              .map((cell, inputIndex) => ({
+                ...cell,
+                inputIndex,
+                localStart: Math.max(0, cell.start - columnIndex)
+              }))
+          }
+          regions.set(columnIndex, region)
+          regions.set(getTablePreviewColumnKey(columns[columnIndex]), region)
+        }
+        return regions
+      }
+
+      function createAgGridPreviewGroupRowCellRenderer(options) {
+        return (params) => {
+          const data = params.data || {}
+          const children = Array.isArray(options.children) ? options.children : []
+          const stop = (event) => event.stopPropagation()
+          const setValue = (field, value) => {
+            if (!field || !params.data) return
+            params.data[field] = value
+            if (params.data.mode !== 'C' && params.data.mode !== 'D') params.data.mode = 'U'
+            params.api?.refreshCells?.({ rowNodes: params.node ? [params.node] : undefined, force: true })
+          }
+          const getGroupInput = (rowIndex, inputIndex, targetColumnId) => {
+            const columnId = targetColumnId || params.column?.getColId?.() || params.colDef?.colId || params.colDef?.field
+            const rows = Array.from(document.querySelectorAll('.ag-row'))
+            const row = rows.find((element) => element.getAttribute('row-index') === String(rowIndex))
+            const cells = row ? Array.from(row.querySelectorAll('.ag-cell')) : []
+            const cell = cells.find((element) => element.getAttribute('col-id') === String(columnId))
+            return cell?.querySelector('.qt-ag-group-input[data-qt-ag-group-input-index="' + inputIndex + '"]') ||
+              cell?.querySelector('.qt-ag-layout-input[data-qt-ag-layout-input-index="' + inputIndex + '"]') ||
+              null
+          }
+          const focusGroupInput = (rowIndex, inputIndex) => {
+            const columnId = params.column?.getColId?.() || params.colDef?.colId || params.colDef?.field
+            params.api?.ensureIndexVisible?.(rowIndex)
+            params.api?.ensureColumnVisible?.(columnId)
+            params.api?.setFocusedCell?.(rowIndex, columnId)
+            setTimeout(() => {
+              const targetInput = getGroupInput(rowIndex, inputIndex)
+              targetInput?.focus?.()
+              targetInput?.select?.()
+            }, 0)
+          }
+          const getDisplayedColumns = () => {
+            const allColumns = params.api?.getAllDisplayedColumns?.()
+            if (Array.isArray(allColumns) && allColumns.length > 0) return allColumns
+            const centerColumns = params.api?.getDisplayedCenterColumns?.()
+            return Array.isArray(centerColumns) ? centerColumns : []
+          }
+          const getCurrentColumnIndex = () => {
+            const columnId = params.column?.getColId?.() || params.colDef?.colId || params.colDef?.field
+            return getDisplayedColumns().findIndex((column) => column?.getColId?.() === columnId)
+          }
+          const isEditableColumnDef = (columnDef) => {
+            if (columnDef?.qtGroupRowCell === true) return true
+            if (typeof columnDef?.editable === 'function') {
+              return Boolean(columnDef.editable({ ...params, colDef: columnDef }))
+            }
+            return columnDef?.editable === true
+          }
+          const focusGridCell = (rowIndex, columnIndex) => {
+            const columns = getDisplayedColumns()
+            const targetColumn = columns[columnIndex]
+            const targetColumnId = targetColumn?.getColId?.()
+            const targetColumnDef = targetColumn?.getColDef?.() || {}
+            if (!targetColumnId || !isEditableColumnDef(targetColumnDef)) return false
+            params.api?.ensureIndexVisible?.(rowIndex)
+            params.api?.ensureColumnVisible?.(targetColumnId)
+            params.api?.setFocusedCell?.(rowIndex, targetColumnId)
+            setTimeout(() => {
+              if (targetColumnDef.qtGroupRowCell === true) {
+                const targetInput = getGroupInput(rowIndex, 0, targetColumnId)
+                targetInput?.focus?.()
+                targetInput?.select?.()
+              } else {
+                params.api?.startEditingCell?.({ rowIndex, colKey: targetColumnId })
+              }
+            }, 0)
+            return true
+          }
+          const shouldKeepHorizontalArrow = (event, input) => {
+            if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return false
+            if (typeof input.selectionStart !== 'number' || typeof input.selectionEnd !== 'number') return false
+            if (input.selectionStart !== input.selectionEnd) return true
+            const textLength = String(input.value || '').length
+            return event.key === 'ArrowLeft' ? input.selectionStart > 0 : input.selectionEnd < textLength
+          }
+          const moveGroupInput = (event, input) => {
+            if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter'].includes(event.key)) return false
+            if (shouldKeepHorizontalArrow(event, input)) return false
+            if (event.key === 'Enter' && event.shiftKey) return false
+            const passThrough = 'qt-ag-pass-through'
+
+            const currentIndex = Number(input.dataset.qtAgGroupInputIndex || 0)
+            const currentRowIndex = Number(params.node?.rowIndex)
+            const displayedRowCount = Number(params.api?.getDisplayedRowCount?.() || 0)
+            let nextIndex = currentIndex
+            let nextRowIndex = currentRowIndex
+
+            if (event.key === 'ArrowDown' || event.key === 'Enter') {
+              nextRowIndex += 1
+            } else if (event.key === 'ArrowUp') {
+              nextRowIndex -= 1
+            } else if (event.key === 'ArrowRight') {
+              if (currentIndex < children.length) nextIndex += 1
+              else {
+                const moved = focusGridCell(currentRowIndex, getCurrentColumnIndex() + children.length)
+                if (!moved) return passThrough
+                event.preventDefault()
+                event.stopPropagation()
+                setValue(input.dataset.qtAgGroupField || '', input.value)
+                return true
+              }
+            } else if (event.key === 'ArrowLeft') {
+              if (currentIndex > 0) nextIndex -= 1
+              else {
+                const moved = focusGridCell(currentRowIndex, getCurrentColumnIndex() - 1)
+                if (!moved) return passThrough
+                event.preventDefault()
+                event.stopPropagation()
+                setValue(input.dataset.qtAgGroupField || '', input.value)
+                return true
+              }
+            }
+
+            if (!Number.isInteger(nextRowIndex) || nextRowIndex < 0 || nextRowIndex >= displayedRowCount) return passThrough
+            event.preventDefault()
+            event.stopPropagation()
+            setValue(input.dataset.qtAgGroupField || '', input.value)
+            focusGroupInput(nextRowIndex, nextIndex)
+            return true
+          }
+          const handleKeydown = (event, input) => {
+            if (event.key === 'Enter' && event.shiftKey) {
+              event.preventDefault()
+              event.stopPropagation()
+              setValue(input.dataset.qtAgGroupField || '', input.value)
+              return
+            }
+            const moved = moveGroupInput(event, input)
+            if (moved === true || moved === 'qt-ag-pass-through') return
+            event.stopPropagation()
+          }
+          const createInput = (field, label, className, editable = true, inputIndex = 0) => {
+            const input = document.createElement('input')
+            input.className = className
+            input.dataset.qtAgGroupInputIndex = String(inputIndex)
+            input.dataset.qtAgGroupField = field || ''
+            input.value = data[field] == null ? '' : String(data[field])
+            input.placeholder = label || field || ''
+            input.readOnly = editable === false
+            input.addEventListener('mousedown', stop)
+            input.addEventListener('click', stop)
+            input.addEventListener('dblclick', stop)
+            input.addEventListener('keydown', (event) => handleKeydown(event, input))
+            input.addEventListener('change', () => setValue(field, input.value))
+            input.addEventListener('blur', () => setValue(field, input.value))
+            return input
+          }
+          const root = document.createElement('div')
+          root.className = 'qt-ag-group-row-editor'
+          root.style.setProperty('--qt-group-child-count', String(Math.max(1, children.length)))
+          root.addEventListener('mousedown', stop)
+          root.addEventListener('click', stop)
+          root.addEventListener('dblclick', stop)
+          root.appendChild(createInput(options.groupField, options.groupLabel, 'qt-ag-group-input qt-ag-group-main', true, 0))
+          const childWrap = document.createElement('div')
+          childWrap.className = 'qt-ag-group-children'
+          children.forEach((child, index) => {
+            childWrap.appendChild(createInput(child.field, child.label, 'qt-ag-group-input', child.editable, index + 1))
+          })
+          root.appendChild(childWrap)
+          return root
+        }
+      }
+
+      function createAgGridPreviewBodyLayoutCellRenderer(region) {
+        return (params) => {
+          const data = params.data || {}
+          const stop = (event) => event.stopPropagation()
+          const setValue = (field, value) => {
+            if (!field || !params.data) return
+            params.data[field] = value
+            if (params.data.mode !== 'C' && params.data.mode !== 'D') params.data.mode = 'U'
+            params.api?.refreshCells?.({ rowNodes: params.node ? [params.node] : undefined, force: true })
+          }
+          const getRegionInput = (rowIndex, inputIndex, targetColumnId) => {
+            const columnId = targetColumnId || params.column?.getColId?.() || params.colDef?.colId || params.colDef?.field
+            const rows = Array.from(document.querySelectorAll('.ag-row'))
+            const row = rows.find((element) => element.getAttribute('row-index') === String(rowIndex))
+            const cells = row ? Array.from(row.querySelectorAll('.ag-cell')) : []
+            const cell = cells.find((element) => element.getAttribute('col-id') === String(columnId))
+            return cell?.querySelector('.qt-ag-layout-input[data-qt-ag-layout-input-index="' + inputIndex + '"]') || null
+          }
+          const focusRegionInput = (rowIndex, inputIndex) => {
+            const columnId = params.column?.getColId?.() || params.colDef?.colId || params.colDef?.field
+            params.api?.ensureIndexVisible?.(rowIndex)
+            params.api?.ensureColumnVisible?.(columnId)
+            params.api?.setFocusedCell?.(rowIndex, columnId)
+            setTimeout(() => {
+              const targetInput = getRegionInput(rowIndex, inputIndex, columnId)
+              targetInput?.focus?.()
+              targetInput?.select?.()
+            }, 0)
+          }
+          const getCellElement = (rowIndex, targetColumnId) => {
+            const columnId = targetColumnId || params.column?.getColId?.() || params.colDef?.colId || params.colDef?.field
+            const rows = Array.from(document.querySelectorAll('.ag-row'))
+            const row = rows.find((element) => element.getAttribute('row-index') === String(rowIndex))
+            const cells = row ? Array.from(row.querySelectorAll('.ag-cell')) : []
+            return cells.find((element) => element.getAttribute('col-id') === String(columnId)) || null
+          }
+          const findLayoutInputByBodyRow = (rowIndex, targetColumnId, bodyRowIndex, anchorColumn = 0) => {
+            const cell = getCellElement(rowIndex, targetColumnId)
+            const inputs = Array.from(cell?.querySelectorAll?.('.qt-ag-layout-input') || [])
+            if (inputs.length === 0) return null
+            const rows = inputs.map((item) => ({
+              input: item,
+              rowStart: Math.max(0, Number(item.dataset.qtAgLayoutRowStart || 0)),
+              rowEnd: Math.max(0, Number(item.dataset.qtAgLayoutRowEnd || item.dataset.qtAgLayoutRowStart || 0)),
+              colStart: Math.max(0, Number(item.dataset.qtAgLayoutColStart || 0))
+            }))
+            const candidates = rows.filter((item) => bodyRowIndex >= item.rowStart && bodyRowIndex <= item.rowEnd)
+            const pool = candidates.length > 0 ? candidates : rows
+            return pool
+              .slice()
+              .sort((left, right) =>
+                Math.abs(left.colStart - anchorColumn) - Math.abs(right.colStart - anchorColumn) ||
+                left.rowStart - right.rowStart
+              )[0]?.input || null
+          }
+          const regionCells = Array.isArray(region.cells) ? region.cells : []
+          const regionRowCount = Math.max(1, Number(region.rowCount || 1))
+          const getCellByInputIndex = (inputIndex) =>
+            regionCells.find((cell) => Number(cell.inputIndex || 0) === Number(inputIndex))
+          const getCellStart = (cell) => Math.max(0, Number(cell?.localStart || 0))
+          const getCellSpan = (cell) => Math.max(1, Number(cell?.span || 1))
+          const getCellEnd = (cell) => getCellStart(cell) + getCellSpan(cell) - 1
+          const getCellRowStart = (cell) => Math.max(0, Number(cell?.rowIndex || 0))
+          const getCellRowSpan = (cell) => Math.max(1, Number(cell?.rowspan || 1))
+          const getCellRowEnd = (cell) => getCellRowStart(cell) + getCellRowSpan(cell) - 1
+          const chooseCellAt = (bodyRowIndex, anchorColumn) => {
+            const candidates = regionCells.filter((cell) =>
+              bodyRowIndex >= getCellRowStart(cell) && bodyRowIndex <= getCellRowEnd(cell)
+            )
+            const exact = candidates.find((cell) =>
+              anchorColumn >= getCellStart(cell) && anchorColumn <= getCellEnd(cell)
+            )
+            if (exact) return exact
+            return candidates
+              .slice()
+              .sort((left, right) =>
+                Math.abs(getCellStart(left) - anchorColumn) - Math.abs(getCellStart(right) - anchorColumn)
+              )[0] || null
+          }
+          const findHorizontalCell = (currentCell, direction) => {
+            const bodyRowIndex = getCellRowStart(currentCell)
+            const targetColumn = direction > 0 ? getCellEnd(currentCell) + 1 : getCellStart(currentCell) - 1
+            const target = chooseCellAt(bodyRowIndex, targetColumn)
+            return target && target !== currentCell ? target : null
+          }
+          const findVerticalCell = (currentCell, direction, dataRowIndex, displayedRowCount) => {
+            const anchorColumn = getCellStart(currentCell)
+            const firstBodyRow = direction > 0 ? getCellRowEnd(currentCell) + 1 : getCellRowStart(currentCell) - 1
+            for (
+              let bodyRowIndex = firstBodyRow;
+              bodyRowIndex >= 0 && bodyRowIndex < regionRowCount;
+              bodyRowIndex += direction
+            ) {
+              const target = chooseCellAt(bodyRowIndex, anchorColumn)
+              if (target) return { rowIndex: dataRowIndex, cell: target }
+            }
+
+            const nextDataRowIndex = dataRowIndex + direction
+            if (!Number.isInteger(nextDataRowIndex) || nextDataRowIndex < 0 || nextDataRowIndex >= displayedRowCount) {
+              return null
+            }
+
+            const startBodyRow = direction > 0 ? 0 : regionRowCount - 1
+            for (
+              let bodyRowIndex = startBodyRow;
+              bodyRowIndex >= 0 && bodyRowIndex < regionRowCount;
+              bodyRowIndex += direction
+            ) {
+              const target = chooseCellAt(bodyRowIndex, anchorColumn)
+              if (target) return { rowIndex: nextDataRowIndex, cell: target }
+            }
+            return null
+          }
+          const shouldKeepHorizontalArrow = (event, input) => {
+            if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return false
+            if (typeof input.selectionStart !== 'number' || typeof input.selectionEnd !== 'number') return false
+            if (input.selectionStart !== input.selectionEnd) return true
+            const textLength = String(input.value || '').length
+            return event.key === 'ArrowLeft' ? input.selectionStart > 0 : input.selectionEnd < textLength
+          }
+          const moveInput = (event, input) => {
+            if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter'].includes(event.key)) return false
+            if (event.key === 'Enter' && event.shiftKey) return false
+            if (shouldKeepHorizontalArrow(event, input)) return false
+            const passThrough = 'qt-ag-pass-through'
+            const inputs = Array.from(root.querySelectorAll('.qt-ag-layout-input'))
+            const currentIndex = Number(input.dataset.qtAgLayoutInputIndex || 0)
+            const currentCell = getCellByInputIndex(currentIndex)
+            const currentRowIndex = Number(params.node?.rowIndex)
+            const displayedRowCount = Number(params.api?.getDisplayedRowCount?.() || 0)
+            const getDisplayedColumns = () => {
+              const allColumns = params.api?.getAllDisplayedColumns?.()
+              if (Array.isArray(allColumns) && allColumns.length > 0) return allColumns
+              const centerColumns = params.api?.getDisplayedCenterColumns?.()
+              return Array.isArray(centerColumns) ? centerColumns : []
+            }
+            const getCurrentColumnIndex = () => {
+              const columnId = params.column?.getColId?.() || params.colDef?.colId || params.colDef?.field
+              return getDisplayedColumns().findIndex((column) => column?.getColId?.() === columnId)
+            }
+            const focusGridCell = (rowIndex, columnIndex, bodyRowIndex = 0, anchorColumn = 0) => {
+              const columns = getDisplayedColumns()
+              const targetColumn = columns[columnIndex]
+              const targetColumnId = targetColumn?.getColId?.()
+              const targetColumnDef = targetColumn?.getColDef?.() || {}
+              if (!targetColumnId) return false
+              params.api?.ensureIndexVisible?.(rowIndex)
+              params.api?.ensureColumnVisible?.(targetColumnId)
+              params.api?.setFocusedCell?.(rowIndex, targetColumnId)
+              setTimeout(() => {
+                const targetInput = findLayoutInputByBodyRow(rowIndex, targetColumnId, bodyRowIndex, anchorColumn) ||
+                  getRegionInput(rowIndex, 0, targetColumnId) ||
+                  document.querySelector('.ag-row[row-index="' + rowIndex + '"] .ag-cell[col-id="' + targetColumnId + '"] .qt-ag-group-input[data-qt-ag-group-input-index="0"]')
+                if (targetInput) {
+                  targetInput.focus?.()
+                  targetInput.select?.()
+                } else if (targetColumnDef.editable === true || typeof targetColumnDef.editable === 'function') {
+                  params.api?.startEditingCell?.({ rowIndex, colKey: targetColumnId })
+                }
+              }, 0)
+              return true
+            }
+            let nextInputIndex = currentIndex
+            let nextRowIndex = currentRowIndex
+            if (event.key === 'ArrowLeft') nextInputIndex -= 1
+            if (event.key === 'ArrowRight') nextInputIndex += 1
+            if (event.key === 'ArrowDown' || event.key === 'Enter') nextRowIndex += 1
+            if (event.key === 'ArrowUp') nextRowIndex -= 1
+            if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+              const targetCell = currentCell
+                ? findHorizontalCell(currentCell, event.key === 'ArrowRight' ? 1 : -1)
+                : null
+              const nextInput = targetCell
+                ? inputs.find((candidate) => Number(candidate.dataset.qtAgLayoutInputIndex || 0) === Number(targetCell.inputIndex || 0))
+                : inputs[nextInputIndex]
+              if (!nextInput) {
+                const nextColumnIndex = getCurrentColumnIndex() + (event.key === 'ArrowRight' ? Math.max(1, region.span || 1) : -1)
+                const moved = focusGridCell(
+                  currentRowIndex,
+                  nextColumnIndex,
+                  currentCell ? getCellRowStart(currentCell) : 0,
+                  currentCell ? getCellStart(currentCell) : 0
+                )
+                if (!moved) return passThrough
+                event.preventDefault()
+                event.stopPropagation()
+                setValue(input.dataset.qtAgLayoutField || '', input.value)
+                return true
+              }
+              event.preventDefault()
+              event.stopPropagation()
+              setValue(input.dataset.qtAgLayoutField || '', input.value)
+              nextInput.focus()
+              nextInput.select()
+              return true
+            }
+            const target = currentCell
+              ? findVerticalCell(currentCell, event.key === 'ArrowUp' ? -1 : 1, currentRowIndex, displayedRowCount)
+              : null
+            if (!target && (!Number.isInteger(nextRowIndex) || nextRowIndex < 0 || nextRowIndex >= displayedRowCount)) return passThrough
+            event.preventDefault()
+            event.stopPropagation()
+            setValue(input.dataset.qtAgLayoutField || '', input.value)
+            if (target) {
+              focusRegionInput(target.rowIndex, target.cell.inputIndex)
+            } else {
+              focusRegionInput(nextRowIndex, currentIndex)
+            }
+            return true
+          }
+          const createInput = (cell) => {
+            const input = document.createElement('input')
+            input.className = 'qt-ag-layout-input'
+            input.dataset.qtAgLayoutInputIndex = String(cell.inputIndex || 0)
+            input.dataset.qtAgLayoutField = cell.field || ''
+            input.dataset.qtAgLayoutRowStart = String(Math.max(0, Number(cell.rowIndex || 0)))
+            input.dataset.qtAgLayoutRowEnd = String(Math.max(0, Number(cell.rowIndex || 0)) + Math.max(1, Number(cell.rowspan || 1)) - 1)
+            input.dataset.qtAgLayoutColStart = String(Math.max(0, Number(cell.localStart || 0)))
+            input.dataset.qtAgLayoutColEnd = String(Math.max(0, Number(cell.localStart || 0)) + Math.max(1, Number(cell.span || 1)) - 1)
+            input.value = data[cell.field] == null ? '' : String(data[cell.field])
+            input.placeholder = cell.label || cell.field || ''
+            input.style.gridColumn = String((cell.localStart || 0) + 1) + ' / span ' + String(Math.max(1, cell.span || 1))
+            input.style.gridRow = String((cell.rowIndex || 0) + 1) + ' / span ' + String(Math.max(1, cell.rowspan || 1))
+            input.readOnly = cell.editable === false
+            input.addEventListener('mousedown', stop)
+            input.addEventListener('click', stop)
+            input.addEventListener('dblclick', stop)
+            input.addEventListener('keydown', (event) => {
+              if (event.key === 'Enter' && event.shiftKey) {
+                event.preventDefault()
+                event.stopPropagation()
+                setValue(input.dataset.qtAgLayoutField || '', input.value)
+                return
+              }
+              const moved = moveInput(event, input)
+              if (moved === true || moved === 'qt-ag-pass-through') return
+              event.stopPropagation()
+            })
+            input.addEventListener('change', () => setValue(cell.field, input.value))
+            input.addEventListener('blur', () => setValue(cell.field, input.value))
+            return input
+          }
+          const root = document.createElement('div')
+          root.className = 'qt-ag-layout-row-editor'
+          root.style.setProperty('--qt-layout-column-count', String(Math.max(1, region.span || 1)))
+          root.style.setProperty('--qt-layout-row-count', String(Math.max(1, region.rowCount || 1)))
+          root.addEventListener('mousedown', stop)
+          root.addEventListener('click', stop)
+          root.addEventListener('dblclick', stop)
+          ;(region.cells || []).forEach((cell) => root.appendChild(createInput(cell)))
+          return root
+        }
+      }
+
+      function mergeAgGridPreviewCellClass(currentClass, nextClass) {
+        if (!currentClass) return nextClass
+        if (typeof currentClass === 'string') return currentClass + ' ' + nextClass
+        if (Array.isArray(currentClass)) return currentClass.concat(nextClass)
+        return currentClass
+      }
+
+      function shouldRenderPreviewColumnLeafAtDepth(columns, index, depth, groupDepth) {
+        const column = columns[index]
+        const headerName = getTablePreviewColumnGroupName(column, depth)
+        if (!headerName) return true
+        if (column?.__qtForceHeaderRows) return false
+        if (Array.isArray(column?.__qtGeneratedHeaders) && column.__qtGeneratedHeaders[depth]) return false
+        const displayName = getTableColumnDisplayText(column)
+        const hasAdjacentSameHeader =
+          getTablePreviewColumnGroupName(columns[index - 1], depth) === headerName ||
+          getTablePreviewColumnGroupName(columns[index + 1], depth) === headerName
+        const hasDeeperHeader = hasPreviewColumnGroupHeaderBelow(column, depth, groupDepth)
+        return !hasAdjacentSameHeader && !hasDeeperHeader && headerName === displayName
+      }
+
+      function hasPreviewColumnGroupHeaderBelow(column, depth, groupDepth) {
+        for (let index = depth + 1; index < groupDepth; index += 1) {
+          if (getTablePreviewColumnGroupName(column, index)) return true
+        }
+        return false
+      }
+
+      function prepareTablePreviewColumnsForHeaderRows(columns, groupDepth) {
+        return (Array.isArray(columns) ? columns : []).map((column) => {
+          const next = { ...column }
+          const headers = getTablePreviewExistingColumnHeaders(next).slice(0, groupDepth)
+          const generatedHeaders = []
+
+          for (let index = 0; index < groupDepth; index += 1) {
+            if (!String(headers[index] || '').trim() && !isTablePreviewModeColumn(next)) {
+              headers[index] = getTableColumnDisplayText(next)
+              generatedHeaders[index] = true
+            } else {
+              headers[index] = String(headers[index] || '').trim()
+              generatedHeaders[index] = false
+            }
+          }
+
+          if (headers.some(Boolean)) next.headers = headers
+          if (generatedHeaders.some(Boolean)) next.__qtGeneratedHeaders = generatedHeaders
+          return next
+        })
+      }
+
+      function getTablePreviewExistingColumnHeaders(column) {
+        if (Array.isArray(column?.headers)) return column.headers.slice()
+        return [
+          column?.header1 ?? column?.headerGroup ?? column?.group ?? '',
+          column?.header2 ?? column?.headerSubGroup ?? ''
+        ]
+      }
+
+      function isTablePreviewModeColumn(column) {
+        return column?.modeColumn === true || column?.field === 'mode' || column?.name === 'mode'
+      }
+
+      function getTablePreviewColumnGroupName(column, index) {
+        if (Array.isArray(column?.headers)) return String(column.headers[index] || '')
+        if (index === 0) return String(column?.header1 || column?.headerGroup || column?.group || '')
+        if (index === 1) return String(column?.header2 || column?.headerSubGroup || '')
+        return ''
+      }
+
+      function getTablePreviewColumnGroupFieldName(column, index, fallback) {
+        if (Array.isArray(column?.headerFields)) return String(column.headerFields[index] || fallback || '')
+        if (Array.isArray(column?.groupFields)) return String(column.groupFields[index] || fallback || '')
+        if (index === 0) return String(column?.headerField || column?.groupField || fallback || '')
+        return String(fallback || '')
+      }
+
+      function getTableHeaderRows(component) {
+        const number = Number(component?.table?.headerRows ?? 1)
+        if (!Number.isFinite(number)) return 1
+        return Math.min(3, Math.max(1, Math.round(number)))
+      }
+
+      function getTableRowRows(component) {
+        const number = Number(component?.table?.rowRows ?? 1)
+        if (!Number.isFinite(number)) return 1
+        return Math.min(3, Math.max(1, Math.round(number)))
+      }
+
+      function getTableHeaderEventInfo(event, component) {
+        const headerCell = event.target?.closest?.('.ag-header-cell, .ag-header-group-cell')
+        if (!headerCell || !event.currentTarget?.contains?.(headerCell)) return null
+        const columnIndexes = getAgHeaderColumnIndexesFromCell(event.currentTarget, headerCell, component)
+        if (columnIndexes.length === 0) return null
+        const headerRow = headerCell.closest?.('.ag-header-row')
+        const rowIndex = getAgHeaderDomRowIndex(headerRow)
+        const start = Math.min(...columnIndexes)
+        const end = Math.max(...columnIndexes)
+        return {
+          rowIndex,
+          columnIndex: start,
+          start,
+          end,
+          isGroup: headerCell.classList.contains('ag-header-group-cell'),
+          element: headerCell
+        }
+      }
+
+      function markTableHeaderDomSelection(wrapper, info) {
+        wrapper.querySelectorAll?.('.qt-ag-header-selected')
+          .forEach((element) => element.classList.remove('qt-ag-header-selected'))
+        info?.element?.classList?.add('qt-ag-header-selected')
+      }
+
+      function getAgHeaderDomRowIndex(headerRow) {
+        const raw = headerRow?.getAttribute?.('aria-rowindex') ||
+          headerRow?.dataset?.rowIndex ||
+          headerRow?.getAttribute?.('row-index')
+        const number = Number(raw)
+        if (Number.isFinite(number)) return Math.max(0, Math.round(number) - 1)
+        const rows = [...(headerRow?.parentElement?.querySelectorAll?.('.ag-header-row') || [])]
+        const index = rows.indexOf(headerRow)
+        return index >= 0 ? index : 0
+      }
+
+      function getAgHeaderColumnIndexesFromCell(wrapper, headerCell, component) {
+        const headerBounds = headerCell.getBoundingClientRect()
+        const leafCells = [...wrapper.querySelectorAll('.ag-header-cell')]
+          .filter((cell) => !cell.classList.contains('ag-header-group-cell'))
+        const indexes = []
+        leafCells.forEach((cell, orderIndex) => {
+          const bounds = cell.getBoundingClientRect()
+          const overlaps = bounds.right > headerBounds.left + 1 && bounds.left < headerBounds.right - 1
+          if (!overlaps) return
+          const sourceIndex = getTableSourceColumnIndexByHeaderCell(component, cell, orderIndex)
+          if (sourceIndex >= 0 && !indexes.includes(sourceIndex)) indexes.push(sourceIndex)
+        })
+        return indexes.sort((left, right) => left - right)
+      }
+
+      function getTableSourceColumnIndexByHeaderCell(component, headerCell, orderIndex) {
+        const colId = headerCell.getAttribute('col-id') || headerCell.getAttribute('colId') || ''
+        const previewColumns = getTablePreviewColumns(component)
+        let previewIndex = previewColumns.findIndex((column) =>
+          String(column?.name || column?.field || 'column') === String(colId)
+        )
+        if (previewIndex < 0) previewIndex = orderIndex
+        const previewColumn = previewColumns[previewIndex]
+        if (!previewColumn || previewColumn.modeColumn || previewColumn.field === 'mode') return -1
+        const sourceColumns = Array.isArray(component?.columns) ? component.columns : []
+        const sourceIndex = sourceColumns.indexOf(previewColumn)
+        if (sourceIndex >= 0) return sourceIndex
+        const modeOffset = previewColumns.some((column) => column?.modeColumn || column?.field === 'mode') ? 1 : 0
+        const fallbackIndex = previewIndex - modeOffset
+        return fallbackIndex >= 0 && fallbackIndex < sourceColumns.length ? fallbackIndex : -1
+      }
+
+      function tableHeaderInfoToColumnEditorNode(info, component) {
+        const cellIndex = getTableLayoutCellIndexAtColumn(component.headerRows, component, info.rowIndex, info.columnIndex)
+        if (cellIndex >= 0) {
+          return { kind: 'layout', layout: 'header', rowIndex: info.rowIndex, cellIndex }
+        }
+        return { kind: 'column', index: info.columnIndex }
+      }
+
+      function tableBodyInfoToColumnEditorNode(info) {
+        return { kind: 'layout', layout: 'body', rowIndex: info.rowIndex, cellIndex: info.cellIndex }
+      }
+
+      function getTableBodyLayoutEventInfo(event, component) {
+        const input = event.target?.closest?.('.qt-ag-layout-input')
+        if (input) {
+          const field = input.dataset.qtAgLayoutField || ''
+          const rows = normalizeTablePreviewLayoutRows(component.bodyRows, getTablePreviewColumns(component), getTableRowRows(component))
+          for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
+            const cellIndex = rows[rowIndex].findIndex((cell) => (cell.columns || []).includes(field) || cell.field === field)
+            if (cellIndex >= 0) {
+              const cell = rows[rowIndex][cellIndex]
+              const indexes = getTablePreviewLayoutColumnIndexes(getTablePreviewColumns(component), cell)
+              return {
+                rowIndex,
+                cellIndex,
+                columnIndex: Math.min(...indexes),
+                start: Math.min(...indexes),
+                end: Math.max(...indexes)
+              }
+            }
+          }
+        }
+        const bodyCell = event.target?.closest?.('.ag-center-cols-container .ag-cell, .ag-pinned-left-cols-container .ag-cell, .ag-pinned-right-cols-container .ag-cell')
+        if (!bodyCell || !event.currentTarget?.contains?.(bodyCell)) return null
+        const colId = bodyCell.getAttribute('col-id') || ''
+        const columns = getTablePreviewColumns(component)
+        const columnIndex = columns.findIndex((column) => String(column?.name || column?.field || '') === colId)
+        if (columnIndex < 0) return null
+        const cellIndex = getTableLayoutCellIndexAtColumn(component.bodyRows, component, 0, columnIndex)
+        if (cellIndex < 0) return null
+        return { rowIndex: 0, cellIndex, columnIndex, start: columnIndex, end: columnIndex }
+      }
+
+      function getTableLayoutCellIndexAtColumn(rows, component, rowIndex, columnIndex) {
+        const columns = getTablePreviewColumns(component)
+        const layoutRows = normalizeTablePreviewLayoutRows(rows, columns, Math.max(rowIndex + 1, Array.isArray(rows) ? rows.length : 1))
+        const row = layoutRows[rowIndex] || []
+        return row.findIndex((cell) => {
+          const indexes = getTablePreviewLayoutColumnIndexes(columns, cell)
+          if (indexes.length === 0) return false
+          return columnIndex >= Math.min(...indexes) && columnIndex <= Math.max(...indexes)
+        })
+      }
+
+      function getTableHeaderGroupRange(component, rowIndex, columnIndex) {
+        const columns = Array.isArray(component?.columns) ? component.columns : []
+        const target = getTableColumnHeaderValue(columns[columnIndex], rowIndex) ||
+          getTableColumnDisplayText(columns[columnIndex])
+        let start = columnIndex
+        let end = columnIndex
+        while (start > 0) {
+          const value = getTableColumnHeaderValue(columns[start - 1], rowIndex) ||
+            getTableColumnDisplayText(columns[start - 1])
+          if (value !== target) break
+          start -= 1
+        }
+        while (end + 1 < columns.length) {
+          const value = getTableColumnHeaderValue(columns[end + 1], rowIndex) ||
+            getTableColumnDisplayText(columns[end + 1])
+          if (value !== target) break
+          end += 1
+        }
+        return { start, end }
+      }
+
+      function handleTableHeaderCtrlClick(component, info) {
+        const current = {
+          componentId: component.id,
+          rowIndex: info.rowIndex,
+          columnIndex: info.columnIndex
+        }
+        const previous = selectedTableHeaderMergeCells.filter((cell) =>
+          cell.componentId === current.componentId && cell.rowIndex === current.rowIndex
+        )
+        if (!previous.some((cell) => cell.columnIndex === current.columnIndex)) {
+          previous.push(current)
+        }
+        selectedTableHeaderMergeCells = previous
+        if (selectedTableHeaderMergeCells.length < 2) return
+
+        const indexes = selectedTableHeaderMergeCells
+          .map((cell) => cell.columnIndex)
+          .sort((left, right) => left - right)
+        const minIndex = indexes[0]
+        const maxIndex = indexes[indexes.length - 1]
+        const isContiguous = indexes.length === maxIndex - minIndex + 1 &&
+          indexes.every((index, offset) => index === minIndex + offset)
+        if (!isContiguous) return
+
+        mergeOrSplitTableLayoutCells(component, 'header', current.rowIndex, minIndex, maxIndex)
+        selectedTableHeaderMergeCells = []
+      }
+
+      function handleTableBodyCtrlClick(component, info) {
+        const current = {
+          componentId: component.id,
+          rowIndex: info.rowIndex,
+          cellIndex: info.cellIndex,
+          columnIndex: info.columnIndex
+        }
+        const previous = selectedTableBodyMergeCells.filter((cell) =>
+          cell.componentId === current.componentId && cell.rowIndex === current.rowIndex
+        )
+        if (!previous.some((cell) => cell.cellIndex === current.cellIndex)) previous.push(current)
+        selectedTableBodyMergeCells = previous
+        if (selectedTableBodyMergeCells.length < 2) return
+        const indexes = selectedTableBodyMergeCells.map((cell) => cell.columnIndex).sort((left, right) => left - right)
+        const minIndex = indexes[0]
+        const maxIndex = indexes[indexes.length - 1]
+        mergeOrSplitTableLayoutCells(component, 'body', current.rowIndex, minIndex, maxIndex)
+        selectedTableBodyMergeCells = []
+      }
+
+      function mergeOrSplitTableLayoutCells(component, layout, rowIndex, start, end) {
+        const columns = JSON.parse(JSON.stringify(component.columns || []))
+        const sourceRows = layout === 'header' ? component.headerRows : component.bodyRows
+        const rows = normalizeTablePreviewLayoutRows(sourceRows, columns, layout === 'header' ? getTableHeaderRows(component) : getTableRowRows(component))
+        const row = rows[rowIndex]
+        if (!row || start < 0 || end < start) return
+        const selectedCellIndexes = row
+          .map((cell, cellIndex) => ({ cell, cellIndex, indexes: getTablePreviewLayoutColumnIndexes(columns, cell) }))
+          .filter((item) => item.indexes.length && Math.min(...item.indexes) >= start && Math.max(...item.indexes) <= end)
+          .map((item) => item.cellIndex)
+        if (selectedCellIndexes.length < 1) return
+        const minCell = Math.min(...selectedCellIndexes)
+        const maxCell = Math.max(...selectedCellIndexes)
+        const selectedCells = row.slice(minCell, maxCell + 1)
+        const alreadyMerged = selectedCells.length === 1 && (selectedCells[0].columns || []).length > 1
+        if (alreadyMerged) {
+          const splitCells = (selectedCells[0].columns || []).map((key) => {
+            const column = columns.find((item) => String(item.field || item.name) === String(key)) || {}
+            return { label: column.label || key, field: key, columns: [key] }
+          })
+          row.splice(minCell, 1, ...splitCells)
+        } else {
+          const mergedColumns = selectedCells.flatMap((cell) => cell.columns || [])
+          const first = selectedCells[0] || {}
+          row.splice(minCell, maxCell - minCell + 1, {
+            label: first.label || mergedColumns[0] || '',
+            field: first.field || mergedColumns[0] || '',
+            columns: mergedColumns,
+            colspan: mergedColumns.length
+          })
+        }
+        if (layout === 'header') component.headerRows = rows
+        else component.bodyRows = rows
+        vscode.postMessage({
+          type: 'updateTableColumns',
+          id: component.id,
+          columns,
+          headerRows: getTableHeaderRows(component),
+          rowRows: getTableRowRows(component),
+          headerLayout: component.headerRows,
+          bodyRows: component.bodyRows
+        })
+        render()
+      }
+
+      function getTableColumnHeaderValue(column, rowIndex) {
+        if (Array.isArray(column?.headers)) return String(column.headers[rowIndex] || '')
+        if (rowIndex === 0) return String(column?.header1 || column?.headerGroup || column?.group || '')
+        if (rowIndex === 1) return String(column?.header2 || column?.headerSubGroup || '')
+        return ''
+      }
+
+      function setTableColumnHeaderValue(column, rowIndex, value) {
+        if (!column) return
+        const headers = Array.isArray(column.headers) ? [...column.headers] : []
+        headers[rowIndex] = String(value || '').trim()
+        column.headers = headers
+      }
+
+      function getTableColumnDisplayText(column) {
+        return String(column?.label || column?.name || column?.field || 'Column')
       }
 
       function getTablePreviewColumns(component) {

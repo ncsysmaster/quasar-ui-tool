@@ -154,6 +154,8 @@ function getPropertiesHtml(webview, htmlShell, getNonce) {
           field('id', 'id', component.id || '') +
           field('title', 'table.title', table.title || component.label || '') +
           field('row-key', 'table.rowKey', table.rowKey || props.rowKey || 'id') +
+          selectField('header rows', 'table.headerRows', String(table.headerRows || 1), ['1', '2', '3']) +
+          selectField('row rows', 'table.rowRows', String(table.rowRows || 1), ['1', '2', '3']) +
           fieldWithButton('Class', 'class', component.class || props.class || '', '...') +
           field('Style', 'style', componentStyle) +
           field('Height', 'style.height', getStyleDeclaration(componentStyle, 'height')) +

@@ -407,10 +407,18 @@ class PageEditorState {
         else delete component.events[key];
       } else if (name.startsWith("table.")) {
         const tablePath = name.slice(6);
-        const nextValue = tablePath === "pagination.rowsPerPageOptions"
+        let nextValue = tablePath === "pagination.rowsPerPageOptions"
           ? String(value || "").split(",").map((item) => Number(item.trim())).filter(Number.isFinite)
           : coerceValue(value);
+        if (tablePath === "headerRows") nextValue = clampTableHeaderRows(nextValue);
+        if (tablePath === "rowRows") nextValue = clampTableRowRows(nextValue);
         setNestedComponentValue(component, tablePath, nextValue);
+        if (component.type === "Table" && tablePath === "headerRows") {
+          component.headerRows = normalizeTableLayoutRows(component.headerRows, component.columns, nextValue, "header");
+        }
+        if (component.type === "Table" && tablePath === "rowRows") {
+          component.bodyRows = normalizeTableLayoutRows(component.bodyRows, component.columns, nextValue, "body");
+        }
         if (tablePath === "title") component.label = String(nextValue || "Table");
         if (tablePath === "rowKey") {
           component.props ||= {};
@@ -469,11 +477,31 @@ class PageEditorState {
     });
   }
 
-  async updateTableColumns(componentId, columns) {
+  async updateTableColumns(componentId, columns, options = {}) {
     await this.updateModel((model) => {
       const component = findComponent(model.components, componentId);
       if (!component || component.type !== "Table") return;
       component.columns = normalizeTableColumns(columns);
+      if (options.headerRows !== undefined) {
+        component.table ||= {};
+        component.table.headerRows = clampTableHeaderRows(options.headerRows);
+      }
+      if (options.rowRows !== undefined) {
+        component.table ||= {};
+        component.table.rowRows = clampTableRowRows(options.rowRows);
+      }
+      component.headerRows = normalizeTableLayoutRows(
+        options.headerLayout || component.headerRows,
+        component.columns,
+        component.table?.headerRows || 1,
+        "header",
+      );
+      component.bodyRows = normalizeTableLayoutRows(
+        options.bodyRows || component.bodyRows,
+        component.columns,
+        component.table?.rowRows || 1,
+        "body",
+      );
       this.selectedId = componentId;
     });
   }
@@ -1162,6 +1190,13 @@ function createTableComponent(model, item, options = {}) {
   const models = {};
   if (selection !== "none") models.selected = `${id}Selected`;
   if (paginationEnabled) models.pagination = `${id}Pagination`;
+  const defaultColumns = normalizeTableColumns([
+    { name: "name", label: "명칭", field: "name", type: "text", align: "left", sortable: true },
+    { name: "dtlDt", label: "상세일자", field: "dtlDt", type: "date", align: "center", sortable: true },
+    { name: "actions", label: "작업", field: "actions", type: "actions", align: "center", sortable: false },
+  ]);
+  const headerRowCount = clampTableHeaderRows(options.headerRows ?? 1);
+  const bodyRowCount = clampTableRowRows(options.rowRows ?? 1);
 
   return {
     id,
@@ -1177,16 +1212,16 @@ function createTableComponent(model, item, options = {}) {
     },
     ...(Object.keys(dynamicProps).length ? { dynamicProps } : {}),
     ...(Object.keys(models).length ? { models } : {}),
-    columns: normalizeTableColumns([
-      { name: "name", label: "명칭", field: "name", type: "text", align: "left", sortable: true },
-      { name: "dtlDt", label: "상세일자", field: "dtlDt", type: "date", align: "center", sortable: true },
-      { name: "actions", label: "작업", field: "actions", type: "actions", align: "center", sortable: false },
-    ]),
+    columns: defaultColumns,
+    headerRows: createDefaultTableLayoutRows(defaultColumns, headerRowCount, "header"),
+    bodyRows: createDefaultTableLayoutRows(defaultColumns, bodyRowCount, "body"),
     table: {
       title: options.title || "Table",
       rowKey: options.rowKey || "id",
       showModeColumn: options.showModeColumn !== false,
       excelCopy: options.excelCopy !== false,
+      headerRows: headerRowCount,
+      rowRows: bodyRowCount,
       selection,
       rowsBinding: options.rowsBinding || "",
       loadingBinding: options.loadingBinding || "",
@@ -1212,6 +1247,8 @@ function normalizeTableColumns(columns) {
   return (Array.isArray(columns) ? columns : []).map((column, index) => {
     const name = String(column?.name || `column${index + 1}`).trim();
     const width = String(column?.width || "").trim();
+    const headers = normalizeTableColumnHeaders(column);
+    const headerFields = normalizeTableColumnHeaderFields(column);
     return {
       name,
       label: String(column?.label || name),
@@ -1219,12 +1256,99 @@ function normalizeTableColumns(columns) {
       type: allowedTypes.has(column?.type) ? column.type : "text",
       align: ["left", "center", "right"].includes(column?.align) ? column.align : "left",
       ...(width ? { width, style: `width: ${width}`, headerStyle: `width: ${width}` } : {}),
+      ...(headers.some((header) => header) ? { headers } : {}),
+      ...(headerFields.some((field) => field) ? { headerFields } : {}),
       sortable: Boolean(column?.sortable),
       required: Boolean(column?.required),
       editable: Boolean(column?.editable),
       ...(column?.format ? { format: String(column.format) } : {}),
     };
   });
+}
+
+function normalizeTableColumnHeaders(column) {
+  const source = Array.isArray(column?.headers)
+    ? column.headers
+    : [
+        column?.header1 ?? column?.headerGroup ?? column?.group ?? "",
+        column?.header2 ?? column?.headerSubGroup ?? "",
+      ];
+  return [0, 1].map((index) => String(source[index] || "").trim());
+}
+
+function normalizeTableColumnHeaderFields(column) {
+  const source = Array.isArray(column?.headerFields)
+    ? column.headerFields
+    : Array.isArray(column?.groupFields)
+      ? column.groupFields
+      : [
+          column?.headerField ?? column?.groupField ?? "",
+          "",
+        ];
+  return [0, 1].map((index) => String(source[index] || "").trim());
+}
+
+function normalizeTableLayoutRows(rows, columns, rowCount = 1, kind = "body") {
+  const columnKeys = normalizeTableColumns(columns).map((column) => column.field);
+  const limit = Math.min(3, Math.max(1, Math.round(Number(rowCount) || 1)));
+  const defaultRows = createDefaultTableLayoutRows(columns, limit, kind);
+  const source = Array.isArray(rows) && rows.length > 0
+    ? rows.slice(0, limit)
+    : [];
+  while (source.length < limit) {
+    source.push(defaultRows[source.length] || defaultRows[0] || []);
+  }
+
+  return source.map((row) => {
+    const cells = Array.isArray(row) ? row : [];
+    const normalizedCells = [];
+    let cursor = 0;
+    cells.forEach((cell) => {
+      const rawColumns = Array.isArray(cell?.columns)
+        ? cell.columns.map(String).filter(Boolean)
+        : (cell?.field ? [String(cell.field)] : []);
+      const startKey = rawColumns.find((key) => columnKeys.includes(key)) || columnKeys[cursor] || "";
+      const start = columnKeys.indexOf(startKey);
+      if (start < 0) return;
+      const span = Math.max(1, Math.min(columnKeys.length - start, Number(cell?.colspan || rawColumns.length || 1)));
+      const keys = columnKeys.slice(start, start + span);
+      cursor = start + span;
+      normalizedCells.push({
+        label: String(cell?.label || keys[0] || ""),
+        field: String(cell?.field || keys[0] || ""),
+        columns: keys,
+        ...(span > 1 ? { colspan: span } : {}),
+        ...(Number(cell?.rowspan) > 1 ? { rowspan: Math.min(limit, Math.round(Number(cell.rowspan))) } : {}),
+      });
+    });
+    return normalizedCells.length > 0
+      ? normalizedCells
+      : createDefaultTableLayoutRows(columns, 1, kind)[0];
+  });
+}
+
+function createDefaultTableLayoutRows(columns, rowCount = 1, kind = "body") {
+  const normalizedColumns = normalizeTableColumns(columns);
+  const count = Math.min(3, Math.max(1, Math.round(Number(rowCount) || 1)));
+  return Array.from({ length: count }, (_, rowIndex) =>
+    normalizedColumns.map((column, columnIndex) => ({
+      label: kind === "header" && rowIndex > 0 ? `title${columnIndex + 1}` : column.label,
+      field: column.field,
+      columns: [column.field],
+    })),
+  );
+}
+
+function clampTableHeaderRows(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return 1;
+  return Math.min(3, Math.max(1, Math.round(number)));
+}
+
+function clampTableRowRows(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return 1;
+  return Math.min(3, Math.max(1, Math.round(number)));
 }
 
 function createTableRowClickCode(functionName) {

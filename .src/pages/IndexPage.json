@@ -367,10 +367,11 @@
                   "type": "Table",
                   "label": "tblList",
                   "props": {
-                    "rowKey": "rowSn",
+                    "rows": [],
+                    "rowKey": "row-id",
                     "noDataLabel": "데이터가 없습니다.",
                     "loadingLabel": "데이터를 불러오는 중입니다.",
-                    "selection": "multiple"
+                    "selection": "single"
                   },
                   "models": {
                     "selected": "storeName.selectedRow",
@@ -379,50 +380,58 @@
                   "columns": [
                     {
                       "name": "name",
-                      "label": "명칭",
+                      "label": "성명",
                       "field": "name",
                       "type": "text",
                       "align": "left",
-                      "sortable": true,
-                      "required": true,
-                      "editable": true
-                    },
-                    {
-                      "name": "dtlDt",
-                      "label": "상세일자",
-                      "field": "dtlDt",
-                      "type": "date",
-                      "align": "center",
-                      "sortable": true,
-                      "required": true,
-                      "editable": true
-                    },
-                    {
-                      "name": "add",
-                      "label": "주소",
-                      "field": "address",
-                      "type": "text",
-                      "align": "left",
-                      "sortable": true,
+                      "headers": [
+                        "명칭",
+                        ""
+                      ],
+                      "sortable": false,
                       "required": false,
                       "editable": true
                     },
                     {
-                      "name": "actions",
-                      "label": "작업",
-                      "field": "actions",
-                      "type": "actions",
-                      "align": "center",
+                      "name": "column2",
+                      "label": "직책",
+                      "field": "position",
+                      "type": "text",
+                      "align": "left",
                       "sortable": false,
+                      "required": false,
+                      "editable": true
+                    },
+                    {
+                      "name": "column3",
+                      "label": "주소",
+                      "field": "address",
+                      "type": "text",
+                      "align": "left",
+                      "sortable": false,
+                      "required": false,
+                      "editable": true
+                    },
+                    {
+                      "name": "deptment",
+                      "label": "부서",
+                      "field": "deptment",
+                      "type": "text",
+                      "align": "left",
+                      "sortable": true,
                       "required": false,
                       "editable": true
                     }
                   ],
                   "table": {
                     "title": "tblList",
-                    "rowKey": "rowSn",
-                    "selection": "multiple",
-                    "rowsBinding": "storeName.list",
+                    "rowKey": "row-id",
+                    "showModeColumn": true,
+                    "excelCopy": false,
+                    "headerRows": 2,
+                    "rowRows": 2,
+                    "selection": "single",
+                    "rowsBinding": "",
                     "loadingBinding": "",
                     "toolbar": {
                       "filter": false,
@@ -453,17 +462,120 @@
                       "noData": true,
                       "loading": true,
                       "error": true
-                    },
-                    "showModeColumn": true,
-                    "excelCopy": false
+                    }
                   },
                   "events": {
                     "row-click": "onRowClick_Table001"
                   },
-                  "style": "height: 400px",
-                  "dynamicProps": {
-                    "rows": "storeName.list"
-                  }
+                  "bodyRows": [
+                    [
+                      {
+                        "label": "성명",
+                        "field": "name",
+                        "columns": [
+                          "name"
+                        ]
+                      },
+                      {
+                        "label": "직책",
+                        "field": "position",
+                        "columns": [
+                          "position",
+                          "address"
+                        ],
+                        "colspan": 2
+                      },
+                      {
+                        "label": "컬럼 4",
+                        "field": "deptment",
+                        "columns": [
+                          "deptment"
+                        ]
+                      }
+                    ],
+                    [
+                      {
+                        "label": "성명",
+                        "field": "name",
+                        "columns": [
+                          "name"
+                        ]
+                      },
+                      {
+                        "label": "직책",
+                        "field": "position",
+                        "columns": [
+                          "position"
+                        ]
+                      },
+                      {
+                        "label": "주소",
+                        "field": "address",
+                        "columns": [
+                          "address"
+                        ]
+                      },
+                      {
+                        "label": "부서",
+                        "field": "deptment",
+                        "columns": [
+                          "deptment"
+                        ]
+                      }
+                    ]
+                  ],
+                  "headerRows": [
+                    [
+                      {
+                        "label": "성명",
+                        "field": "name",
+                        "columns": [
+                          "name"
+                        ]
+                      },
+                      {
+                        "label": "직책",
+                        "field": "position",
+                        "columns": [
+                          "position",
+                          "address"
+                        ],
+                        "colspan": 2
+                      },
+                      {
+                        "label": "부서",
+                        "field": "deptment",
+                        "columns": [
+                          "deptment"
+                        ]
+                      }
+                    ],
+                    [
+                      {
+                        "label": "부서",
+                        "field": "name",
+                        "columns": [
+                          "name"
+                        ]
+                      },
+                      {
+                        "label": "title2",
+                        "field": "position",
+                        "columns": [
+                          "position",
+                          "address"
+                        ],
+                        "colspan": 2
+                      },
+                      {
+                        "label": "컬럼 4",
+                        "field": "deptment",
+                        "columns": [
+                          "deptment"
+                        ]
+                      }
+                    ]
+                  ]
                 }
               ]
             }
