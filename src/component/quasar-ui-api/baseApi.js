@@ -107,4 +107,4 @@ export function createBaseComponentApi(options = {}) {
   return api
 }
 
-export { resolveElement, resolveValue, writeValue }
+export { resolveValue, writeValue }

@@ -15,10 +15,13 @@ import {
   getTableRowRows,
   getTableColumnsVariableName,
   getTableRowKey,
+  getTableGridRowsVariableName,
   getTableRowsExpression,
   getTableRowsVariableName,
+  renderTableDisplayRowsHelper,
   renderTableColumnsExpression,
   renderTableComponent,
+  usesExpandedBodyRows,
 } from './table-renderer.mjs'
 
 const require = createRequire(import.meta.url)
@@ -26,11 +29,14 @@ const { toQuasarType } = require('../src/componentTypes.js')
 
 const workspaceRoot = process.cwd()
 const defaultInputDir = '.src/pages'
+let apiSourceComponents = null
 
 main().catch((error) => {
   console.error(`[generate-vue] ${error.message}`)
   process.exitCode = 1
 })
+
+// ---- CLI / file IO ----
 
 async function main() {
   const inputPaths = await resolveInputPaths(process.argv.slice(2))
@@ -126,6 +132,7 @@ function generateVue(definition, inputPath, setupScript) {
     collectModelBindings(components),
     collectTableColumnDefinitions(components),
     collectTableLocalRefs(components),
+    collectTableDisplayRowsDefinitions(components),
     collectComponentApiDefinitions(components)
   )
 
@@ -144,6 +151,8 @@ function assertPageDefinition(definition, inputPath) {
     throw new Error(`${relativeToWorkspace(inputPath)} components must be an array when present`)
   }
 }
+
+// ---- HTML template rendering ----
 
 function renderTemplate(components) {
   return components.map((component) => renderComponent(component, 1)).join('\n')
@@ -266,6 +275,8 @@ function renderProp(name, value) {
   return `${propName}="${escapeAttribute(String(value))}"`
 }
 
+// ---- <script setup> code generation (incl. component API wiring) ----
+
 function renderScriptSetup(
   data,
   scriptSetup = {},
@@ -274,6 +285,7 @@ function renderScriptSetup(
   modelBindings = new Set(),
   tableColumnDefinitions = [],
   tableLocalRefs = [],
+  tableDisplayRowsDefinitions = [],
   componentApiDefinitions = []
 ) {
   const exportedNames = Array.isArray(scriptSetup.dataExports)
@@ -297,6 +309,10 @@ function renderScriptSetup(
   const tableLocalRefStatements = tableLocalRefs.map(
     ({ name, value }) => `const ${name} = ref(${JSON.stringify(value, null, 2)})`
   )
+  const tableDisplayRowsStatements = tableDisplayRowsDefinitions.map(
+    ({ name, sourceExpression, rowRows, rowKey }) =>
+      `const ${name} = computed(() => createAgGridDisplayRows(${renderReadExpression(sourceExpression, modelBindings, tableLocalRefs)}, ${rowRows}, ${JSON.stringify(rowKey)}))`
+  )
   const componentRefStatements = componentApiDefinitions.map(
     ({ refName }) => `const ${refName} = ref(null)`
   )
@@ -308,9 +324,11 @@ function renderScriptSetup(
     ...statements,
     ...tableColumnStatements,
     ...tableLocalRefStatements,
+    ...tableDisplayRowsStatements,
     ...componentRefStatements,
     ...componentApiStatements,
   ]
+  if (tableDisplayRowsStatements.length > 0) blocks.push(renderTableDisplayRowsHelper())
   if (setupCode) blocks.push(setupCode)
 
   if (blocks.length === 0) {
@@ -320,9 +338,14 @@ function renderScriptSetup(
   const importLines = storeImports
     .filter((item) => item?.name && item?.from)
     .map((item) => `import { ${item.name} } from '${escapeJavaScriptString(item.from)}'`)
-  const needsRef = blocks.some((statement) => statement.includes(' = ref('))
-  if (needsRef && !/import\s*\{[^}]*\bref\b[^}]*\}\s*from\s*['"]vue['"]/.test(setupCode)) {
-    importLines.unshift("import { ref } from 'vue'")
+  const vueImports = []
+  if (blocks.some((statement) => statement.includes(' = ref('))) vueImports.push('ref')
+  if (blocks.some((statement) => statement.includes('computed('))) vueImports.push('computed')
+  const missingVueImports = [...new Set(vueImports)].filter((name) =>
+    !new RegExp("import\\s*\\{[^}]*\\b" + name + "\\b[^}]*\\}\\s*from\\s*['\"]vue['\"]").test(setupCode)
+  )
+  if (missingVueImports.length > 0) {
+    importLines.unshift(`import { ${missingVueImports.join(', ')} } from 'vue'`)
   }
   const apiFactoryNames = [...new Set(componentApiDefinitions.map((definition) => definition.factoryName))]
   if (apiFactoryNames.length > 0) {
@@ -387,6 +410,21 @@ function collectTableLocalRefs(components, result = []) {
   return result
 }
 
+function collectTableDisplayRowsDefinitions(components, result = []) {
+  ;(components || []).forEach((component) => {
+    if (component.type === 'Table' && usesExpandedBodyRows(component)) {
+      result.push({
+        name: getTableGridRowsVariableName(component),
+        sourceExpression: getTableRowsExpression(component),
+        rowRows: getTableRowRows(component),
+        rowKey: getTableRowKey(component),
+      })
+    }
+    collectTableDisplayRowsDefinitions(component.children, result)
+  })
+  return result
+}
+
 function collectComponentApiDefinitions(components, result = []) {
   ;(components || []).forEach((component) => {
     if (component?.id && component.type === 'Table') {
@@ -422,6 +460,10 @@ function renderComponentApiStatement(definition, modelBindings, tableLocalRefs) 
 
   if (component?.type === 'Table') {
     options.push(`rowKey: ${JSON.stringify(getTableRowKey(component))}`)
+    options.push(`headerRows: ${getTableHeaderRows(component)}`)
+    options.push(`headerLayout: ${JSON.stringify(component.headerRows || [])}`)
+    options.push(`sourceColumns: ${JSON.stringify(getRenderableTableColumns(component))}`)
+    options.push(`rowRows: ${getTableRowRows(component)}`)
     options.push(`excelCopy: ${component.table?.excelCopy !== false}`)
     options.push(`rows: ${renderAccessor(getTableRowsExpression(component), modelBindings, tableLocalRefs)}`)
     options.push(`columns: { get: () => ${getTableColumnsVariableName(component)} }`)
@@ -438,8 +480,6 @@ function renderComponentApiStatement(definition, modelBindings, tableLocalRefs) 
 
   return `const ${definition.apiName} = ${definition.factoryName}({\n  ${options.join(',\n  ')}\n})`
 }
-
-let apiSourceComponents = null
 
 function findApiSourceComponent(id) {
   return apiSourceComponents?.get(id) || null
@@ -494,6 +534,8 @@ function resolveStoreImports(definition) {
     defineStoreId: store.defineStoreId
   }))
 }
+
+// ---- output path / misc utilities ----
 
 function resolveOutputPath(definition, inputPath) {
   const targetVuePath = definition.page?.targetVuePath

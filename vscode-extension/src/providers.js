@@ -4,6 +4,7 @@ const { getEventsHtml } = require("./eventsView");
 const { getPaletteHtml } = require("./paletteView");
 const { getPageTreeHtml } = require("./pageTreeView");
 const { getPropertiesHtml } = require("./propertiesView");
+const { getDatasetHtml } = require("./datasetView");
 const { findProjectFolder } = require("./projectRoot");
 const {
   importPiniaStoreIntoPage,
@@ -13,7 +14,6 @@ const {
 const { listPiniaStores } = require("./piniaStoreRepository");
 
 const {
-  getDatasetHtml,
   getEditorHtml,
   getNonce,
   htmlShell,
@@ -29,16 +29,13 @@ class PageEditorProvider {
   async resolveCustomTextEditor(document, webviewPanel) {
     const editorState = await this.state.getOrCreate(document);
     this.state.activate(editorState);
+    editorState.setEditorTab("screen");
     const projectFolder = findProjectFolder(document.uri);
 
     webviewPanel.webview.options = {
       enableScripts: true,
       localResourceRoots: this.webviewRoots,
     };
-    webviewPanel.webview.html = getEditorHtml(
-      webviewPanel.webview,
-      getRuntimeUris(webviewPanel.webview, this.context),
-    );
     const webviewRegistration = this.state.registerEditorWebview(
       editorState,
       webviewPanel.webview,
@@ -90,16 +87,13 @@ class PageEditorProvider {
 
     webviewPanel.webview.onDidReceiveMessage(async (message) => {
       this.state.activate(editorState);
-      console.log("[PageEditorProvider message]", message);
 
       if (message.type === "ready") {
-        console.log("[PageEditorProvider] ready");
         postState();
         await postPiniaStores();
       }
 
       if (message.type === "select") {
-        console.log("[PageEditorProvider] select:", message.id);
         editorState.selectComponent(message.id);
       }
 
@@ -194,7 +188,6 @@ class PageEditorProvider {
       }
 
       if (message.type === "updateScript") {
-        console.log("[PageEditorProvider] updateScript");
         await editorState.updateScript(message.value);
         webviewPanel.webview.postMessage({
           type: "saved",
@@ -209,7 +202,6 @@ class PageEditorProvider {
       }
 
       if (message.type === "moveComponent") {
-        console.log("[PageEditorProvider] moveComponent:", message);
         await editorState.moveComponent(
           message.dragId,
           message.dropId,
@@ -250,7 +242,6 @@ class PageEditorProvider {
       }
 
       if (message.type === "deleteSelected") {
-        console.log("[PageEditorProvider] deleteSelected received");
         await editorState.removeSelectedComponent();
       }
 
@@ -294,6 +285,11 @@ class PageEditorProvider {
         });
       }
     });
+
+    webviewPanel.webview.html = getEditorHtml(
+      webviewPanel.webview,
+      getRuntimeUris(webviewPanel.webview, this.context),
+    );
   }
 }
 
@@ -344,8 +340,6 @@ class PropertiesViewProvider {
     view.onDidDispose(() => subscription.dispose());
 
     view.webview.onDidReceiveMessage(async (message) => {
-      console.log("[PropertiesViewProvider message]", message);
-
       if (message.type === "ready") {
         postState();
       }
@@ -359,7 +353,6 @@ class PropertiesViewProvider {
       }
 
       if (message.type === "deleteSelected") {
-        console.log("[PropertiesViewProvider] deleteSelected");
         await this.state.removeSelectedComponent();
       }
 
@@ -500,7 +493,7 @@ class DatasetViewProvider {
       enableScripts: true,
       localResourceRoots: this.webviewRoots,
     };
-    view.webview.html = getDatasetHtml(view.webview);
+    view.webview.html = getDatasetHtml(view.webview, htmlShell, getNonce);
 
     const postState = () => postViewState(view, this.state);
     const subscription = this.state.onDidChange(postState);

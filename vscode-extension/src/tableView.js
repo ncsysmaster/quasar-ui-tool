@@ -51,6 +51,8 @@ function getTableHtml() {
 <div id="table-context-menu" class="form-context-menu hidden" role="menu">
   <button type="button" data-table-context="edit" role="menuitem">컬럼 편집...</button>
   <button type="button" data-table-context="add" role="menuitem">컬럼 추가</button>
+  <button type="button" data-table-context="mergeHeader" role="menuitem">Merge</button>
+  <button type="button" data-table-context="splitHeader" role="menuitem">Merge 취소</button>
 </div>`;
 }
 
@@ -75,6 +77,9 @@ function getTableScript() {
     getLayoutCellColumns,
     getLayoutCellStartIndex,
     getLayoutCellSpan,
+    getLayoutCellRowSpan,
+    createTableLayoutCellId,
+    getTableLayoutCellId,
     getTableDraftHeaderValue,
     getTableDraftHeaderFieldValue,
     renderTableColumnTree,
@@ -96,6 +101,13 @@ function getTableScript() {
     syncLayoutColumnReference,
     addTableLayoutRow,
     removeTableLayoutRow,
+    getSelectedTableLayoutCellItems,
+    getTableLayoutCellCoverage,
+    areTableLayoutRowsContiguous,
+    mergeHorizontalTableLayoutCells,
+    mergeVerticalTableLayoutCells,
+    replaceTableLayoutCells,
+    insertTableLayoutCellsAtStart,
     mergeSelectedTableLayoutCells,
     splitSelectedTableLayoutCell,
     renderTableLayoutGrid,
@@ -109,6 +121,8 @@ function getTableScript() {
     .map((fn) => fn.toString())
     .join("\n\n");
 }
+
+// ---- wizard dialog ----
 
 function setupTableDialogs() {
   const wizard = document.getElementById("table-wizard-dialog");
@@ -146,9 +160,20 @@ function setupTableDialogs() {
   menu?.querySelectorAll("[data-table-context]").forEach((button) =>
     button.addEventListener("click", () => {
       const componentId = menu.dataset.componentId || "";
+      const layout = menu.dataset.layout || "header";
       const action = button.dataset.tableContext;
       hideTableContextMenu();
-      showTableColumnsDialog(componentId, action === "add");
+      if (action === "mergeHeader") {
+        if (layout === "body") mergeSelectedTableBodyCells(componentId);
+        else mergeSelectedTableHeaderCells(componentId);
+        return;
+      }
+      if (action === "splitHeader") {
+        if (layout === "body") splitSelectedTableBodyCell(componentId);
+        else splitSelectedTableHeaderCell(componentId);
+        return;
+      }
+      showTableColumnsDialog(componentId, action === "add", action === "edit" ? tableContextInitialNode : null);
     }),
   );
   document.addEventListener("pointerdown", (event) => {
@@ -230,10 +255,14 @@ function setTableWizardError(message) {
   error.classList.toggle("hidden", !message);
 }
 
-function showTableContextMenu(clientX, clientY, componentId) {
+function showTableContextMenu(clientX, clientY, componentId, options = {}) {
   const menu = document.getElementById("table-context-menu");
   if (!menu) return;
   menu.dataset.componentId = componentId || "";
+  menu.dataset.layout = options.layout || "header";
+  tableContextInitialNode = options.initialNode || null;
+  menu.querySelector('[data-table-context="mergeHeader"]')?.classList.toggle("hidden", !options.canMergeHeader);
+  menu.querySelector('[data-table-context="splitHeader"]')?.classList.toggle("hidden", !options.canSplitHeader);
   menu.classList.remove("hidden");
   const bounds = menu.getBoundingClientRect();
   menu.style.left = Math.max(4, Math.min(clientX, innerWidth - bounds.width - 4)) + "px";
@@ -243,6 +272,8 @@ function showTableContextMenu(clientX, clientY, componentId) {
 function hideTableContextMenu() {
   document.getElementById("table-context-menu")?.classList.add("hidden");
 }
+
+// ---- columns dialog draft state ----
 
 function showTableColumnsDialog(componentId, appendColumn = false, initialNode = null) {
   const component = findTableComponent(model?.components || [], componentId);
@@ -270,6 +301,8 @@ function showTableColumnsDialog(componentId, appendColumn = false, initialNode =
     const cell = { label: column.label, field: column.field, columns: [column.field] };
     tableColumnsHeaderLayout.forEach((row) => row.push({ ...cell, columns: [...cell.columns] }));
     tableColumnsBodyRows.forEach((row) => row.push({ ...cell, columns: [...cell.columns] }));
+    tableColumnsHeaderLayout = normalizeTableLayoutRows(tableColumnsHeaderLayout, tableColumnsDraft, tableColumnsHeaderLayout.length || 1, "header");
+    tableColumnsBodyRows = normalizeTableLayoutRows(tableColumnsBodyRows, tableColumnsDraft, tableColumnsBodyRows.length || 1, "body");
   }
   tableColumnsActiveTab = initialNode?.kind === "layout" ? initialNode.layout : "columns";
   tableColumnsSelectedNode = initialNode || { kind: "column", index: Math.max(0, tableColumnsDraft.length - 1) };
@@ -321,11 +354,12 @@ function normalizeTableLayoutRows(rows, columns, rowCount, kind) {
     : [];
   while (source.length < limit) source.push(defaults[source.length] || defaults[0] || []);
 
-  return source.map((row) => {
+  const usedCellIds = new Set();
+  const normalizedRows = source.map((row, rowIndex) => {
     const cells = Array.isArray(row) ? row : [];
     const nextCells = [];
     let cursor = 0;
-    cells.forEach((cell) => {
+    cells.forEach((cell, cellIndex) => {
       const rawColumns = getLayoutCellColumns(cell);
       const startKey = rawColumns.find((key) => columnKeys.includes(key)) || columnKeys[cursor] || "";
       const start = Math.max(0, columnKeys.indexOf(startKey));
@@ -333,7 +367,8 @@ function normalizeTableLayoutRows(rows, columns, rowCount, kind) {
       const keys = columnKeys.slice(start, start + span);
       if (keys.length === 0) return;
       cursor = start + span;
-      nextCells.push({
+      const nextCell = {
+        cellId: getTableLayoutCellId(cell, kind, rowIndex, keys, cellIndex, usedCellIds),
         label: String(cell?.label || cell?.headerName || keys.map((key) => {
           const column = columns[columnKeys.indexOf(key)];
           return column?.label || key;
@@ -341,8 +376,9 @@ function normalizeTableLayoutRows(rows, columns, rowCount, kind) {
         field: String(cell?.field || keys[0] || ""),
         columns: keys,
         ...(span > 1 ? { colspan: span } : {}),
-        ...(Number(cell?.rowspan) > 1 ? { rowspan: Math.min(limit, Math.round(Number(cell.rowspan))) } : {}),
-      });
+        ...(Number(cell?.rowspan) > 1 ? { rowspan: Math.min(limit - rowIndex, Math.round(Number(cell.rowspan))) } : {}),
+      };
+      nextCells.push(nextCell);
     });
 
     if (nextCells.length === 0) {
@@ -350,12 +386,17 @@ function normalizeTableLayoutRows(rows, columns, rowCount, kind) {
     }
     return nextCells;
   });
+
+  normalizedRows.forEach((row) => row.forEach((cell) => delete cell.navigation));
+
+  return normalizedRows;
 }
 
 function createDefaultTableLayoutRows(columns, rowCount = 1, kind = "body") {
   const count = Math.min(3, Math.max(1, Math.round(Number(rowCount || 1))));
   return Array.from({ length: count }, (_, rowIndex) =>
     (columns || []).map((column, columnIndex) => ({
+      cellId: createTableLayoutCellId(kind, rowIndex, [getColumnFieldKey(column)], columnIndex),
       label: kind === "header" && rowIndex > 0
         ? "title" + (columnIndex + 1)
         : String(column?.label || column?.name || column?.field || "Column"),
@@ -401,6 +442,8 @@ function getLayoutRowLimitForTab(tab = tableColumnsActiveTab) {
   return 3;
 }
 
+// ---- layout cell id / normalization math ----
+
 function getLayoutCellColumns(cell) {
   if (Array.isArray(cell?.columns)) return cell.columns.map(String).filter(Boolean);
   if (cell?.field) return [String(cell.field)];
@@ -418,6 +461,36 @@ function getLayoutCellSpan(cell) {
   return Math.max(1, Number(cell?.colspan || getLayoutCellColumns(cell).length || 1));
 }
 
+function getLayoutCellRowSpan(cell, rowIndex = 0, rowCount = 1) {
+  return Math.max(1, Math.min(Math.max(1, rowCount - rowIndex), Math.round(Number(cell?.rowspan || 1))));
+}
+
+function createTableLayoutCellId(kind, rowIndex, keys, cellIndex = 0) {
+  const rawKey = (Array.isArray(keys) ? keys : [])
+    .map((key) => String(key || "").trim())
+    .filter(Boolean)
+    .join("_") || "cell" + (Number(cellIndex) + 1);
+  const safeKey = rawKey
+    .replace(/[^A-Za-z0-9_가-힣-]+/g, "_")
+    .replace(/^_+|_+$/g, "") || "cell";
+  return String(kind || "body") + "_r" + (Number(rowIndex) + 1) + "_" + safeKey;
+}
+
+function getTableLayoutCellId(cell, kind, rowIndex, keys, cellIndex, usedCellIds = new Set()) {
+  const raw = String(cell?.cellId || "").trim();
+  let cellId = raw || createTableLayoutCellId(kind, rowIndex, keys, cellIndex);
+  if (usedCellIds.has(cellId)) {
+    const base = cellId;
+    let sequence = 2;
+    while (usedCellIds.has(cellId)) {
+      cellId = base + "_" + sequence;
+      sequence += 1;
+    }
+  }
+  usedCellIds.add(cellId);
+  return cellId;
+}
+
 function getTableDraftHeaderValue(column, rowIndex) {
   if (Array.isArray(column?.headers)) return String(column.headers[rowIndex] || "");
   if (rowIndex === 0) return String(column?.header1 || column?.headerGroup || column?.group || "");
@@ -431,6 +504,8 @@ function getTableDraftHeaderFieldValue(column, rowIndex) {
   if (rowIndex === 0) return String(column?.headerField || column?.groupField || "");
   return "";
 }
+
+// ---- tree rendering ----
 
 function renderTableColumnTree(nodes, depth = 0) {
   return (nodes || []).map((node) => {
@@ -470,6 +545,8 @@ function renderTableLayoutTree(nodes, depth = 0) {
       '</button>' + children + '</div>';
   }).join('');
 }
+
+// ---- property panel rendering ----
 
 function renderTableColumnProperties() {
   if (tableColumnsSelectedNode?.kind === "layout") return renderTableLayoutProperties(tableColumnsSelectedNode);
@@ -559,6 +636,8 @@ function getColumnFieldKey(column) {
   return String(column?.field || column?.name || '').trim();
 }
 
+// ---- column / layout editing actions ----
+
 function selectTableColumnNode(event) {
   if (event.target?.matches?.('[data-layout-cell-select]')) return;
   const button = event.target.closest('[data-node-kind]');
@@ -583,6 +662,8 @@ function addTableColumn() {
   const cell = { label: column.label, field: column.field, columns: [column.field] };
   tableColumnsHeaderLayout.forEach((row) => row.push({ ...cell }));
   tableColumnsBodyRows.forEach((row) => row.push({ ...cell }));
+  tableColumnsHeaderLayout = normalizeTableLayoutRows(tableColumnsHeaderLayout, tableColumnsDraft, tableColumnsHeaderLayout.length || 1, "header");
+  tableColumnsBodyRows = normalizeTableLayoutRows(tableColumnsBodyRows, tableColumnsDraft, tableColumnsBodyRows.length || 1, "body");
   tableColumnsSelectedNode = { kind: 'column', index: tableColumnsDraft.length - 1 };
   renderTableColumnsEditor();
 }
@@ -676,6 +757,7 @@ function syncLayoutColumnReference(oldKey, newKey) {
       row.forEach((cell) => {
         cell.columns = getLayoutCellColumns(cell).map((key) => key === oldKey ? newKey : key);
         if (cell.field === oldKey) cell.field = newKey;
+        if (cell.cellId && String(cell.cellId).includes(oldKey)) delete cell.cellId;
       });
     });
   });
@@ -704,31 +786,137 @@ function removeTableLayoutRow() {
   renderTableColumnsEditor();
 }
 
+function getSelectedTableLayoutCellItems(rows) {
+  return [...document.querySelectorAll('[data-layout-cell-select]:checked')]
+    .map((input) => {
+      const rowIndex = Number(input.dataset.rowIndex);
+      const cellIndex = Number(input.dataset.cellIndex);
+      const cell = rows?.[rowIndex]?.[cellIndex];
+      if (!cell || !Number.isInteger(rowIndex) || !Number.isInteger(cellIndex)) return null;
+      const start = getLayoutCellStartIndex(cell);
+      const span = getLayoutCellSpan(cell);
+      return {
+        rowIndex,
+        cellIndex,
+        cell,
+        start,
+        end: start + span - 1,
+      };
+    })
+    .filter(Boolean);
+}
+
+function getTableLayoutCellCoverage(items) {
+  const sorted = (items || []).slice().sort((left, right) => left.start - right.start || left.cellIndex - right.cellIndex);
+  if (sorted.length === 0) return null;
+  for (let index = 1; index < sorted.length; index += 1) {
+    if (sorted[index].start !== sorted[index - 1].end + 1) return null;
+  }
+  const start = sorted[0].start;
+  const end = sorted[sorted.length - 1].end;
+  const columns = tableColumnsDraft.slice(start, end + 1).map(getColumnFieldKey);
+  return columns.length > 0 ? { start, end, columns, sorted } : null;
+}
+
+function areTableLayoutRowsContiguous(rowIndexes) {
+  const sorted = [...new Set(rowIndexes || [])].sort((left, right) => left - right);
+  return sorted.length > 0 && sorted.every((rowIndex, offset) => rowIndex === sorted[0] + offset);
+}
+
+function replaceTableLayoutCells(row, cellIndexes, replacement) {
+  const indexes = [...new Set(cellIndexes || [])].sort((left, right) => right - left);
+  if (indexes.length === 0) return -1;
+  const insertIndex = Math.min(...indexes);
+  indexes.forEach((index) => row.splice(index, 1));
+  row.splice(insertIndex, 0, replacement);
+  return insertIndex;
+}
+
+function insertTableLayoutCellsAtStart(row, start, cells) {
+  const insertIndex = row.findIndex((cell) => getLayoutCellStartIndex(cell) > start);
+  const index = insertIndex >= 0 ? insertIndex : row.length;
+  row.splice(index, 0, ...cells);
+  return index;
+}
+
+function mergeHorizontalTableLayoutCells(rows, tab, selectedItems) {
+  const rowIndex = selectedItems[0]?.rowIndex;
+  const row = rows[rowIndex];
+  if (!row) return false;
+  const coverage = getTableLayoutCellCoverage(selectedItems);
+  if (!coverage || selectedItems.length < 2) return false;
+  const indexes = selectedItems.map((item) => item.cellIndex).sort((left, right) => left - right);
+  if (indexes.some((index, offset) => index !== indexes[0] + offset)) return false;
+  const rowSpans = new Set(selectedItems.map((item) => getLayoutCellRowSpan(item.cell, rowIndex, rows.length)));
+  if (rowSpans.size !== 1) return false;
+  const first = row[indexes[0]] || {};
+  const rowSpan = [...rowSpans][0] || 1;
+  const merged = {
+    cellId: first.cellId,
+    label: first.label || coverage.columns[0] || "",
+    field: first.field || coverage.columns[0] || "",
+    columns: coverage.columns,
+    ...(coverage.columns.length > 1 ? { colspan: coverage.columns.length } : {}),
+    ...(rowSpan > 1 ? { rowspan: rowSpan } : {}),
+  };
+  const nextIndex = replaceTableLayoutCells(row, indexes, merged);
+  setLayoutRowsForTab(tab, rows);
+  tableColumnsSelectedNode = { kind: "layout", layout: tab, rowIndex, cellIndex: nextIndex };
+  return true;
+}
+
+function mergeVerticalTableLayoutCells(rows, tab, selectedItems) {
+  const rowIndexes = [...new Set(selectedItems.map((item) => item.rowIndex))].sort((left, right) => left - right);
+  if (rowIndexes.length < 2 || !areTableLayoutRowsContiguous(rowIndexes)) return false;
+  const grouped = rowIndexes.map((rowIndex) => selectedItems.filter((item) => item.rowIndex === rowIndex));
+  const coverages = grouped.map(getTableLayoutCellCoverage);
+  if (coverages.some((coverage) => !coverage)) return false;
+  const firstCoverage = coverages[0];
+  if (!coverages.every((coverage) => coverage.start === firstCoverage.start && coverage.end === firstCoverage.end)) {
+    return false;
+  }
+  const topRowIndex = rowIndexes[0];
+  const topItems = grouped[0];
+  const topRow = rows[topRowIndex];
+  const topIndexes = topItems.map((item) => item.cellIndex);
+  const first = topRow[Math.min(...topIndexes)] || {};
+  const rowSpan = rowIndexes.length;
+  const merged = {
+    cellId: first.cellId,
+    label: first.label || firstCoverage.columns[0] || "",
+    field: first.field || firstCoverage.columns[0] || "",
+    columns: firstCoverage.columns,
+    ...(firstCoverage.columns.length > 1 ? { colspan: firstCoverage.columns.length } : {}),
+    ...(rowSpan > 1 ? { rowspan: rowSpan } : {}),
+  };
+
+  rowIndexes.slice().reverse().forEach((rowIndex) => {
+    const row = rows[rowIndex];
+    const indexes = selectedItems
+      .filter((item) => item.rowIndex === rowIndex)
+      .map((item) => item.cellIndex);
+    if (rowIndex === topRowIndex) {
+      replaceTableLayoutCells(row, indexes, merged);
+    } else {
+      [...new Set(indexes)].sort((left, right) => right - left).forEach((index) => row.splice(index, 1));
+    }
+  });
+
+  setLayoutRowsForTab(tab, rows);
+  tableColumnsSelectedNode = { kind: "layout", layout: tab, rowIndex: topRowIndex, cellIndex: Math.min(...topIndexes) };
+  return true;
+}
+
 function mergeSelectedTableLayoutCells() {
   const tab = tableColumnsActiveTab;
-  const selected = [...document.querySelectorAll('[data-layout-cell-select]:checked')]
-    .map((input) => ({ rowIndex: Number(input.dataset.rowIndex), cellIndex: Number(input.dataset.cellIndex) }))
-    .filter((item) => Number.isInteger(item.rowIndex) && Number.isInteger(item.cellIndex));
-  const rowIndexes = [...new Set(selected.map((item) => item.rowIndex))];
-  if (rowIndexes.length !== 1 || selected.length < 2) return;
   const rows = getLayoutRowsForTab(tab).map((row) => row.map((cell) => ({ ...cell, columns: getLayoutCellColumns(cell) })));
-  const rowIndex = rowIndexes[0];
-  const row = rows[rowIndex];
-  const indexes = selected.map((item) => item.cellIndex).sort((left, right) => left - right);
-  const min = indexes[0];
-  const max = indexes[indexes.length - 1];
-  if (indexes.some((index, offset) => index !== min + offset)) return;
-  const columns = row.slice(min, max + 1).flatMap((cell) => getLayoutCellColumns(cell));
-  const first = row[min] || {};
-  row.splice(min, max - min + 1, {
-    label: first.label || columns[0] || "",
-    field: first.field || columns[0] || "",
-    columns,
-    colspan: columns.length,
-  });
-  setLayoutRowsForTab(tab, rows);
-  tableColumnsSelectedNode = { kind: "layout", layout: tab, rowIndex, cellIndex: min };
-  renderTableColumnsEditor();
+  const selectedItems = getSelectedTableLayoutCellItems(rows);
+  if (selectedItems.length < 2) return;
+  const rowIndexes = [...new Set(selectedItems.map((item) => item.rowIndex))];
+  const merged = rowIndexes.length === 1
+    ? mergeHorizontalTableLayoutCells(rows, tab, selectedItems)
+    : mergeVerticalTableLayoutCells(rows, tab, selectedItems);
+  if (merged) renderTableColumnsEditor();
 }
 
 function splitSelectedTableLayoutCell() {
@@ -737,7 +925,9 @@ function splitSelectedTableLayoutCell() {
   const rows = getLayoutRowsForTab(layout).map((row) => row.map((cell) => ({ ...cell, columns: getLayoutCellColumns(cell) })));
   const cell = rows?.[rowIndex]?.[cellIndex];
   if (!cell) return;
-  const nextCells = getLayoutCellColumns(cell).map((key) => {
+  const columns = getLayoutCellColumns(cell);
+  const rowSpan = getLayoutCellRowSpan(cell, rowIndex, rows.length);
+  const createSplitCells = () => columns.map((key) => {
     const column = tableColumnsDraft.find((item) => getColumnFieldKey(item) === key) || {};
     return {
       label: column.label || key,
@@ -745,35 +935,42 @@ function splitSelectedTableLayoutCell() {
       columns: [key],
     };
   });
-  rows[rowIndex].splice(cellIndex, 1, ...nextCells);
+  rows[rowIndex].splice(cellIndex, 1, ...createSplitCells());
+  for (let nextRowIndex = rowIndex + 1; nextRowIndex < rowIndex + rowSpan; nextRowIndex += 1) {
+    if (!rows[nextRowIndex]) continue;
+    insertTableLayoutCellsAtStart(rows[nextRowIndex], getLayoutCellStartIndex(cell), createSplitCells());
+  }
   setLayoutRowsForTab(layout, rows);
   tableColumnsSelectedNode = { kind: "layout", layout, rowIndex, cellIndex };
   renderTableColumnsEditor();
 }
 
+// ---- grid rendering / read helpers ----
+
 function renderTableLayoutGrid(tab) {
   const rows = getLayoutRowsForTab(tab);
   const gridTemplate = "86px repeat(" + Math.max(1, tableColumnsDraft.length) + ", minmax(90px, 1fr))";
-  return '<div class="table-layout-grid">' + rows.map((row, rowIndex) => {
-    let cursor = 1;
-    const cells = row.map((cell, cellIndex) => {
+  const rowTitles = rows.map((row, rowIndex) =>
+    '<div class="table-layout-row-title" style="grid-column:1;grid-row:' + (rowIndex + 1) + '">' +
+      (tab === "header" ? "Header " : "Body ") + (rowIndex + 1) +
+    '</div>'
+  ).join('');
+  const cells = rows.map((row, rowIndex) => {
+    return row.map((cell, cellIndex) => {
       const start = getLayoutCellStartIndex(cell) + 2;
       const span = getLayoutCellSpan(cell);
-      cursor = start + span;
+      const rowSpan = getLayoutCellRowSpan(cell, rowIndex, rows.length);
       const selected = tableColumnsSelectedNode?.kind === "layout" &&
         tableColumnsSelectedNode.layout === tab &&
         tableColumnsSelectedNode.rowIndex === rowIndex &&
         tableColumnsSelectedNode.cellIndex === cellIndex;
-      return '<button type="button" class="table-layout-cell' + (selected ? ' selected' : '') + '" style="grid-column:' + start + ' / span ' + span + '" data-node-kind="layout" data-layout="' + tab + '" data-row-index="' + rowIndex + '" data-cell-index="' + cellIndex + '">' +
+      return '<button type="button" class="table-layout-cell' + (selected ? ' selected' : '') + '" style="grid-column:' + start + ' / span ' + span + ';grid-row:' + (rowIndex + 1) + ' / span ' + rowSpan + '" data-node-kind="layout" data-layout="' + tab + '" data-row-index="' + rowIndex + '" data-cell-index="' + cellIndex + '">' +
         '<input type="checkbox" data-layout-cell-select data-row-index="' + rowIndex + '" data-cell-index="' + cellIndex + '">' +
         '<span>' + escapeAttr(cell.label || cell.field || '') + '</span>' +
       '</button>';
     }).join('');
-    return '<div class="table-layout-row" style="grid-template-columns:' + gridTemplate + '">' +
-      '<div class="table-layout-row-title">' + (tab === "header" ? "Header " : "Body ") + (rowIndex + 1) + '</div>' +
-      cells +
-    '</div>';
-  }).join('') + '</div>';
+  }).join('');
+  return '<div class="table-layout-grid" style="grid-template-columns:' + gridTemplate + ';grid-auto-rows:minmax(38px, auto)">' + rowTitles + cells + '</div>';
 }
 
 function renderTableColumnsEditor() {

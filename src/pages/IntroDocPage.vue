@@ -25,4 +25,9 @@
 </template>
 
 <script setup>
+import { ref, computed } from 'vue'
+
+// TODO: 문서 목록 데이터가 아직 정의되지 않음 (.src/pages/IntroDocPage.json도 비어있음) — 채워 넣어야 함
+const docs = ref([])
+const currentDoc = computed(() => docs.value[0] || {})
 </script>

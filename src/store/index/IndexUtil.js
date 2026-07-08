@@ -21,19 +21,10 @@ export const useIndexUtilStore = defineStore('indexUtil', {
     searchText: null,
     list: []
   }),
-  getters: {
-    getRows: (state) => {
-      return undefined
-    }
-  },
   actions: {
     async selectList(loading) {
       this.entity.id = 'adf'
       this.entity.name = 'en Name'
-
-      console.log('selectList123')
-
-
     }
   }
 })

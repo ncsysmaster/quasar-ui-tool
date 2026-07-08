@@ -1,8 +1,15 @@
 import { createBaseComponentApi, resolveValue, writeValue } from './baseApi'
 
 const INTERNAL_ROW_ID = '__qtRowId'
+const DISPLAY_ROW_ID = '__qtDisplayRowId'
+const DISPLAY_SOURCE_ROW_INDEX = '__qtSourceRowIndex'
+const DISPLAY_CHANGED_FIELD = '__qtChangedField'
+const DISPLAY_ROW_COUNT = '__qtDisplayRowCount'
+const DISPLAY_SELECTION_FIELD = '__qtSelection'
 const ROW_MODE_FIELD = 'mode'
 const ROW_MODES = new Set(['R', 'C', 'U', 'D'])
+
+// ---- row identity / mode ----
 
 function asArray(value) {
   return Array.isArray(value) ? value : []
@@ -49,6 +56,8 @@ function markRowUpdated(row) {
   return row
 }
 
+// ---- IME / keyboard editing ----
+
 function isImeKeyboardEvent(event) {
   return Boolean(
     event?.isComposing ||
@@ -70,19 +79,11 @@ function isPrintableKeyboardEvent(event) {
   )
 }
 
-function isArrowKeyboardEvent(event) {
-  return ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event?.key)
-}
-
-function getCellMoveKey(event) {
-  if (event?.key === 'Enter' && event.shiftKey) return ''
-  if (event?.key === 'Enter') return 'ArrowDown'
-  return isArrowKeyboardEvent(event) ? event.key : ''
-}
-
 function shouldCompleteEditingOnly(event) {
   return event?.key === 'Enter' && event.shiftKey
 }
+
+// ---- clipboard ----
 
 function parseClipboardText(text) {
   const source = String(text ?? '').replace(/\r\n/g, '\n').replace(/\r/g, '\n')
@@ -156,40 +157,6 @@ function isEditableColumnDef(columnDef, params = {}) {
   return columnDef?.editable === true
 }
 
-function isGroupRowCellColumnDef(columnDef) {
-  return columnDef?.qtGroupRowCell === true
-}
-
-function getTextInputFromEvent(event) {
-  const target = event?.target
-  if (!target) return null
-
-  const isTextInput = (element) => {
-    if (!element || typeof element !== 'object') return false
-    const tagName = String(element.tagName || '').toLowerCase()
-    return tagName === 'textarea' || tagName === 'input'
-  }
-
-  if (isTextInput(target)) return target
-  return typeof target.closest === 'function' ? target.closest('input,textarea') : null
-}
-
-function shouldKeepHorizontalArrowInEditor(event) {
-  if (event?.key !== 'ArrowLeft' && event?.key !== 'ArrowRight') return false
-  const input = getTextInputFromEvent(event)
-  if (!input || typeof input.selectionStart !== 'number' || typeof input.selectionEnd !== 'number') {
-    return false
-  }
-
-  const selectionStart = input.selectionStart
-  const selectionEnd = input.selectionEnd
-  if (selectionStart !== selectionEnd) return true
-
-  const textLength = String(input.value || '').length
-  if (event.key === 'ArrowLeft') return selectionStart > 0
-  return selectionEnd < textLength
-}
-
 function assignInternalRowId(row, value) {
   Object.defineProperty(row, INTERNAL_ROW_ID, {
     value,
@@ -200,20 +167,58 @@ function assignInternalRowId(row, value) {
   return row
 }
 
-function getStableRowKey(row, rowKey) {
-  const internalKey = row?.[INTERNAL_ROW_ID]
-  return isEmptyValue(internalKey) ? getRowKeyValue(row, rowKey) : internalKey
+// ---- header layout DOM ----
+
+function getElementFromRef(componentRef) {
+  const value = componentRef?.value || componentRef
+  if (!value) return null
+  if (value.nodeType === 1) return value
+  if (value.$el?.nodeType === 1) return value.$el
+  if (value.eGui?.nodeType === 1) return value.eGui
+  if (typeof value.getGui === 'function') {
+    const element = value.getGui()
+    if (element?.nodeType === 1) return element
+  }
+  return null
+}
+
+function getHeaderDomRowIndex(headerRow) {
+  const raw = headerRow?.getAttribute?.('aria-rowindex') ||
+    headerRow?.dataset?.rowIndex ||
+    headerRow?.getAttribute?.('row-index')
+  const number = Number(raw)
+  if (Number.isFinite(number)) return Math.max(0, Math.round(number) - 1)
+  const rows = Array.from(headerRow?.parentElement?.querySelectorAll?.('.ag-header-row') || [])
+  const index = rows.indexOf(headerRow)
+  return index >= 0 ? index : 0
+}
+
+function resetHeaderLayoutDomSpans(root) {
+  root?.querySelectorAll?.('.qt-ag-header-span-anchor').forEach((element) => {
+    element.classList.remove('qt-ag-header-span-anchor')
+    element.style.width = ''
+    element.style.zIndex = ''
+  })
+  root?.querySelectorAll?.('.qt-ag-header-span-hidden').forEach((element) => {
+    element.classList.remove('qt-ag-header-span-hidden')
+    element.style.visibility = ''
+    element.style.pointerEvents = ''
+  })
 }
 
 export function createTableApi(options = {}) {
   const base = createBaseComponentApi(options)
   const {
+    componentRef = null,
     rows = null,
     columns = null,
+    sourceColumns = [],
     selected = null,
     pagination = null,
     loading = null,
     rowKey = 'id',
+    headerRows = 1,
+    headerLayout = [],
     excelCopy = true,
   } = options
   let gridApi = null
@@ -223,6 +228,100 @@ export function createTableApi(options = {}) {
   let copyRange = null
   let copyRangeDragging = false
   const isExcelCopyEnabled = () => excelCopy !== false
+  const getHeaderRowCount = () => Math.min(3, Math.max(1, Math.round(Number(headerRows) || 1)))
+
+  // -- header layout DOM --
+
+  const getGridElement = () => {
+    const element = getElementFromRef(componentRef)
+    if (!element) return null
+    return element.classList?.contains('qt-ag-grid') ? element : element.querySelector?.('.qt-ag-grid')
+  }
+
+  const getHeaderColumnIdMap = () => {
+    const map = new Map()
+    const add = (key, colId) => {
+      const normalizedKey = String(key || '').trim()
+      const normalizedColId = String(colId || '').trim()
+      if (normalizedKey && normalizedColId && !map.has(normalizedKey)) map.set(normalizedKey, normalizedColId)
+    }
+    const displayedColumns = gridApi?.getAllDisplayedColumns?.() || gridApi?.getDisplayedCenterColumns?.() || []
+    displayedColumns.forEach((column) => {
+      const colId = column?.getColId?.()
+      const columnDef = column?.getColDef?.() || {}
+      add(colId, colId)
+      add(columnDef.colId, colId)
+      add(columnDef.field, colId)
+      add(columnDef.name, colId)
+    })
+    asArray(sourceColumns).forEach((column) => {
+      const sourceKey = column?.field || column?.name
+      const colId = map.get(String(column?.name || '').trim()) ||
+        map.get(String(column?.field || '').trim()) ||
+        String(column?.name || column?.field || '').trim()
+      add(sourceKey, colId)
+    })
+    return map
+  }
+
+  const applyHeaderLayoutDomSpans = () => {
+    const root = getGridElement()
+    if (!root || typeof document === 'undefined') return false
+    resetHeaderLayoutDomSpans(root)
+    const count = getHeaderRowCount()
+    const groupRows = Math.max(0, count - 1)
+    const rows = Array.isArray(headerLayout) ? headerLayout : []
+    const idMap = getHeaderColumnIdMap()
+    const domRows = Array.from(root.querySelectorAll('.ag-header-row'))
+
+    rows.forEach((row, rowIndex) => {
+      if (rowIndex < groupRows || !Array.isArray(row)) return
+      const domRow = domRows.find((element) => getHeaderDomRowIndex(element) === rowIndex)
+      if (!domRow) return
+      const leafCells = Array.from(domRow.querySelectorAll('.ag-header-cell'))
+      row.forEach((cell) => {
+        const keys = Array.isArray(cell?.columns) ? cell.columns.map(String).filter(Boolean) : []
+        if (keys.length < 2) return
+        const cells = keys
+          .map((key) => {
+            const colId = idMap.get(String(key || '').trim()) || String(key || '').trim()
+            return leafCells.find((element) => String(element.getAttribute('col-id') || '') === colId)
+          })
+          .filter(Boolean)
+        if (cells.length < 2) return
+        const ordered = cells.slice().sort((left, right) => left.getBoundingClientRect().left - right.getBoundingClientRect().left)
+        const bounds = ordered.map((element) => element.getBoundingClientRect())
+        const left = Math.min(...bounds.map((item) => item.left))
+        const right = Math.max(...bounds.map((item) => item.right))
+        const anchor = ordered[0]
+        anchor.classList.add('qt-ag-header-span-anchor')
+        anchor.style.width = `${Math.max(0, right - left)}px`
+        anchor.style.zIndex = '5'
+        ordered.slice(1).forEach((element) => {
+          element.classList.add('qt-ag-header-span-hidden')
+          element.style.visibility = 'hidden'
+          element.style.pointerEvents = 'none'
+        })
+      })
+    })
+    return true
+  }
+
+  const scheduleHeaderLayoutDomSpans = () => {
+    const sync = () => applyHeaderLayoutDomSpans()
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(() => requestAnimationFrame(sync))
+    }
+    setTimeout(sync, 80)
+  }
+
+  const attachHeaderLayoutEvents = (eventApi) => {
+    ;['columnResized', 'displayedColumnsChanged', 'gridSizeChanged', 'firstDataRendered', 'modelUpdated'].forEach((eventName) => {
+      eventApi?.addEventListener?.(eventName, scheduleHeaderLayoutDomSpans)
+    })
+  }
+
+  // -- row identity / mode --
 
   const ensureRowIdentity = (row) => {
     if (!row || typeof row !== 'object') return row
@@ -260,12 +359,33 @@ export function createTableApi(options = {}) {
   const ensureGeneratedRowKey = (row) => {
     if (!row || typeof row !== 'object' || !rowKey) return row
     if (isEmptyValue(row[rowKey])) row[rowKey] = createGeneratedRowKey()
-      return row
-    }
+    return row
+  }
 
   const isNonDataField = (field) => {
     const name = String(field || '').trim()
-    return !name || name === 'actions' || name === ROW_MODE_FIELD || name === rowKey
+    return !name ||
+      name === 'actions' ||
+      name === ROW_MODE_FIELD ||
+      name === rowKey ||
+      name === DISPLAY_ROW_ID ||
+      name === DISPLAY_SOURCE_ROW_INDEX ||
+      name === DISPLAY_CHANGED_FIELD ||
+      name === DISPLAY_ROW_COUNT ||
+      name === DISPLAY_SELECTION_FIELD ||
+      name === 'rowIdx'
+  }
+
+  const stripDisplayFields = (row) => {
+    if (!row || typeof row !== 'object') return row
+    const next = { ...row }
+    delete next[DISPLAY_ROW_ID]
+    delete next[DISPLAY_SOURCE_ROW_INDEX]
+    delete next[DISPLAY_CHANGED_FIELD]
+    delete next[DISPLAY_ROW_COUNT]
+    delete next[DISPLAY_SELECTION_FIELD]
+    delete next.rowIdx
+    return next
   }
 
   const isNonDataColumn = (column) => {
@@ -300,6 +420,10 @@ export function createTableApi(options = {}) {
   const findDataRowIndex = (event) => {
     const currentRows = api.getRows()
     const data = event?.data
+    const sourceIndex = Number(data?.[DISPLAY_SOURCE_ROW_INDEX])
+    if (Number.isInteger(sourceIndex) && sourceIndex >= 0 && sourceIndex < currentRows.length) {
+      return sourceIndex
+    }
     const identityIndex = currentRows.indexOf(data)
     if (identityIndex >= 0) return identityIndex
 
@@ -322,6 +446,10 @@ export function createTableApi(options = {}) {
   const findRowIndexByData = (data) => {
     if (!data || typeof data !== 'object') return -1
     const currentRows = api.getRows()
+    const sourceIndex = Number(data?.[DISPLAY_SOURCE_ROW_INDEX])
+    if (Number.isInteger(sourceIndex) && sourceIndex >= 0 && sourceIndex < currentRows.length) {
+      return sourceIndex
+    }
     const identityIndex = currentRows.indexOf(data)
     if (identityIndex >= 0) return identityIndex
 
@@ -340,6 +468,8 @@ export function createTableApi(options = {}) {
     return -1
   }
 
+  // -- clipboard / copy-range --
+
   const getDisplayedColumns = (eventApi) => {
     const allColumns = eventApi?.getAllDisplayedColumns?.()
     if (Array.isArray(allColumns) && allColumns.length > 0) return allColumns
@@ -350,30 +480,6 @@ export function createTableApi(options = {}) {
   const getColumnField = (column) => {
     const columnDef = column?.getColDef?.() || column || {}
     return columnDef.field || columnDef.name || columnDef.colId || column?.getColId?.()
-  }
-
-  const focusGroupRowCellInput = (eventApi, rowIndex, columnId, inputIndex = 0) => {
-    if (!eventApi || columnId === undefined || columnId === null) return false
-    eventApi.ensureIndexVisible?.(rowIndex)
-    eventApi.ensureColumnVisible?.(columnId)
-    eventApi.setFocusedCell?.(rowIndex, columnId)
-
-    setTimeout(() => {
-      if (typeof document === 'undefined') return
-      const rows = Array.from(document.querySelectorAll('.ag-row'))
-      const row = rows.find((element) => element.getAttribute('row-index') === String(rowIndex))
-      const cells = row ? Array.from(row.querySelectorAll('.ag-cell')) : []
-      const cell = cells.find((element) => element.getAttribute('col-id') === String(columnId))
-      const input = cell?.querySelector?.(
-        `.qt-ag-group-input[data-qt-ag-group-input-index="${Number(inputIndex) || 0}"]`,
-      ) || cell?.querySelector?.(
-        `.qt-ag-layout-input[data-qt-ag-layout-input-index="${Number(inputIndex) || 0}"]`,
-      )
-      input?.focus?.()
-      input?.select?.()
-    }, 0)
-
-    return true
   }
 
   const getFocusedCellInfo = (eventApi) => {
@@ -456,80 +562,7 @@ export function createTableApi(options = {}) {
     return { eventApi, rowIndex, columnId }
   }
 
-  const moveToAdjacentEditableCell = (params, key) => {
-    const eventApi = params.api || gridApi
-    const moveKey = getCellMoveKey({ key })
-    const movingFromEditor = params.editing === true
-    const shouldStartEditingAfterMove = movingFromEditor && key !== 'Enter'
-    if (!eventApi || !moveKey) return false
-
-    const columns = getDisplayedColumns(eventApi)
-    if (columns.length === 0) return false
-
-    const isNavigableColumn = (column, rowIndex) => {
-      const rowNode = eventApi.getDisplayedRowAtIndex?.(rowIndex)
-      const columnDef = column?.getColDef?.() || {}
-      if (isNonDataColumn(columnDef)) return false
-      if (!movingFromEditor) return true
-      return isEditableColumnDef(columnDef, {
-        ...params,
-        api: eventApi,
-        node: rowNode,
-        data: rowNode?.data,
-        column,
-        colDef: columnDef,
-      })
-    }
-
-    const currentColumnId = params.column?.getColId?.() || params.colDef?.colId || params.colDef?.field
-    const currentColumnIndex = columns.findIndex((column) => column?.getColId?.() === currentColumnId)
-    const currentRowIndex = Number.isInteger(Number(params.node?.rowIndex))
-      ? Number(params.node.rowIndex)
-      : Number(eventApi.getFocusedCell?.()?.rowIndex)
-
-    if (!Number.isInteger(currentRowIndex) || currentColumnIndex < 0) return false
-
-    const displayedRowCount = Number(eventApi.getDisplayedRowCount?.() ?? api.getRows().length)
-    let nextRowIndex = currentRowIndex
-    let nextColumnIndex = currentColumnIndex
-
-    if (moveKey === 'ArrowUp') nextRowIndex -= 1
-    if (moveKey === 'ArrowDown') nextRowIndex += 1
-
-    if (moveKey === 'ArrowLeft' || moveKey === 'ArrowRight') {
-      const direction = moveKey === 'ArrowLeft' ? -1 : 1
-      nextColumnIndex += direction
-      while (nextColumnIndex >= 0 && nextColumnIndex < columns.length) {
-        if (isNavigableColumn(columns[nextColumnIndex], nextRowIndex)) break
-        nextColumnIndex += direction
-      }
-    }
-
-    if (nextRowIndex < 0 || nextRowIndex >= displayedRowCount) return false
-    if (nextColumnIndex < 0 || nextColumnIndex >= columns.length) return false
-
-    const targetColumn = columns[nextColumnIndex]
-    const targetColumnId = targetColumn?.getColId?.()
-    const targetColumnDef = targetColumn?.getColDef?.() || {}
-    if (!targetColumnId || !isNavigableColumn(targetColumn, nextRowIndex)) return false
-
-    params.event?.preventDefault?.()
-    params.event?.stopPropagation?.()
-    if (movingFromEditor) eventApi.stopEditing?.(false)
-
-    setTimeout(() => {
-      eventApi.ensureIndexVisible?.(nextRowIndex)
-      eventApi.ensureColumnVisible?.(targetColumnId)
-      eventApi.setFocusedCell?.(nextRowIndex, targetColumnId)
-      if (isGroupRowCellColumnDef(targetColumnDef)) {
-        focusGroupRowCellInput(eventApi, nextRowIndex, targetColumnId, 0)
-      } else if (shouldStartEditingAfterMove) {
-          eventApi.startEditingCell?.({ rowIndex: nextRowIndex, colKey: targetColumnId })
-      }
-    }, 0)
-
-    return true
-  }
+  // -- IME / keyboard editing --
 
   const completeCurrentEdit = (params = {}) => {
     const eventApi = params.api || gridApi
@@ -541,42 +574,14 @@ export function createTableApi(options = {}) {
     return true
   }
 
-  const delCreatedBlankLastRowOnArrowUp = (params = {}) => {
-    const keyboardEvent = params.event
-    const eventApi = params.api || gridApi
-    if (keyboardEvent?.key !== 'ArrowUp' || !eventApi || !params.data) return false
-
-    const editorInput = getTextInputFromEvent(keyboardEvent)
-    if (editorInput && !isEmptyValue(editorInput.value)) return false
-
-    const rowIndex = Number(params.node?.rowIndex)
-    const displayedRowCount = Number(eventApi.getDisplayedRowCount?.() ?? api.getRows().length)
-    const isLastDisplayedRow =
-      Number.isInteger(rowIndex) && rowIndex >= Math.max(0, displayedRowCount - 1)
-    if (!isLastDisplayedRow || !isCreatedBlankDataRow(params.data)) return false
-
-    keyboardEvent.preventDefault?.()
-    keyboardEvent.stopPropagation?.()
-    eventApi.stopEditing?.(false)
-
-    const removedIndex = findDataRowIndex(params)
-    api.delRow(removedIndex)
-
-    setTimeout(() => {
-      const nextRowCount = Number(eventApi.getDisplayedRowCount?.() ?? api.getRows().length)
-      if (nextRowCount <= 0) return
-      const nextIndex = Math.min(Math.max(0, removedIndex - 1), nextRowCount - 1)
-      eventApi.ensureIndexVisible?.(nextIndex)
-      eventApi.setFocusedCell?.(nextIndex, params.column?.getColId?.())
-    }, 0)
-
-    return true
-  }
+  // -- public API --
 
   const api = {
     ...base,
     setGridApi(nextGridApi) {
       gridApi = nextGridApi || null
+      attachHeaderLayoutEvents(gridApi)
+      scheduleHeaderLayoutDomSpans()
     },
     getGridApi() {
       return gridApi
@@ -616,48 +621,14 @@ export function createTableApi(options = {}) {
       if (row && typeof row === 'object') pendingBlankRows.add(row)
       return row
     },
-    handleCellKeyDown(event) {
-      const keyboardEvent = event?.event
-      const moveKey = getCellMoveKey(keyboardEvent)
-      if (!moveKey) return false
-
-      const eventApi = event?.api || gridApi
-      const rowIndex = Number(event?.node?.rowIndex)
-      const displayedRowCount = Number(eventApi?.getDisplayedRowCount?.() ?? api.getRows().length)
-      const isLastDisplayedRow =
-        Number.isInteger(rowIndex) && rowIndex >= Math.max(0, displayedRowCount - 1)
-
-      if (delCreatedBlankLastRowOnArrowUp({ ...event, event: keyboardEvent })) return true
-
-      if (!isLastDisplayedRow || keyboardEvent.key !== 'ArrowDown') {
-        return moveToAdjacentEditableCell({ ...event, event: keyboardEvent, editing: false }, keyboardEvent.key)
-      }
-
-      if (event?.data && pendingBlankRows.has(event.data) && isDataRowBlank(event.data)) {
-        return moveToAdjacentEditableCell({ ...event, event: keyboardEvent, editing: false }, keyboardEvent.key)
-      }
-
-      keyboardEvent.preventDefault?.()
-      const newRow = api.addEmptyRow()
-      const nextIndex = api.getRows().length - 1
-      setTimeout(() => {
-        eventApi?.ensureIndexVisible?.(nextIndex)
-        eventApi?.setFocusedCell?.(nextIndex, event?.column?.getColId?.())
-      }, 0)
-      return newRow
+    handleCellKeyDown() {
+      return false
     },
     suppressKeyboardEvent(params = {}) {
       const event = params.event
       const columnDef = params.column?.getColDef?.() || params.colDef || {}
       if (params.editing && shouldCompleteEditingOnly(event)) {
         return completeCurrentEdit(params)
-      }
-
-      if (params.editing && delCreatedBlankLastRowOnArrowUp(params)) return true
-
-      if (params.editing && getCellMoveKey(event)) {
-        if (shouldKeepHorizontalArrowInEditor(event)) return false
-        return moveToAdjacentEditableCell(params, event.key)
       }
 
       if (params.editing || !isEditableColumnDef(columnDef, params)) return false
@@ -671,10 +642,10 @@ export function createTableApi(options = {}) {
       const nextRows = [...api.getRows()]
       if (dataIndex < 0 || dataIndex >= nextRows.length) return false
 
-      const field = event?.colDef?.field || event?.column?.getColDef?.()?.field
+      const field = event?.data?.[DISPLAY_CHANGED_FIELD] || event?.colDef?.field || event?.column?.getColDef?.()?.field
       const nextRow = {
         ...nextRows[dataIndex],
-        ...(event?.data && typeof event.data === 'object' ? event.data : {}),
+        ...(event?.data && typeof event.data === 'object' ? stripDisplayFields(event.data) : {}),
       }
       if (field) nextRow[field] = event?.newValue
       nextRows[dataIndex] = preserveRowIdentity(

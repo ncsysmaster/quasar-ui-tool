@@ -45,6 +45,8 @@ class PageEditorState {
     this.lastTableRowsBindingWarningKey = "";
   }
 
+  // ---- document lifecycle ----
+
   async setDocument(document) {
     this.document = document;
     this.selectedCellIds = [];
@@ -139,6 +141,8 @@ class PageEditorState {
     }
   }
 
+  // ---- tab / navigation requests ----
+
   setEditorTab(tabName) {
     const allowedTabs = new Set(["screen", "script", "store"]);
     this.editorTab = allowedTabs.has(tabName) ? tabName : "screen";
@@ -178,6 +182,8 @@ class PageEditorState {
     this.fire();
   }
 
+  // ---- model save / update ----
+
   async updateModel(mutator) {
     if (!this.document) {
       vscode.window.showWarningMessage(
@@ -211,6 +217,8 @@ class PageEditorState {
     await this.warnInvalidTableRowsBindings(model);
     this.fire();
   }
+
+  // ---- component tree editing ----
 
   // 콤퍼넌트를 추가 이벤트
   async addComponent(paletteIndex, targetId, options = {}) {
@@ -617,6 +625,8 @@ class PageEditorState {
     });
   }
 
+  // ---- grid layout (resize / merge / split) ----
+
   async updateFormLayout(action, targetId) {
     if (!targetId) return;
 
@@ -900,6 +910,8 @@ class PageEditorState {
     });
   }
 
+  // ---- script ----
+
   async updateScript(value) {
     if (!this.document) return;
 
@@ -920,6 +932,8 @@ class PageEditorState {
     this.fire();
     this.scheduleGenerateVue(this.document);
   }
+
+  // ---- dataset ----
 
   async addDatasetField() {
     await this.updateModel((model) => {
@@ -950,6 +964,8 @@ class PageEditorState {
       ensureDataset(model).fields.splice(index, 1);
     });
   }
+
+  // ---- internal helpers ----
 
   fire() {
     this.changeEmitter.fire({
@@ -1038,6 +1054,8 @@ class PageEditorState {
     );
   }
 
+  // ---- event method navigation ----
+
   async updateSelectedEvent(eventName, value) {
     let shouldCreateHandler = false;
 
@@ -1124,6 +1142,10 @@ class PageEditorState {
     this.requestScriptMethod(handler);
   }
 }
+
+// ==== free functions below: not class members ====
+
+// ---- palette / table model normalization ----
 
 function createPaletteComponent(item) {
   const component = {
@@ -1299,11 +1321,12 @@ function normalizeTableLayoutRows(rows, columns, rowCount = 1, kind = "body") {
     source.push(defaultRows[source.length] || defaultRows[0] || []);
   }
 
-  return source.map((row) => {
+  const usedCellIds = new Set();
+  const normalizedRows = source.map((row, rowIndex) => {
     const cells = Array.isArray(row) ? row : [];
     const normalizedCells = [];
     let cursor = 0;
-    cells.forEach((cell) => {
+    cells.forEach((cell, cellIndex) => {
       const rawColumns = Array.isArray(cell?.columns)
         ? cell.columns.map(String).filter(Boolean)
         : (cell?.field ? [String(cell.field)] : []);
@@ -1313,18 +1336,24 @@ function normalizeTableLayoutRows(rows, columns, rowCount = 1, kind = "body") {
       const span = Math.max(1, Math.min(columnKeys.length - start, Number(cell?.colspan || rawColumns.length || 1)));
       const keys = columnKeys.slice(start, start + span);
       cursor = start + span;
-      normalizedCells.push({
+      const nextCell = {
+        cellId: getTableLayoutCellId(cell, kind, rowIndex, keys, cellIndex, usedCellIds),
         label: String(cell?.label || keys[0] || ""),
         field: String(cell?.field || keys[0] || ""),
         columns: keys,
         ...(span > 1 ? { colspan: span } : {}),
-        ...(Number(cell?.rowspan) > 1 ? { rowspan: Math.min(limit, Math.round(Number(cell.rowspan))) } : {}),
-      });
+        ...(Number(cell?.rowspan) > 1 ? { rowspan: Math.min(limit - rowIndex, Math.round(Number(cell.rowspan))) } : {}),
+      };
+      normalizedCells.push(nextCell);
     });
     return normalizedCells.length > 0
       ? normalizedCells
       : createDefaultTableLayoutRows(columns, 1, kind)[0];
   });
+
+  normalizedRows.forEach((row) => row.forEach((cell) => delete cell.navigation));
+
+  return normalizedRows;
 }
 
 function createDefaultTableLayoutRows(columns, rowCount = 1, kind = "body") {
@@ -1332,11 +1361,38 @@ function createDefaultTableLayoutRows(columns, rowCount = 1, kind = "body") {
   const count = Math.min(3, Math.max(1, Math.round(Number(rowCount) || 1)));
   return Array.from({ length: count }, (_, rowIndex) =>
     normalizedColumns.map((column, columnIndex) => ({
+      cellId: createTableLayoutCellId(kind, rowIndex, [column.field], columnIndex),
       label: kind === "header" && rowIndex > 0 ? `title${columnIndex + 1}` : column.label,
       field: column.field,
       columns: [column.field],
     })),
   );
+}
+
+function createTableLayoutCellId(kind, rowIndex, keys, cellIndex = 0) {
+  const rawKey = (Array.isArray(keys) ? keys : [])
+    .map((key) => String(key || "").trim())
+    .filter(Boolean)
+    .join("_") || `cell${Number(cellIndex) + 1}`;
+  const safeKey = rawKey
+    .replace(/[^A-Za-z0-9_가-힣-]+/g, "_")
+    .replace(/^_+|_+$/g, "") || "cell";
+  return `${String(kind || "body")}_r${Number(rowIndex) + 1}_${safeKey}`;
+}
+
+function getTableLayoutCellId(cell, kind, rowIndex, keys, cellIndex, usedCellIds = new Set()) {
+  const raw = String(cell?.cellId || "").trim();
+  let cellId = raw || createTableLayoutCellId(kind, rowIndex, keys, cellIndex);
+  if (usedCellIds.has(cellId)) {
+    const base = cellId;
+    let sequence = 2;
+    while (usedCellIds.has(cellId)) {
+      cellId = `${base}_${sequence}`;
+      sequence += 1;
+    }
+  }
+  usedCellIds.add(cellId);
+  return cellId;
 }
 
 function clampTableHeaderRows(value) {
@@ -1452,6 +1508,8 @@ function getWorkspaceRoot(documentUri) {
   if (!documentUri) return "";
   return vscode.workspace.getWorkspaceFolder(documentUri)?.uri.fsPath || "";
 }
+
+// ---- model binding validation ----
 
 function getTableRowsBindingExpression(component) {
   return String(
@@ -1594,6 +1652,9 @@ function setNestedComponentValue(component, path, value) {
   }
   target[keys[0]] = value;
 }
+
+// ---- course-search-form template generator ----
+// (a single named template feature; kept isolated from the generic utilities around it)
 
 function createCourseSearchForm(model) {
   const nextId = createSequentialIdFactory(model.components);
@@ -1770,120 +1831,6 @@ function createCourseSearchForm(model) {
   return form;
 }
 
-function createLegacyCourseSearchForm(model) {
-  const nextId = createSequentialIdFactory(model.components);
-  const make = (type, options = {}) => {
-    const component = { id: nextId(type, options.tag), type };
-    if (options.tag) component.tag = options.tag;
-    if (options.class) component.class = options.class;
-    if (options.props && Object.keys(options.props).length)
-      component.props = options.props;
-    if (options.models) component.models = options.models;
-    if (options.dynamicProps) component.dynamicProps = options.dynamicProps;
-    if (options.events) component.events = options.events;
-    if (options.children) component.children = options.children;
-    return component;
-  };
-  const div = (className, children) =>
-    make("HtmlElement", {
-      tag: "div",
-      class: className,
-      children,
-    });
-
-  const form = make("Card", {
-    class: "q-mb-md",
-    props: { flat: true, bordered: true },
-    children: [
-      make("CardSection", {
-        children: [
-          div("row q-col-gutter-md items-end", [
-            div("col-12 col-md-2", [
-              make("Select", {
-                models: { modelValue: "searchForm.clsfCd" },
-                dynamicProps: { options: "classOptions" },
-                props: {
-                  optionLabel: "label",
-                  optionValue: "value",
-                  emitValue: true,
-                  mapOptions: true,
-                  outlined: true,
-                  dense: true,
-                  label: "교육분류",
-                },
-                events: { "update:model-value": "onChangeClass" },
-              }),
-            ]),
-            div("col-12 col-md-2", [
-              make("Select", {
-                models: { modelValue: "searchForm.dclsfCd" },
-                dynamicProps: { options: "detailOptionsFiltered" },
-                props: {
-                  optionLabel: "label",
-                  optionValue: "value",
-                  emitValue: true,
-                  mapOptions: true,
-                  outlined: true,
-                  dense: true,
-                  label: "분류상세",
-                },
-              }),
-            ]),
-            div("col-12 col-md-2", [
-              div("row items-center q-gutter-md search-toggle-wrap", [
-                make("Toggle", {
-                  models: { modelValue: "searchForm.requiredYn" },
-                  props: {
-                    trueValue: "Y",
-                    falseValue: "",
-                    label: "필수",
-                    color: "primary",
-                  },
-                }),
-                make("Toggle", {
-                  models: { modelValue: "searchForm.closedYn" },
-                  props: {
-                    trueValue: "Y",
-                    falseValue: "",
-                    label: "사용여부",
-                    color: "grey-7",
-                  },
-                }),
-              ]),
-            ]),
-            div("col-12 col-md-4", [
-              make("Input", {
-                models: { modelValue: "searchForm.courseNm" },
-                props: {
-                  outlined: true,
-                  dense: true,
-                  label: "교육과정명",
-                  clearable: true,
-                },
-                events: { "keyup.enter": "fetchCourseList" },
-              }),
-            ]),
-            div("col-12 col-md-2", [
-              div("row q-gutter-sm justify-end", [
-                make("Button", {
-                  props: { color: "primary", label: "검색" },
-                  events: { click: "fetchCourseList" },
-                }),
-                make("Button", {
-                  props: { flat: true, color: "grey-8", label: "초기화" },
-                  events: { click: "resetSearch" },
-                }),
-              ]),
-            ]),
-          ]),
-        ],
-      }),
-    ],
-  });
-  form.designer = { template: "courseSearchForm" };
-  return form;
-}
-
 function createSequentialIdFactory(components) {
   const usedIds = new Set();
   const counters = new Map();
@@ -1982,6 +1929,8 @@ function createCourseSearchScript(existingScript) {
 
   return missing.length ? `\n\n${missing.join("\n\n")}\n` : "";
 }
+
+// ---- generic component-tree utilities ----
 
 function moveComponentInTree(components, dragId, dropId) {
   const dragInfo = findComponentWithParent(components, dragId);
@@ -2152,6 +2101,8 @@ function isColumnComponent(component) {
       ))
   );
 }
+
+// ---- grid merge / split geometry math ----
 
 function isMergeableCellContext(context) {
   return Boolean(
@@ -2573,6 +2524,8 @@ function moveComponentInside(components, dragId, dropId) {
 
   return true;
 }
+
+// ---- code-string generators ----
 
 function hasFunction(script, functionName) {
   const escapedName = String(functionName).replace(

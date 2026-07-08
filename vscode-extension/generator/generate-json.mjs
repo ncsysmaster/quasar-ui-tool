@@ -115,6 +115,8 @@ function generateJson(vueSource, inputPath) {
   return { definition, setupScript: parsedScript.setup }
 }
 
+// ---- template -> JSON component-tree extraction ----
+
 function extractBlock(source, tagName) {
   const match = source.match(new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)<\\/${tagName}>`, 'i'))
   return match ? match[1].trim() : null
@@ -254,6 +256,8 @@ function textNodeToString(node) {
 
   return ''
 }
+
+// ---- <script setup> literal-evaluation parsing ----
 
 function parseScriptSetup(scriptSetup) {
   const data = {}
@@ -479,6 +483,8 @@ function buildComponentId(tagName, siblingIndex) {
 
   return `${base || 'component'}${siblingIndex + 1}`
 }
+
+// ---- output path / misc utilities ----
 
 function resolveOutputPath(inputPath) {
   const fileName = inputPath.split(/[\\/]/).pop().replace(/\.vue$/i, '.json')

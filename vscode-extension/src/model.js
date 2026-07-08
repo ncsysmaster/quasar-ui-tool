@@ -102,16 +102,6 @@ function findComponent(components, id) {
   return null
 }
 
-function removeComponent(components, id) {
-  if (!Array.isArray(components)) return false
-  const index = components.findIndex((component) => component.id === id)
-  if (index >= 0) {
-    components.splice(index, 1)
-    return true
-  }
-  return components.some((component) => removeComponent(component.children, id))
-}
-
 function firstSelectableId(components) {
   return components?.[0]?.id || ''
 }
@@ -139,6 +129,5 @@ module.exports = {
   findComponent,
   firstSelectableId,
   parseModel,
-  removeComponent,
   stringifyModel
 }

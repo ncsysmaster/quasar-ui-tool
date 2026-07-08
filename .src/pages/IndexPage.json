@@ -368,69 +368,239 @@
                   "label": "tblList",
                   "props": {
                     "rows": [],
-                    "rowKey": "row-id",
+                    "rowKey": "rowId",
                     "noDataLabel": "데이터가 없습니다.",
-                    "loadingLabel": "데이터를 불러오는 중입니다.",
-                    "selection": "single"
+                    "loadingLabel": "데이터를 불러오는 중입니다."
                   },
                   "models": {
-                    "selected": "storeName.selectedRow",
                     "pagination": "Table001Pagination"
                   },
                   "columns": [
                     {
                       "name": "name",
-                      "label": "성명",
+                      "label": "명칭",
                       "field": "name",
-                      "type": "text",
-                      "align": "left",
-                      "headers": [
-                        "명칭",
-                        ""
-                      ],
-                      "sortable": false,
-                      "required": false,
-                      "editable": true
-                    },
-                    {
-                      "name": "column2",
-                      "label": "직책",
-                      "field": "position",
-                      "type": "text",
-                      "align": "left",
-                      "sortable": false,
-                      "required": false,
-                      "editable": true
-                    },
-                    {
-                      "name": "column3",
-                      "label": "주소",
-                      "field": "address",
-                      "type": "text",
-                      "align": "left",
-                      "sortable": false,
-                      "required": false,
-                      "editable": true
-                    },
-                    {
-                      "name": "deptment",
-                      "label": "부서",
-                      "field": "deptment",
                       "type": "text",
                       "align": "left",
                       "sortable": true,
                       "required": false,
-                      "editable": true
+                      "editable": false
+                    },
+                    {
+                      "name": "dtlDt",
+                      "label": "상세일자",
+                      "field": "dtlDt",
+                      "type": "date",
+                      "align": "center",
+                      "sortable": true,
+                      "required": false,
+                      "editable": false
+                    },
+                    {
+                      "name": "actions",
+                      "label": "작업",
+                      "field": "actions",
+                      "type": "actions",
+                      "align": "center",
+                      "sortable": false,
+                      "required": false,
+                      "editable": false
+                    },
+                    {
+                      "name": "column4",
+                      "label": "주소",
+                      "field": "adress",
+                      "type": "text",
+                      "align": "left",
+                      "sortable": false,
+                      "required": false,
+                      "editable": false
                     }
+                  ],
+                  "headerRows": [
+                    [
+                      {
+                        "cellId": "header_r1_name",
+                        "label": "명칭",
+                        "field": "name",
+                        "columns": [
+                          "name"
+                        ]
+                      },
+                      {
+                        "cellId": "header_r1_dtlDt",
+                        "label": "상세일자",
+                        "field": "dtlDt",
+                        "columns": [
+                          "dtlDt",
+                          "actions"
+                        ],
+                        "colspan": 2
+                      },
+                      {
+                        "cellId": "header_r1_adress",
+                        "label": "컬럼 4",
+                        "field": "adress",
+                        "columns": [
+                          "adress"
+                        ]
+                      }
+                    ],
+                    [
+                      {
+                        "cellId": "header_r2_name",
+                        "label": "title1",
+                        "field": "name",
+                        "columns": [
+                          "name"
+                        ]
+                      },
+                      {
+                        "cellId": "header_r2_dtlDt",
+                        "label": "title2",
+                        "field": "dtlDt",
+                        "columns": [
+                          "dtlDt"
+                        ]
+                      },
+                      {
+                        "cellId": "header_r2_actions",
+                        "label": "title3",
+                        "field": "actions",
+                        "columns": [
+                          "actions"
+                        ]
+                      },
+                      {
+                        "cellId": "header_r2_adress",
+                        "label": "컬럼 4",
+                        "field": "adress",
+                        "columns": [
+                          "adress"
+                        ]
+                      }
+                    ],
+                    [
+                      {
+                        "cellId": "header_r3_name",
+                        "label": "title1",
+                        "field": "name",
+                        "columns": [
+                          "name"
+                        ]
+                      },
+                      {
+                        "cellId": "header_r3_dtlDt",
+                        "label": "title2",
+                        "field": "dtlDt",
+                        "columns": [
+                          "dtlDt"
+                        ]
+                      },
+                      {
+                        "cellId": "header_r3_actions",
+                        "label": "title3",
+                        "field": "actions",
+                        "columns": [
+                          "actions"
+                        ]
+                      },
+                      {
+                        "cellId": "header_r3_adress",
+                        "label": "컬럼 4",
+                        "field": "adress",
+                        "columns": [
+                          "adress"
+                        ]
+                      }
+                    ]
+                  ],
+                  "bodyRows": [
+                    [
+                      {
+                        "cellId": "body_r1_name",
+                        "label": "명칭",
+                        "field": "name",
+                        "columns": [
+                          "name"
+                        ],
+                        "rowspan": 2
+                      },
+                      {
+                        "cellId": "body_r1_dtlDt",
+                        "label": "상세일자",
+                        "field": "dtlDt",
+                        "columns": [
+                          "dtlDt",
+                          "actions"
+                        ],
+                        "colspan": 2
+                      },
+                      {
+                        "cellId": "body_r1_adress",
+                        "label": "컬럼 4",
+                        "field": "adress",
+                        "columns": [
+                          "adress"
+                        ],
+                        "rowspan": 2
+                      }
+                    ],
+                    [
+                      {
+                        "cellId": "body_r2_dtlDt",
+                        "label": "상세일자",
+                        "field": "dtlDt",
+                        "columns": [
+                          "dtlDt",
+                          "actions"
+                        ],
+                        "colspan": 2
+                      }
+                    ],
+                    [
+                      {
+                        "cellId": "body_r3_name",
+                        "label": "명칭",
+                        "field": "name",
+                        "columns": [
+                          "name"
+                        ]
+                      },
+                      {
+                        "cellId": "body_r3_dtlDt",
+                        "label": "상세일자",
+                        "field": "dtlDt",
+                        "columns": [
+                          "dtlDt"
+                        ]
+                      },
+                      {
+                        "cellId": "body_r3_actions",
+                        "label": "작업",
+                        "field": "actions",
+                        "columns": [
+                          "actions"
+                        ]
+                      },
+                      {
+                        "cellId": "body_r3_adress",
+                        "label": "컬럼 4",
+                        "field": "adress",
+                        "columns": [
+                          "adress"
+                        ]
+                      }
+                    ]
                   ],
                   "table": {
                     "title": "tblList",
-                    "rowKey": "row-id",
+                    "rowKey": "rowId",
                     "showModeColumn": true,
                     "excelCopy": false,
-                    "headerRows": 2,
-                    "rowRows": 2,
-                    "selection": "single",
+                    "headerRows": 3,
+                    "rowRows": 3,
+                    "selection": "none",
                     "rowsBinding": "",
                     "loadingBinding": "",
                     "toolbar": {
@@ -466,116 +636,7 @@
                   },
                   "events": {
                     "row-click": "onRowClick_Table001"
-                  },
-                  "bodyRows": [
-                    [
-                      {
-                        "label": "성명",
-                        "field": "name",
-                        "columns": [
-                          "name"
-                        ]
-                      },
-                      {
-                        "label": "직책",
-                        "field": "position",
-                        "columns": [
-                          "position",
-                          "address"
-                        ],
-                        "colspan": 2
-                      },
-                      {
-                        "label": "컬럼 4",
-                        "field": "deptment",
-                        "columns": [
-                          "deptment"
-                        ]
-                      }
-                    ],
-                    [
-                      {
-                        "label": "성명",
-                        "field": "name",
-                        "columns": [
-                          "name"
-                        ]
-                      },
-                      {
-                        "label": "직책",
-                        "field": "position",
-                        "columns": [
-                          "position"
-                        ]
-                      },
-                      {
-                        "label": "주소",
-                        "field": "address",
-                        "columns": [
-                          "address"
-                        ]
-                      },
-                      {
-                        "label": "부서",
-                        "field": "deptment",
-                        "columns": [
-                          "deptment"
-                        ]
-                      }
-                    ]
-                  ],
-                  "headerRows": [
-                    [
-                      {
-                        "label": "성명",
-                        "field": "name",
-                        "columns": [
-                          "name"
-                        ]
-                      },
-                      {
-                        "label": "직책",
-                        "field": "position",
-                        "columns": [
-                          "position",
-                          "address"
-                        ],
-                        "colspan": 2
-                      },
-                      {
-                        "label": "부서",
-                        "field": "deptment",
-                        "columns": [
-                          "deptment"
-                        ]
-                      }
-                    ],
-                    [
-                      {
-                        "label": "부서",
-                        "field": "name",
-                        "columns": [
-                          "name"
-                        ]
-                      },
-                      {
-                        "label": "title2",
-                        "field": "position",
-                        "columns": [
-                          "position",
-                          "address"
-                        ],
-                        "colspan": 2
-                      },
-                      {
-                        "label": "컬럼 4",
-                        "field": "deptment",
-                        "columns": [
-                          "deptment"
-                        ]
-                      }
-                    ]
-                  ]
+                  }
                 }
               ]
             }
