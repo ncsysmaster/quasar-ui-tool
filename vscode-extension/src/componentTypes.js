@@ -45,7 +45,6 @@ function kebabToPascal(value) {
 
 module.exports = {
   NEUTRAL_TO_QUASAR,
-  QUASAR_TO_NEUTRAL,
   toNeutralType,
   toQuasarType,
 };

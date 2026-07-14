@@ -64,6 +64,136 @@ function getTablePreviewSelectionScript() {
 }
 
 
+
+
+      // ---- shared layout-cell / rect geometry (header + body) ----
+
+      function getTableLayoutCellIndexAtColumn(rows, component, rowIndex, columnIndex) {
+        const columns = getTablePreviewColumns(component)
+        const layoutRows = normalizeTablePreviewLayoutRows(rows, columns, Math.max(rowIndex + 1, Array.isArray(rows) ? rows.length : 1))
+        const row = layoutRows[rowIndex] || []
+        return row.findIndex((cell) => {
+          const indexes = getTablePreviewLayoutColumnIndexes(columns, cell)
+          if (indexes.length === 0) return false
+          return columnIndex >= Math.min(...indexes) && columnIndex <= Math.max(...indexes)
+        })
+      }
+
+
+      function createTableLayoutCellItem(component, rows, columns, cell, rowIndex, cellIndex) {
+        const indexes = getTablePreviewLayoutColumnIndexes(columns, cell)
+        if (indexes.length === 0) return null
+        const start = Math.min(...indexes)
+        const end = Math.max(...indexes)
+        const rowSpan = Math.max(1, Math.min(rows.length - rowIndex, Number(cell?.rowspan || 1)))
+        return {
+          componentId: component.id,
+          rowIndex,
+          rowEnd: rowIndex + rowSpan - 1,
+          columnIndex: start,
+          start,
+          end,
+          cellIndex,
+          cellId: String(cell?.cellId || ''),
+          cell
+        }
+      }
+
+
+      function getTableLayoutSelectionKey(cell) {
+        return [
+          cell.componentId || '',
+          cell.rowIndex,
+          cell.cellIndex,
+          cell.cellId || '',
+          cell.start,
+          cell.end
+        ].join(':')
+      }
+
+
+      function findMatchingTableLayoutCell(knownCells, selectedCell) {
+        if (!selectedCell) return null
+        const selectedKey = getTableLayoutSelectionKey(selectedCell)
+        return knownCells.find((cell) => getTableLayoutSelectionKey(cell) === selectedKey) ||
+          knownCells.find((cell) =>
+            cell.componentId === selectedCell.componentId &&
+            cell.rowIndex === selectedCell.rowIndex &&
+            (cell.rowEnd ?? cell.rowIndex) === (selectedCell.rowEnd ?? selectedCell.rowIndex) &&
+            cell.start === selectedCell.start &&
+            cell.end === selectedCell.end
+          ) ||
+          knownCells.find((cell) =>
+            cell.componentId === selectedCell.componentId &&
+            tableLayoutRectsOverlap(cell, selectedCell)
+          ) ||
+          null
+      }
+
+
+      function tableLayoutRectsOverlap(left, right) {
+        return Math.max(left.rowIndex, right.rowIndex) <= Math.min(left.rowEnd ?? left.rowIndex, right.rowEnd ?? right.rowIndex) &&
+          Math.max(left.start, right.start) <= Math.min(left.end, right.end)
+      }
+
+
+      function tableLayoutRectsTouch(left, right) {
+        const leftBottom = left.rowEnd ?? left.rowIndex
+        const rightBottom = right.rowEnd ?? right.rowIndex
+        const rowsOverlap = Math.max(left.rowIndex, right.rowIndex) <= Math.min(leftBottom, rightBottom)
+        const columnsOverlap = Math.max(left.start, right.start) <= Math.min(left.end, right.end)
+        const horizontalTouch = rowsOverlap && (left.end + 1 === right.start || right.end + 1 === left.start)
+        const verticalTouch = columnsOverlap && (leftBottom + 1 === right.rowIndex || rightBottom + 1 === left.rowIndex)
+        return horizontalTouch || verticalTouch
+      }
+
+
+      function getTableLayoutSelectionRectangle(cells) {
+        const selected = (cells || []).filter(Boolean)
+        if (selected.length === 0) return null
+        return {
+          rowIndex: Math.min(...selected.map((cell) => cell.rowIndex)),
+          rowEnd: Math.max(...selected.map((cell) => cell.rowEnd ?? cell.rowIndex)),
+          start: Math.min(...selected.map((cell) => cell.start)),
+          end: Math.max(...selected.map((cell) => cell.end)),
+          selectedCount: selected.length,
+          cells: selected
+        }
+      }
+
+
+      function isCompleteTableLayoutSelectionRectangle(range) {
+        if (!range) return false
+        const covered = new Set()
+        for (const cell of range.cells) {
+          const rowEnd = cell.rowEnd ?? cell.rowIndex
+          for (let rowIndex = cell.rowIndex; rowIndex <= rowEnd; rowIndex += 1) {
+            for (let columnIndex = cell.start; columnIndex <= cell.end; columnIndex += 1) {
+              const key = rowIndex + ':' + columnIndex
+              if (covered.has(key)) return false
+              covered.add(key)
+            }
+          }
+        }
+        const area = (range.rowEnd - range.rowIndex + 1) * (range.end - range.start + 1)
+        return covered.size === area
+      }
+
+
+      function postTableLayoutUpdate(component, columns) {
+        vscode.postMessage({
+          type: 'updateTableColumns',
+          id: component.id,
+          columns,
+          headerRows: getTableHeaderRows(component),
+          rowRows: getTableRowRows(component),
+          headerLayout: component.headerRows,
+          bodyRows: component.bodyRows
+        })
+        render()
+      }
+
+
       // ---- DOM event info / span sync (header + body) ----
 
       function getTableHeaderEventInfo(event, component) {
@@ -339,66 +469,10 @@ function getTablePreviewSelectionScript() {
       }
 
 
-      // ---- cell model / rect geometry (header + body) ----
-
-      function getTableLayoutCellIndexAtColumn(rows, component, rowIndex, columnIndex) {
-        const columns = getTablePreviewColumns(component)
-        const layoutRows = normalizeTablePreviewLayoutRows(rows, columns, Math.max(rowIndex + 1, Array.isArray(rows) ? rows.length : 1))
-        const row = layoutRows[rowIndex] || []
-        return row.findIndex((cell) => {
-          const indexes = getTablePreviewLayoutColumnIndexes(columns, cell)
-          if (indexes.length === 0) return false
-          return columnIndex >= Math.min(...indexes) && columnIndex <= Math.max(...indexes)
-        })
-      }
-
+      // ---- header cell model / selection / merge-split ----
 
       function getTableHeaderLayoutCellInfo(component, rowIndex, columnIndex) {
         return getTableHeaderLayoutCells(component).cells.find((cell) =>
-          rowIndex >= cell.rowIndex &&
-          rowIndex <= cell.rowEnd &&
-          columnIndex >= cell.start &&
-          columnIndex <= cell.end
-        ) || null
-      }
-
-
-      function createTableLayoutCellItem(component, rows, columns, cell, rowIndex, cellIndex) {
-        const indexes = getTablePreviewLayoutColumnIndexes(columns, cell)
-        if (indexes.length === 0) return null
-        const start = Math.min(...indexes)
-        const end = Math.max(...indexes)
-        const rowSpan = Math.max(1, Math.min(rows.length - rowIndex, Number(cell?.rowspan || 1)))
-        return {
-          componentId: component.id,
-          rowIndex,
-          rowEnd: rowIndex + rowSpan - 1,
-          columnIndex: start,
-          start,
-          end,
-          cellIndex,
-          cellId: String(cell?.cellId || ''),
-          cell
-        }
-      }
-
-
-      function getTableBodyLayoutCells(component) {
-        const columns = Array.isArray(component?.columns) ? component.columns : []
-        const rows = normalizeTablePreviewLayoutRows(component.bodyRows, columns, getTableRowRows(component), 'body')
-        const cells = []
-        rows.forEach((row, rowIndex) => {
-          row.forEach((cell, cellIndex) => {
-            const item = createTableLayoutCellItem(component, rows, columns, cell, rowIndex, cellIndex)
-            if (item) cells.push(item)
-          })
-        })
-        return { columns, rows, cells }
-      }
-
-
-      function getTableBodyLayoutCellInfo(component, rowIndex, columnIndex) {
-        return getTableBodyLayoutCells(component).cells.find((cell) =>
           rowIndex >= cell.rowIndex &&
           rowIndex <= cell.rowEnd &&
           columnIndex >= cell.start &&
@@ -431,36 +505,6 @@ function getTablePreviewSelectionScript() {
       }
 
 
-      function getTableLayoutSelectionKey(cell) {
-        return [
-          cell.componentId || '',
-          cell.rowIndex,
-          cell.cellIndex,
-          cell.cellId || '',
-          cell.start,
-          cell.end
-        ].join(':')
-      }
-
-      function findMatchingTableLayoutCell(knownCells, selectedCell) {
-        if (!selectedCell) return null
-        const selectedKey = getTableLayoutSelectionKey(selectedCell)
-        return knownCells.find((cell) => getTableLayoutSelectionKey(cell) === selectedKey) ||
-          knownCells.find((cell) =>
-            cell.componentId === selectedCell.componentId &&
-            cell.rowIndex === selectedCell.rowIndex &&
-            (cell.rowEnd ?? cell.rowIndex) === (selectedCell.rowEnd ?? selectedCell.rowIndex) &&
-            cell.start === selectedCell.start &&
-            cell.end === selectedCell.end
-          ) ||
-          knownCells.find((cell) =>
-            cell.componentId === selectedCell.componentId &&
-            tableLayoutRectsOverlap(cell, selectedCell)
-          ) ||
-          null
-      }
-
-
       function getTableHeaderSelectionCells(component) {
         const known = getTableHeaderLayoutCells(component).cells
         return selectedTableHeaderMergeCells
@@ -474,25 +518,8 @@ function getTablePreviewSelectionScript() {
       }
 
 
-      function tableLayoutRectsOverlap(left, right) {
-        return Math.max(left.rowIndex, right.rowIndex) <= Math.min(left.rowEnd ?? left.rowIndex, right.rowEnd ?? right.rowIndex) &&
-          Math.max(left.start, right.start) <= Math.min(left.end, right.end)
-      }
-
-
       function tableHeaderRectsTouch(left, right) {
         return tableLayoutRectsTouch(left, right)
-      }
-
-
-      function tableLayoutRectsTouch(left, right) {
-        const leftBottom = left.rowEnd ?? left.rowIndex
-        const rightBottom = right.rowEnd ?? right.rowIndex
-        const rowsOverlap = Math.max(left.rowIndex, right.rowIndex) <= Math.min(leftBottom, rightBottom)
-        const columnsOverlap = Math.max(left.start, right.start) <= Math.min(left.end, right.end)
-        const horizontalTouch = rowsOverlap && (left.end + 1 === right.start || right.end + 1 === left.start)
-        const verticalTouch = columnsOverlap && (leftBottom + 1 === right.rowIndex || rightBottom + 1 === left.rowIndex)
-        return horizontalTouch || verticalTouch
       }
 
 
@@ -501,47 +528,8 @@ function getTablePreviewSelectionScript() {
       }
 
 
-      function getTableLayoutSelectionRectangle(cells) {
-        const selected = (cells || []).filter(Boolean)
-        if (selected.length === 0) return null
-        return {
-          rowIndex: Math.min(...selected.map((cell) => cell.rowIndex)),
-          rowEnd: Math.max(...selected.map((cell) => cell.rowEnd ?? cell.rowIndex)),
-          start: Math.min(...selected.map((cell) => cell.start)),
-          end: Math.max(...selected.map((cell) => cell.end)),
-          selectedCount: selected.length,
-          cells: selected
-        }
-      }
-
-
       function isCompleteTableHeaderSelectionRectangle(range) {
         return isCompleteTableLayoutSelectionRectangle(range)
-      }
-
-
-      function isCompleteTableLayoutSelectionRectangle(range) {
-        if (!range) return false
-        const covered = new Set()
-        for (const cell of range.cells) {
-          const rowEnd = cell.rowEnd ?? cell.rowIndex
-          for (let rowIndex = cell.rowIndex; rowIndex <= rowEnd; rowIndex += 1) {
-            for (let columnIndex = cell.start; columnIndex <= cell.end; columnIndex += 1) {
-              const key = rowIndex + ':' + columnIndex
-              if (covered.has(key)) return false
-              covered.add(key)
-            }
-          }
-        }
-        const area = (range.rowEnd - range.rowIndex + 1) * (range.end - range.start + 1)
-        return covered.size === area
-      }
-
-
-      // ---- selection interaction / merge-split mutations (header + body) ----
-
-      function handleTableHeaderCtrlClick(component, info) {
-        return selectAdjacentTableHeaderCell(component, info)
       }
 
 
@@ -570,45 +558,10 @@ function getTablePreviewSelectionScript() {
       }
 
 
-      function createTableBodySelectionCell(component, info) {
-        const cellInfo = getTableBodyLayoutCellInfo(component, info.rowIndex, info.columnIndex)
-        if (cellInfo) {
-          return {
-            componentId: component.id,
-            rowIndex: cellInfo.rowIndex,
-            rowEnd: cellInfo.rowEnd,
-            columnIndex: cellInfo.start,
-            start: cellInfo.start,
-            end: cellInfo.end,
-            cellIndex: cellInfo.cellIndex,
-            cellId: String(cellInfo.cell?.cellId || '')
-          }
-        }
-        return {
-          componentId: component.id,
-          rowIndex: info.rowIndex,
-          rowEnd: info.rowEnd ?? info.rowIndex,
-          columnIndex: info.columnIndex,
-          start: info.start,
-          end: info.end,
-          cellIndex: info.cellIndex,
-          cellId: String(info.cellId || '')
-        }
-      }
-
-
       function isTableHeaderInfoSelected(component, info) {
         const current = createTableHeaderSelectionCell(component, info)
         return selectedTableHeaderMergeCells.some((cell) =>
           cell.componentId === component.id && tableHeaderRectsOverlap(cell, current)
-        )
-      }
-
-
-      function isTableBodyInfoSelected(component, info) {
-        const current = createTableBodySelectionCell(component, info)
-        return selectedTableBodyMergeCells.some((cell) =>
-          cell.componentId === component.id && tableLayoutRectsOverlap(cell, current)
         )
       }
 
@@ -634,42 +587,8 @@ function getTablePreviewSelectionScript() {
       }
 
 
-      function selectAdjacentTableBodyCell(component, info) {
-        const current = createTableBodySelectionCell(component, info)
-        const previous = selectedTableBodyMergeCells.filter((cell) =>
-          cell.componentId === current.componentId
-        )
-        if (previous.length === 0) {
-          selectedTableBodyMergeCells = [current]
-          return true
-        }
-        const currentKey = getTableLayoutSelectionKey(current)
-        if (previous.some((cell) => getTableLayoutSelectionKey(cell) === currentKey)) {
-          selectedTableBodyMergeCells = previous
-          return true
-        }
-        if (!previous.some((cell) => tableLayoutRectsTouch(cell, current))) return false
-        selectedTableBodyMergeCells = [...previous, current]
-          .sort((left, right) => left.rowIndex - right.rowIndex || left.start - right.start)
-        return true
-      }
-
-
       function getSelectedTableHeaderRange(component) {
         return getTableHeaderSelectionRectangle(getTableHeaderSelectionCells(component))
-      }
-
-
-      function getTableBodySelectionCells(component) {
-        const known = getTableBodyLayoutCells(component).cells
-        return selectedTableBodyMergeCells
-          .filter((cell) => cell.componentId === component.id)
-          .map((cell) => findMatchingTableLayoutCell(known, cell) || cell)
-      }
-
-
-      function getSelectedTableBodyRange(component) {
-        return getTableLayoutSelectionRectangle(getTableBodySelectionCells(component))
       }
 
 
@@ -686,25 +605,6 @@ function getTablePreviewSelectionScript() {
         const target = info ? createTableHeaderSelectionCell(component, info) : selected[0]
         if (!target) return false
         const cellInfo = getTableHeaderLayoutCellInfo(component, target.rowIndex, target.columnIndex)
-        const columnCount = getTablePreviewLayoutCellColumns(cellInfo?.cell).length
-        const rowSpan = Math.max(1, Number(cellInfo?.cell?.rowspan || 1))
-        return Boolean(cellInfo && (columnCount > 1 || rowSpan > 1))
-      }
-
-
-      function canMergeSelectedTableBodyCells(component) {
-        const range = getSelectedTableBodyRange(component)
-        if (!range || range.selectedCount < 2) return false
-        return isCompleteTableLayoutSelectionRectangle(range)
-      }
-
-
-      function canSplitSelectedTableBodyCell(component, info = null) {
-        const selected = getTableBodySelectionCells(component)
-        if (selected.length !== 1) return false
-        const target = info ? createTableBodySelectionCell(component, info) : selected[0]
-        if (!target) return false
-        const cellInfo = getTableBodyLayoutCellInfo(component, target.rowIndex, target.columnIndex)
         const columnCount = getTablePreviewLayoutCellColumns(cellInfo?.cell).length
         const rowSpan = Math.max(1, Number(cellInfo?.cell?.rowspan || 1))
         return Boolean(cellInfo && (columnCount > 1 || rowSpan > 1))
@@ -728,26 +628,6 @@ function getTablePreviewSelectionScript() {
         if (!cellInfo) return
         splitTableHeaderLayoutCell(component, cellInfo)
         selectedTableHeaderMergeCells = []
-      }
-
-
-      function mergeSelectedTableBodyCells(componentId) {
-        const component = findTableComponent(model?.components || [], componentId)
-        if (!component || !canMergeSelectedTableBodyCells(component)) return
-        const range = getSelectedTableBodyRange(component)
-        mergeTableBodyLayoutCells(component, range)
-        selectedTableBodyMergeCells = []
-      }
-
-
-      function splitSelectedTableBodyCell(componentId) {
-        const component = findTableComponent(model?.components || [], componentId)
-        if (!component || !canSplitSelectedTableBodyCell(component)) return
-        const target = getTableBodySelectionCells(component)[0]
-        const cellInfo = target ? getTableBodyLayoutCellInfo(component, target.rowIndex, target.columnIndex) : null
-        if (!cellInfo) return
-        splitTableBodyLayoutCell(component, cellInfo)
-        selectedTableBodyMergeCells = []
       }
 
 
@@ -826,6 +706,145 @@ function getTablePreviewSelectionScript() {
       }
 
 
+      function handleTableHeaderCtrlClick(component, info) {
+        return selectAdjacentTableHeaderCell(component, info)
+      }
+
+
+      // ---- body cell model / selection / merge-split ----
+
+      function getTableBodyLayoutCells(component) {
+        const columns = Array.isArray(component?.columns) ? component.columns : []
+        const rows = normalizeTablePreviewLayoutRows(component.bodyRows, columns, getTableRowRows(component), 'body')
+        const cells = []
+        rows.forEach((row, rowIndex) => {
+          row.forEach((cell, cellIndex) => {
+            const item = createTableLayoutCellItem(component, rows, columns, cell, rowIndex, cellIndex)
+            if (item) cells.push(item)
+          })
+        })
+        return { columns, rows, cells }
+      }
+
+
+      function getTableBodyLayoutCellInfo(component, rowIndex, columnIndex) {
+        return getTableBodyLayoutCells(component).cells.find((cell) =>
+          rowIndex >= cell.rowIndex &&
+          rowIndex <= cell.rowEnd &&
+          columnIndex >= cell.start &&
+          columnIndex <= cell.end
+        ) || null
+      }
+
+
+      function createTableBodySelectionCell(component, info) {
+        const cellInfo = getTableBodyLayoutCellInfo(component, info.rowIndex, info.columnIndex)
+        if (cellInfo) {
+          return {
+            componentId: component.id,
+            rowIndex: cellInfo.rowIndex,
+            rowEnd: cellInfo.rowEnd,
+            columnIndex: cellInfo.start,
+            start: cellInfo.start,
+            end: cellInfo.end,
+            cellIndex: cellInfo.cellIndex,
+            cellId: String(cellInfo.cell?.cellId || '')
+          }
+        }
+        return {
+          componentId: component.id,
+          rowIndex: info.rowIndex,
+          rowEnd: info.rowEnd ?? info.rowIndex,
+          columnIndex: info.columnIndex,
+          start: info.start,
+          end: info.end,
+          cellIndex: info.cellIndex,
+          cellId: String(info.cellId || '')
+        }
+      }
+
+
+      function isTableBodyInfoSelected(component, info) {
+        const current = createTableBodySelectionCell(component, info)
+        return selectedTableBodyMergeCells.some((cell) =>
+          cell.componentId === component.id && tableLayoutRectsOverlap(cell, current)
+        )
+      }
+
+
+      function selectAdjacentTableBodyCell(component, info) {
+        const current = createTableBodySelectionCell(component, info)
+        const previous = selectedTableBodyMergeCells.filter((cell) =>
+          cell.componentId === current.componentId
+        )
+        if (previous.length === 0) {
+          selectedTableBodyMergeCells = [current]
+          return true
+        }
+        const currentKey = getTableLayoutSelectionKey(current)
+        if (previous.some((cell) => getTableLayoutSelectionKey(cell) === currentKey)) {
+          selectedTableBodyMergeCells = previous
+          return true
+        }
+        if (!previous.some((cell) => tableLayoutRectsTouch(cell, current))) return false
+        selectedTableBodyMergeCells = [...previous, current]
+          .sort((left, right) => left.rowIndex - right.rowIndex || left.start - right.start)
+        return true
+      }
+
+
+      function getTableBodySelectionCells(component) {
+        const known = getTableBodyLayoutCells(component).cells
+        return selectedTableBodyMergeCells
+          .filter((cell) => cell.componentId === component.id)
+          .map((cell) => findMatchingTableLayoutCell(known, cell) || cell)
+      }
+
+
+      function getSelectedTableBodyRange(component) {
+        return getTableLayoutSelectionRectangle(getTableBodySelectionCells(component))
+      }
+
+
+      function canMergeSelectedTableBodyCells(component) {
+        const range = getSelectedTableBodyRange(component)
+        if (!range || range.selectedCount < 2) return false
+        return isCompleteTableLayoutSelectionRectangle(range)
+      }
+
+
+      function canSplitSelectedTableBodyCell(component, info = null) {
+        const selected = getTableBodySelectionCells(component)
+        if (selected.length !== 1) return false
+        const target = info ? createTableBodySelectionCell(component, info) : selected[0]
+        if (!target) return false
+        const cellInfo = getTableBodyLayoutCellInfo(component, target.rowIndex, target.columnIndex)
+        const columnCount = getTablePreviewLayoutCellColumns(cellInfo?.cell).length
+        const rowSpan = Math.max(1, Number(cellInfo?.cell?.rowspan || 1))
+        return Boolean(cellInfo && (columnCount > 1 || rowSpan > 1))
+      }
+
+
+      function mergeSelectedTableBodyCells(componentId) {
+        const component = findTableComponent(model?.components || [], componentId)
+        if (!component || !canMergeSelectedTableBodyCells(component)) return
+        const range = getSelectedTableBodyRange(component)
+        mergeTableBodyLayoutCells(component, range)
+        selectedTableBodyMergeCells = []
+      }
+
+
+      function splitSelectedTableBodyCell(componentId) {
+        const component = findTableComponent(model?.components || [], componentId)
+        if (!component || !canSplitSelectedTableBodyCell(component)) return
+        const target = getTableBodySelectionCells(component)[0]
+        const cellInfo = target ? getTableBodyLayoutCellInfo(component, target.rowIndex, target.columnIndex) : null
+        if (!cellInfo) return
+        splitTableBodyLayoutCell(component, cellInfo)
+        selectedTableBodyMergeCells = []
+      }
+
+
       function mergeTableBodyLayoutCells(component, range) {
         if (!range || !isCompleteTableLayoutSelectionRectangle(range)) return
         const columns = JSON.parse(JSON.stringify(component.columns || []))
@@ -901,20 +920,6 @@ function getTablePreviewSelectionScript() {
       }
 
 
-      function postTableLayoutUpdate(component, columns) {
-        vscode.postMessage({
-          type: 'updateTableColumns',
-          id: component.id,
-          columns,
-          headerRows: getTableHeaderRows(component),
-          rowRows: getTableRowRows(component),
-          headerLayout: component.headerRows,
-          bodyRows: component.bodyRows
-        })
-        render()
-      }
-
-
       function handleTableBodyCtrlClick(component, info) {
         return selectAdjacentTableBodyCell(component, info)
       }
@@ -963,6 +968,7 @@ function getTablePreviewSelectionScript() {
         component.bodyRows = rows
         postTableLayoutUpdate(component, columns)
       }
+
 
 module.exports = {
   getTablePreviewSelectionScript,

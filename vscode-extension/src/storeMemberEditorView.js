@@ -192,9 +192,5 @@ const storeMemberEditorFunctions = [
 ];
 
 module.exports = {
-  buildStoreMemberEditorSource,
-  disposeStoreMemberEditor,
-  extractStoreMemberBody,
-  mountStoreMemberEditor,
   storeMemberEditorFunctions,
 };

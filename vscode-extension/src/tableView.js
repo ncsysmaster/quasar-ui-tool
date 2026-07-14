@@ -438,7 +438,7 @@ function setLayoutRowsForTab(tab, rows) {
   }
 }
 
-function getLayoutRowLimitForTab(tab = tableColumnsActiveTab) {
+function getLayoutRowLimitForTab() {
   return 3;
 }
 
@@ -766,7 +766,7 @@ function syncLayoutColumnReference(oldKey, newKey) {
 function addTableLayoutRow() {
   const tab = tableColumnsActiveTab;
   const rows = getLayoutRowsForTab(tab).slice();
-  if (rows.length >= getLayoutRowLimitForTab(tab)) return;
+  if (rows.length >= getLayoutRowLimitForTab()) return;
   rows.push(createDefaultTableLayoutRows(tableColumnsDraft, 1, tab)[0]);
   setLayoutRowsForTab(tab, rows);
   tableColumnsSelectedNode = { kind: "layout", layout: tab, rowIndex: rows.length - 1, cellIndex: 0 };

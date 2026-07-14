@@ -58,7 +58,6 @@ function generateVueForDocument(document) {
 
 module.exports = {
   generateVueForDocument,
-  getPageJsonPath,
   getPageScriptPath,
   isPageJsonDocument,
   isPageScriptDocument,
