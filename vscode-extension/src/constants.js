@@ -1,13 +1,5 @@
 const EDITOR_VIEW_TYPE = "quasarTool.pageEditor";
 
-const VIEW_IDS = {
-  palette: "quasarTool.paletteView",
-  properties: "quasarTool.propertiesView",
-  events: "quasarTool.eventsView",
-  pageTree: "quasarTool.pageTreeView",
-  dataset: "quasarTool.datasetView",
-};
-
 const PALETTE = [
   {
     type: "Page",
@@ -61,6 +53,5 @@ const PALETTE = [
 
 module.exports = {
   EDITOR_VIEW_TYPE,
-  VIEW_IDS,
   PALETTE,
 };

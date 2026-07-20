@@ -53,6 +53,8 @@ function getTableHtml() {
   <button type="button" data-table-context="add" role="menuitem">컬럼 추가</button>
   <button type="button" data-table-context="mergeHeader" role="menuitem">Merge</button>
   <button type="button" data-table-context="splitHeader" role="menuitem">Merge 취소</button>
+  <span class="form-context-separator"></span>
+  <button type="button" data-table-context="exportPpt" role="menuitem">PPT 파일 생성</button>
 </div>`;
 }
 
@@ -163,6 +165,13 @@ function setupTableDialogs() {
       const layout = menu.dataset.layout || "header";
       const action = button.dataset.tableContext;
       hideTableContextMenu();
+      if (action === "exportPpt") {
+        vscode.postMessage({
+          type: "exportTaggedPpt",
+          layoutSnapshot: collectScreenLayoutSnapshot(),
+        });
+        return;
+      }
       if (action === "mergeHeader") {
         if (layout === "body") mergeSelectedTableBodyCells(componentId);
         else mergeSelectedTableHeaderCells(componentId);

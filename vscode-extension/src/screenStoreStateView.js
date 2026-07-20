@@ -1,15 +1,24 @@
 function getScreenStoreStateScript() {
-  return [
-    renderScreenStoreStatePanel,
-    renderScreenStoreStateNode,
-    setupScreenStoreStateDrag,
-    buildStoreBindingExpression,
-    getStoreStateBinding,
-    isStoreStateDrag,
-    screenStoreValueType,
-  ]
-    .map((fn) => fn.toString())
-    .join("\n\n");
+  const preamble =
+    "let screenStoreStatePanelWidth = Number(vscode.getState()?.screenStoreStatePanelWidth) || 300";
+
+  return (
+    preamble +
+    "\n\n" +
+    [
+      renderScreenStoreStatePanel,
+      renderScreenStoreStateNode,
+      setupScreenStoreStateDrag,
+      setupScreenStoreStatePanelResize,
+      clampScreenStoreStateWidth,
+      buildStoreBindingExpression,
+      getStoreStateBinding,
+      isStoreStateDrag,
+      screenStoreValueType,
+    ]
+      .map((fn) => fn.toString())
+      .join("\n\n")
+  );
 }
 
 function renderScreenStoreStatePanel() {
@@ -131,6 +140,66 @@ function setupScreenStoreStateDrag(panel) {
   });
 }
 
+function setupScreenStoreStatePanelResize() {
+  const resizer = document.getElementById("screen-store-state-resizer");
+  const workspace = resizer?.parentElement;
+  if (!resizer || !workspace) return;
+
+  screenStoreStatePanelWidth = clampScreenStoreStateWidth(
+    screenStoreStatePanelWidth,
+  );
+  workspace.style.setProperty(
+    "--store-state-width",
+    screenStoreStatePanelWidth + "px",
+  );
+
+  if (resizer.dataset.resizeReady === "true") return;
+  resizer.dataset.resizeReady = "true";
+
+  resizer.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    const startX = event.clientX;
+    const startWidth = screenStoreStatePanelWidth;
+    resizer.setPointerCapture?.(event.pointerId);
+    resizer.classList.add("active");
+    document.body.classList.add("sp-panel-resizing");
+
+    const move = (moveEvent) => {
+      screenStoreStatePanelWidth = clampScreenStoreStateWidth(
+        startWidth - (moveEvent.clientX - startX),
+      );
+      workspace.style.setProperty(
+        "--store-state-width",
+        screenStoreStatePanelWidth + "px",
+      );
+    };
+    const finish = () => {
+      resizer.removeEventListener("pointermove", move);
+      resizer.removeEventListener("pointerup", finish);
+      resizer.removeEventListener("pointercancel", finish);
+      resizer.classList.remove("active");
+      document.body.classList.remove("sp-panel-resizing");
+      vscode.setState({
+        ...(vscode.getState() || {}),
+        screenStoreStatePanelWidth,
+      });
+    };
+
+    resizer.addEventListener("pointermove", move);
+    resizer.addEventListener("pointerup", finish);
+    resizer.addEventListener("pointercancel", finish);
+  });
+}
+
+function clampScreenStoreStateWidth(value) {
+  const width = Math.round(Number(value) || 300);
+  return Math.max(
+    160,
+    Math.min(Math.max(220, Math.round(window.innerWidth * 0.5)), width),
+  );
+}
+
 function buildStoreBindingExpression(importName, path) {
   return (path || []).reduce(
     (expression, key) =>
@@ -165,9 +234,11 @@ function screenStoreValueType(value) {
 }
 
 function getScreenStoreStateStyles() {
-  return `.screen-editor-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 300px; min-height: calc(100vh - 42px); }
+  return `.screen-editor-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 5px var(--store-state-width, 300px); min-height: calc(100vh - 42px); }
 .screen-editor-canvas { min-width: 0; overflow: auto; }
 .screen-store-state-panel { min-width: 0; overflow: auto; border-left: 1px solid var(--vscode-panel-border); color: var(--vscode-editor-foreground); background: var(--vscode-sideBar-background); }
+.screen-store-state-resizer { cursor: col-resize; touch-action: none; background: transparent; border-left: 1px solid var(--vscode-panel-border); }
+.screen-store-state-resizer:hover, .screen-store-state-resizer.active { background: var(--vscode-focusBorder); border-color: var(--vscode-focusBorder); }
 .screen-store-state-title { position: sticky; z-index: 5; top: 0; padding: 8px 10px; border-bottom: 1px solid var(--vscode-panel-border); border-left: 3px solid var(--vscode-focusBorder); background: var(--vscode-sideBar-background); font-weight: 600; }
 .screen-store-state-content { padding: 5px; }
 .screen-store-state-content details > summary { display: flex; min-height: 26px; align-items: center; list-style: none; cursor: pointer; }
@@ -186,7 +257,7 @@ function getScreenStoreStateStyles() {
 .screen-store-state-children > .screen-store-state-node::before { content: ""; position: absolute; left: -13px; top: 13px; width: 12px; border-top: 1px solid var(--vscode-tree-indentGuidesStroke, var(--vscode-panel-border)); }
 .screen-store-state-leaf { min-height: 26px; padding-left: 17px; }
 .qt-store-binding-drop-target { outline: 3px solid var(--vscode-focusBorder) !important; outline-offset: -3px !important; background-color: rgba(0, 122, 204, .12) !important; }
-@media (max-width: 900px) { .screen-editor-workspace { grid-template-columns: 1fr; } .screen-store-state-panel { max-height: 280px; border-top: 1px solid var(--vscode-panel-border); border-left: 0; } }`;
+@media (max-width: 900px) { .screen-editor-workspace { grid-template-columns: 1fr; } .screen-editor-workspace > .screen-store-state-resizer { display: none; } .screen-store-state-panel { max-height: 280px; border-top: 1px solid var(--vscode-panel-border); border-left: 0; } }`;
 }
 
 module.exports = {

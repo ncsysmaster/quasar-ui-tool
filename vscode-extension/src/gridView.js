@@ -8,6 +8,8 @@ function getGridHtml() {
     '<span class="form-context-separator"></span>',
     '<button data-form-action="delete-row" role="menuitem">Row 삭제</button>',
     '<button data-form-action="delete-column" role="menuitem">Column 삭제</button>',
+    '<span class="form-context-separator"></span>',
+    '<button data-export-tagged-ppt role="menuitem">PPT 파일 생성</button>',
     '</div>',
     '<div id="form-cell-split-dialog" class="designer-dialog-backdrop hidden">',
     '<div class="designer-dialog" role="dialog" aria-modal="true" aria-labelledby="split-cell-title">',
@@ -307,6 +309,14 @@ function setupFormContextMenu() {
     if (cellIds.length < 2) return;
     hideFormContextMenu();
     vscode.postMessage({ type: "mergeFormCells", cellIds });
+  });
+  menu.querySelector("[data-export-tagged-ppt]")?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    hideFormContextMenu();
+    vscode.postMessage({
+      type: "exportTaggedPpt",
+      layoutSnapshot: collectScreenLayoutSnapshot(),
+    });
   });
 }
 

@@ -1,0 +1,551 @@
+{
+  "schemaVersion": "0.1.0",
+  "tool": {
+    "name": "quasar-tool",
+    "artifactType": "page-definition",
+    "description": "Vue 파일에서 역변환된 UI TOOL 페이지 결과물 JSON"
+  },
+  "page": {
+    "id": "IndexPageSlide1",
+    "name": "IndexPageSlide1",
+    "route": "/IndexPageSlide1",
+    "framework": "quasar",
+    "component": "Page",
+    "sourceVuePath": "quasar_tool/.src/pages/IndexPageSlide1.vue",
+    "targetVuePath": "quasar_tool/.src/pages/IndexPageSlide1.vue"
+  },
+  "data": {
+    "stages": [
+      {
+        "title": "1단계",
+        "description": "UI화면편집기 결과물인 화면 JSON -> Vue 파일 생성기"
+      },
+      {
+        "title": "2단계",
+        "description": "컴포넌트 팔레트 + 속성 패널"
+      },
+      {
+        "title": "3단계",
+        "description": "드래그앤드롭 화면 배치"
+      },
+      {
+        "title": "4단계",
+        "description": "그리드, 팝업, 공통코드, API 자동연결"
+      },
+      {
+        "title": "5단계",
+        "description": "VS Code Extension 통합"
+      }
+    ],
+    "search": {
+      "class1": null,
+      "class2": null,
+      "requiredYn": false,
+      "useYn": false,
+      "name": ""
+    },
+    "classOptions": [],
+    "tableyiqqkFilter": "",
+    "tableyiqqkPagination": {
+      "page": 1,
+      "rowsPerPage": 10
+    },
+    "Table001Selected": [],
+    "Table001Pagination": {
+      "page": 1,
+      "rowsPerPage": 10
+    }
+  },
+  "components": [
+    {
+      "id": "page5ity1",
+      "type": "Page",
+      "props": {
+        "padding": true
+      },
+      "children": [
+        {
+          "id": "CardSection001",
+          "type": "CardSection",
+          "designer": {
+            "x": 40,
+            "y": 40,
+            "width": 1121,
+            "height": 107
+          },
+          "class": "q-pa-sm",
+          "children": [
+            {
+              "id": "Div017",
+              "type": "HtmlElement",
+              "designer": {
+                "x": 40,
+                "y": 40,
+                "width": 1113,
+                "height": 99
+              },
+              "tag": "div",
+              "class": "row q-col-gutter-sm",
+              "children": [
+                {
+                  "id": "Div014",
+                  "type": "HtmlElement",
+                  "designer": {
+                    "x": 40,
+                    "y": 40,
+                    "width": 938,
+                    "height": 99
+                  },
+                  "tag": "div",
+                  "class": "col",
+                  "children": [
+                    {
+                      "id": "Div013",
+                      "type": "HtmlElement",
+                      "designer": {
+                        "x": 47,
+                        "y": 38,
+                        "width": 931,
+                        "height": 46
+                      },
+                      "tag": "div",
+                      "class": "row",
+                      "children": [
+                        {
+                          "id": "Div011",
+                          "type": "HtmlElement",
+                          "designer": {
+                            "x": 47,
+                            "y": 38,
+                            "width": 155,
+                            "height": 46
+                          },
+                          "tag": "div",
+                          "class": "col-2"
+                        },
+                        {
+                          "id": "Input001",
+                          "type": "Input",
+                          "designer": {
+                            "x": 217,
+                            "y": 42,
+                            "width": 745,
+                            "height": 38,
+                            "storeBinding": {
+                              "storePath": "d:\\01 PROJECTSRC\\codex\\quasar_tool\\.src\\store\\index\\IndexUtil.json",
+                              "statePath": [
+                                "searchText"
+                              ]
+                            }
+                          },
+                          "props": {
+                            "outlined": true,
+                            "dense": true,
+                            "bgColor": "white"
+                          },
+                          "models": {
+                            "modelValue": "storeName.searchText"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "Div016",
+                  "type": "HtmlElement",
+                  "designer": {
+                    "x": 978,
+                    "y": 40,
+                    "width": 175,
+                    "height": 99
+                  },
+                  "tag": "div",
+                  "class": "col-auto",
+                  "style": "min-width: 180px, display: flex, align-items: flex-end"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cardyi9yj",
+          "type": "Card",
+          "designer": {
+            "x": 39,
+            "y": 59,
+            "width": 1122,
+            "height": 388
+          },
+          "props": {
+            "flat": true,
+            "bordered": true,
+            "label": "Card"
+          },
+          "label": "Card",
+          "children": [
+            {
+              "id": "cardsectionyicnl",
+              "type": "CardSection",
+              "designer": {
+                "x": 40,
+                "y": 60,
+                "width": 1121,
+                "height": 387
+              },
+              "class": "q-pa-sm",
+              "props": {
+                "label": "Card Section"
+              },
+              "label": "Card Section",
+              "children": [
+                {
+                  "id": "Table001",
+                  "type": "Table",
+                  "designer": {
+                    "x": 48,
+                    "y": 96,
+                    "width": 1104,
+                    "height": 212
+                  },
+                  "label": "tblList",
+                  "props": {
+                    "rows": [],
+                    "rowKey": "rowId",
+                    "noDataLabel": "데이터가 없습니다.",
+                    "loadingLabel": "데이터를 불러오는 중입니다.",
+                    "label": "tblList",
+                    "columns": [
+                      {
+                        "name": "name",
+                        "label": "명칭",
+                        "field": "name",
+                        "align": "left"
+                      },
+                      {
+                        "name": "dtlDt",
+                        "label": "상세일자",
+                        "field": "dtlDt",
+                        "align": "left"
+                      },
+                      {
+                        "name": "actions",
+                        "label": "작업",
+                        "field": "actions",
+                        "align": "left"
+                      },
+                      {
+                        "name": "adress",
+                        "label": "주소",
+                        "field": "adress",
+                        "align": "left"
+                      }
+                    ],
+                    "title": "tblList"
+                  },
+                  "models": {
+                    "pagination": "Table001Pagination"
+                  },
+                  "columns": [
+                    {
+                      "name": "name",
+                      "label": "명칭",
+                      "field": "name",
+                      "type": "text",
+                      "align": "left",
+                      "sortable": true,
+                      "required": false,
+                      "editable": false
+                    },
+                    {
+                      "name": "dtlDt",
+                      "label": "상세일자",
+                      "field": "dtlDt",
+                      "type": "date",
+                      "align": "center",
+                      "sortable": true,
+                      "required": false,
+                      "editable": false
+                    },
+                    {
+                      "name": "actions",
+                      "label": "작업",
+                      "field": "actions",
+                      "type": "actions",
+                      "align": "center",
+                      "sortable": false,
+                      "required": false,
+                      "editable": false
+                    },
+                    {
+                      "name": "column4",
+                      "label": "주소",
+                      "field": "adress",
+                      "type": "text",
+                      "align": "left",
+                      "sortable": false,
+                      "required": false,
+                      "editable": false
+                    }
+                  ],
+                  "headerRows": [
+                    [
+                      {
+                        "cellId": "header_r1_name",
+                        "label": "명칭",
+                        "field": "name",
+                        "columns": [
+                          "name"
+                        ]
+                      },
+                      {
+                        "cellId": "header_r1_dtlDt",
+                        "label": "상세일자",
+                        "field": "dtlDt",
+                        "columns": [
+                          "dtlDt",
+                          "actions"
+                        ],
+                        "colspan": 2
+                      },
+                      {
+                        "cellId": "header_r1_adress",
+                        "label": "컬럼 4",
+                        "field": "adress",
+                        "columns": [
+                          "adress"
+                        ]
+                      }
+                    ],
+                    [
+                      {
+                        "cellId": "header_r2_name",
+                        "label": "title1",
+                        "field": "name",
+                        "columns": [
+                          "name"
+                        ]
+                      },
+                      {
+                        "cellId": "header_r2_dtlDt",
+                        "label": "title2",
+                        "field": "dtlDt",
+                        "columns": [
+                          "dtlDt"
+                        ]
+                      },
+                      {
+                        "cellId": "header_r2_actions",
+                        "label": "title3",
+                        "field": "actions",
+                        "columns": [
+                          "actions"
+                        ]
+                      },
+                      {
+                        "cellId": "header_r2_adress",
+                        "label": "컬럼 4",
+                        "field": "adress",
+                        "columns": [
+                          "adress"
+                        ]
+                      }
+                    ],
+                    [
+                      {
+                        "cellId": "header_r3_name",
+                        "label": "title1",
+                        "field": "name",
+                        "columns": [
+                          "name"
+                        ]
+                      },
+                      {
+                        "cellId": "header_r3_dtlDt",
+                        "label": "title2",
+                        "field": "dtlDt",
+                        "columns": [
+                          "dtlDt"
+                        ]
+                      },
+                      {
+                        "cellId": "header_r3_actions",
+                        "label": "title3",
+                        "field": "actions",
+                        "columns": [
+                          "actions"
+                        ]
+                      },
+                      {
+                        "cellId": "header_r3_adress",
+                        "label": "컬럼 4",
+                        "field": "adress",
+                        "columns": [
+                          "adress"
+                        ]
+                      }
+                    ]
+                  ],
+                  "bodyRows": [
+                    [
+                      {
+                        "cellId": "body_r1_name",
+                        "label": "명칭",
+                        "field": "name",
+                        "columns": [
+                          "name"
+                        ],
+                        "rowspan": 2
+                      },
+                      {
+                        "cellId": "body_r1_dtlDt",
+                        "label": "상세일자",
+                        "field": "dtlDt",
+                        "columns": [
+                          "dtlDt",
+                          "actions"
+                        ],
+                        "colspan": 2
+                      },
+                      {
+                        "cellId": "body_r1_adress",
+                        "label": "컬럼 4",
+                        "field": "adress",
+                        "columns": [
+                          "adress"
+                        ],
+                        "rowspan": 2
+                      }
+                    ],
+                    [
+                      {
+                        "cellId": "body_r2_dtlDt",
+                        "label": "상세일자",
+                        "field": "dtlDt",
+                        "columns": [
+                          "dtlDt",
+                          "actions"
+                        ],
+                        "colspan": 2
+                      }
+                    ],
+                    [
+                      {
+                        "cellId": "body_r3_name",
+                        "label": "명칭",
+                        "field": "name",
+                        "columns": [
+                          "name"
+                        ]
+                      },
+                      {
+                        "cellId": "body_r3_dtlDt",
+                        "label": "상세일자",
+                        "field": "dtlDt",
+                        "columns": [
+                          "dtlDt"
+                        ]
+                      },
+                      {
+                        "cellId": "body_r3_actions",
+                        "label": "작업",
+                        "field": "actions",
+                        "columns": [
+                          "actions"
+                        ]
+                      },
+                      {
+                        "cellId": "body_r3_adress",
+                        "label": "컬럼 4",
+                        "field": "adress",
+                        "columns": [
+                          "adress"
+                        ]
+                      }
+                    ]
+                  ],
+                  "table": {
+                    "title": "tblList",
+                    "rowKey": "rowId",
+                    "showModeColumn": true,
+                    "excelCopy": false,
+                    "headerRows": 3,
+                    "rowRows": 3,
+                    "selection": "none",
+                    "rowsBinding": "",
+                    "loadingBinding": "",
+                    "toolbar": {
+                      "filter": false,
+                      "search": false,
+                      "add": true,
+                      "save": true,
+                      "delete": true,
+                      "excel": false,
+                      "refresh": true
+                    },
+                    "handlers": {
+                      "add": "onTableAdd_Table001",
+                      "save": "onTableSave_Table001",
+                      "delete": "onTableDelete_Table001",
+                      "refresh": "onTableRefresh_Table001"
+                    },
+                    "pagination": {
+                      "mode": "client",
+                      "rowsPerPage": 10,
+                      "rowsPerPageOptions": [
+                        10,
+                        20,
+                        50,
+                        0
+                      ]
+                    },
+                    "states": {
+                      "noData": true,
+                      "loading": true,
+                      "error": true
+                    }
+                  },
+                  "events": {
+                    "rowClick": "onRowClick_Table001"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "script": {
+    "src": "IndexPageSlide1.js"
+  },
+  "datasets": [
+    {
+      "name": "defaultDataset",
+      "fields": [
+        {
+          "name": "stages",
+          "label": "stages",
+          "type": "object",
+          "required": false
+        }
+      ]
+    }
+  ],
+  "generation": {
+    "source": {
+      "pptPath": "quasar_tool/examples/IndexPage.pptx",
+      "slideNumber": 1,
+      "converter": "ppt-tagged-rules+embedded-backfill",
+      "embeddedPageJsonAvailable": true,
+      "outputPath": "quasar_tool/.src/pages/IndexPageSlide1.json",
+      "shapeCount": 44,
+      "taggedShapeCount": 10,
+      "generatedShapeCount": 0
+    },
+    "notes": [
+      "Components are always reconstructed from the shapes currently on the PPT slide: shapes deleted in PowerPoint are dropped, and text/position/label edits made in PowerPoint are read fresh from the slide.",
+      "When present, embedded page-JSON metadata only backfills fields with no visible PPT representation (table row data, script logic, rich bindings) for components that still exist on the slide."
+    ]
+  }
+}

@@ -4,6 +4,10 @@ const {
   getScreenStoreStateScript,
   getScreenStoreStateStyles,
 } = require("./screenStoreStateView");
+const {
+  getScreenSidePanelsScript,
+  getScreenSidePanelsStyles,
+} = require("./screenSidePanelsView");
 const { getTableHtml, getTableScript, getTableStyles } = require("./tableView");
 const { getAgGridPreviewScript } = require("./agGridPreview");
 const { PALETTE } = require("./constants");
@@ -381,14 +385,16 @@ function getEditorHtml(webview, runtimeUris) {
           if (scriptEditor && existingScriptContainer?.isConnected) {
             syncScriptEditor(model.script?.setup || '')
             renderScreenStoreStatePanel()
+            setupScreenStoreStatePanelResize()
             setupScriptStoreStateDrop(existingScriptContainer)
             revealPendingScriptMethod()
             scriptEditor.focus()
             return
           }
           disposeScriptEditor()
-          content.innerHTML = '<div class="script-editor-workspace"><div class="script-editor-shell"><div id="script-editor" class="script-editor" role="application" aria-label="JavaScript editor"></div></div><aside id="screen-store-state-panel" class="screen-store-state-panel" aria-label="Store State"></aside></div>'
+          content.innerHTML = '<div class="script-editor-workspace"><div class="script-editor-shell"><div id="script-editor" class="script-editor" role="application" aria-label="JavaScript editor"></div></div><div id="screen-store-state-resizer" class="screen-store-state-resizer" role="separator" aria-orientation="vertical" title="패널 크기 조절"></div><aside id="screen-store-state-panel" class="screen-store-state-panel" aria-label="Store State"></aside></div>'
           renderScreenStoreStatePanel()
+          setupScreenStoreStatePanelResize()
           mountScriptEditor(model.script?.setup || '')
           return
         }
@@ -404,12 +410,21 @@ function getEditorHtml(webview, runtimeUris) {
         disposeStoreMemberEditor()
         unmountPreview()
 
-        content.innerHTML = '<div class="screen-editor-workspace"><div class="screen-editor-canvas"><div class="runtime-preview-frame' + (showCanvasGrid ? ' show-canvas-grid' : '') + '"><div id="quasar-preview"></div></div></div><aside id="screen-store-state-panel" class="screen-store-state-panel" aria-label="Store State"></aside></div>' +
+        content.innerHTML = '<div class="screen-editor-workspace">' +
+          '<aside id="screen-side-panels" class="screen-side-panels" aria-label="Screen Tools"></aside>' +
+          '<div id="screen-side-panels-resizer" class="screen-side-panels-resizer" role="separator" aria-orientation="vertical" title="패널 크기 조절"></div>' +
+          '<div class="screen-editor-canvas"><div class="runtime-preview-frame' + (showCanvasGrid ? ' show-canvas-grid' : '') + '"><div id="quasar-preview"></div></div></div>' +
+          '<div id="screen-store-state-resizer" class="screen-store-state-resizer" role="separator" aria-orientation="vertical" title="패널 크기 조절"></div>' +
+          '<aside id="screen-store-state-panel" class="screen-store-state-panel" aria-label="Store State"></aside></div>' +
           ${JSON.stringify(getGridHtml())}
         mountPreview()
         renderScreenStoreStatePanel()
+        setupScreenStoreStatePanelResize()
+        renderScreenSidePanels()
+        setupScreenSidePanelsResize()
 
         setupPaletteDrop()
+        setupScreenContextMenu()
         setupFormContextMenu()
         setupSplitCellDialog()
       }
@@ -1503,6 +1518,7 @@ function getEditorHtml(webview, runtimeUris) {
       }
 
       ${getScreenStoreStateScript()}
+      ${getScreenSidePanelsScript()}
       ${getStoreScript()}
       ${getTableScript()}
       ${getAgGridPreviewScript()}
@@ -1547,10 +1563,583 @@ function getEditorHtml(webview, runtimeUris) {
         })
       }      
 
+      function setupScreenContextMenu() {
+        const frame = document.querySelector('.runtime-preview-frame')
+        if (!frame) return
+
+        frame.addEventListener('contextmenu', (event) => {
+          if (event.defaultPrevented) return
+          event.preventDefault()
+          event.stopPropagation()
+          hideFormContextMenu()
+          showScreenContextMenu(event.clientX, event.clientY)
+        })
+      }
+
+      function showScreenContextMenu(x, y) {
+        let menu = document.getElementById('screen-context-menu')
+        if (!menu) {
+          menu = document.createElement('div')
+          menu.id = 'screen-context-menu'
+          menu.className = 'designer-context-menu hidden'
+          menu.innerHTML = '<button type="button" data-screen-context-action="export-ppt">PPT 파일 생성</button>'
+          document.body.appendChild(menu)
+          menu.addEventListener('click', (event) => {
+            const action = event.target?.dataset?.screenContextAction
+            if (action === 'export-ppt') {
+              hideScreenContextMenu()
+              vscode.postMessage({
+                type: 'exportTaggedPpt',
+                layoutSnapshot: collectScreenLayoutSnapshot()
+              })
+            }
+          })
+        }
+        menu.style.left = Math.min(x, window.innerWidth - 190) + 'px'
+        menu.style.top = Math.min(y, window.innerHeight - 42) + 'px'
+        menu.classList.remove('hidden')
+      }
+
+      function hideScreenContextMenu() {
+        document.getElementById('screen-context-menu')?.classList.add('hidden')
+      }
+
+      function collectScreenLayoutSnapshot() {
+        const root = document.getElementById('quasar-preview')
+        if (!root) return null
+
+        const rootRect = root.getBoundingClientRect()
+        const seen = new Set()
+        const components = []
+        document.querySelectorAll('#quasar-preview [data-qt-id]').forEach((element) => {
+          const id = String(element.dataset.qtId || '').trim()
+          if (!id || seen.has(id)) return
+          const rect = element.getBoundingClientRect()
+          if (rect.width <= 0 || rect.height <= 0) return
+          seen.add(id)
+          components.push({
+            id,
+            x: Math.round(rect.left - rootRect.left),
+            y: Math.round(rect.top - rootRect.top),
+            width: Math.round(rect.width),
+            height: Math.round(rect.height),
+            style: captureExportStyle(element)
+          })
+        })
+
+        const gridCapture = collectExportGridTables(root, rootRect)
+        return {
+          width: Math.max(root.scrollWidth, Math.round(rootRect.width), 1),
+          height: Math.max(root.scrollHeight, Math.round(rootRect.height), 1),
+          components,
+          renderShapes: collectExportRenderShapes(root, rootRect, new Set(gridCapture.skipElements)),
+          renderTables: gridCapture.tables
+        }
+      }
+
+      function captureExportStyle(element) {
+        const computed = window.getComputedStyle(element)
+        const background = parseExportColor(computed.backgroundColor)
+        const borderWidth = parseFloat(computed.borderTopWidth) || 0
+        const borderStyle = computed.borderTopStyle
+        const hasRealBorder = borderWidth > 0 && borderStyle !== 'none' && borderStyle !== 'hidden'
+        const radiusPx = parseFloat(computed.borderTopLeftRadius) || 0
+        const fontWeight = parseInt(computed.fontWeight, 10) || 400
+        const align = computed.textAlign === 'center' || computed.textAlign === 'right'
+          ? computed.textAlign
+          : 'left'
+        return {
+          background,
+          color: parseExportColor(computed.color) || { r: 33, g: 33, b: 33 },
+          fontFamily: String(computed.fontFamily || '').split(',')[0].replace(/["']/g, '').trim(),
+          fontSize: Math.max(8, Math.round((parseFloat(computed.fontSize) || 14) * 0.75)),
+          bold: fontWeight >= 600,
+          align,
+          borderColor: hasRealBorder ? parseExportColor(computed.borderTopColor) : null,
+          rounded: radiusPx >= 4
+        }
+      }
+
+      function parseExportColor(value) {
+        const raw = String(value || '').trim()
+        if (!raw || raw === 'transparent' || raw === 'none') return null
+        const cache = parseExportColor.cache || (parseExportColor.cache = new Map())
+        if (cache.has(raw)) {
+          const hit = cache.get(raw)
+          return hit ? { r: hit.r, g: hit.g, b: hit.b } : null
+        }
+        let result = null
+        const match = /^rgba?\(([^)]+)\)$/.exec(raw)
+        const parts = match ? match[1].split(',').map((part) => parseFloat(part.trim())) : []
+        if (match && parts.length >= 3 && parts.slice(0, 3).every((n) => Number.isFinite(n))) {
+          result = blendExportColor(parts[0], parts[1], parts[2], parts.length > 3 ? parts[3] : 1)
+        } else {
+          // Modern color syntax (AG Grid v33+ themes resolve color-mix() to
+          // color(srgb ...) / oklab(...), plus named colors): normalize by
+          // painting onto a 1x1 canvas and reading the pixel back.
+          let context = parseExportColor.context
+          if (context === undefined) {
+            const canvas = document.createElement('canvas')
+            canvas.width = 1
+            canvas.height = 1
+            context = canvas.getContext('2d', { willReadFrequently: true }) || null
+            parseExportColor.context = context
+          }
+          if (context) {
+            context.clearRect(0, 0, 1, 1)
+            context.fillStyle = '#010203'
+            context.fillStyle = raw
+            context.fillRect(0, 0, 1, 1)
+            const data = context.getImageData(0, 0, 1, 1).data
+            result = blendExportColor(data[0], data[1], data[2], data[3] / 255)
+          }
+        }
+        cache.set(raw, result)
+        return result ? { r: result.r, g: result.g, b: result.b } : null
+      }
+
+      function blendExportColor(r, g, b, alpha) {
+        if (!Number.isFinite(alpha)) alpha = 1
+        if (alpha <= 0.02) return null
+        // PPT fills are opaque - blend semi-transparent colors onto the
+        // near-white page background so the exported color matches the eye.
+        const blend = (channel) => Math.round(channel * alpha + 250 * (1 - alpha))
+        return { r: blend(r), g: blend(g), b: blend(b) }
+      }
+
+      function collectExportRenderShapes(root, rootRect, skipElements) {
+        const shapes = []
+        const maxShapes = 1200
+        const rootClip = { left: rootRect.left, top: rootRect.top, right: rootRect.right, bottom: rootRect.bottom }
+
+        const visit = (element, clip) => {
+          if (shapes.length >= maxShapes) return
+          if (skipElements && skipElements.has(element)) return
+          const tagName = String(element.tagName || '').toLowerCase()
+          if (tagName === 'script' || tagName === 'style' || tagName === 'svg') return
+          if (element.classList.contains('qt-grid-metric-badge')) return
+          const computed = window.getComputedStyle(element)
+          if (computed.display === 'none' || computed.visibility === 'hidden') return
+          const opacityValue = parseFloat(computed.opacity)
+          if (Number.isFinite(opacityValue) && opacityValue < 0.05) return
+          // Screen-reader-only helpers hide visually via clip: rect(0,0,0,0),
+          // clip-path: inset(...), or live-region announcements while keeping
+          // normal display/visibility - they must not export.
+          if (computed.position === 'absolute' && computed.clip !== 'auto') return
+          if (computed.position === 'absolute' && computed.clipPath && computed.clipPath !== 'none') return
+          if (element.getAttribute && (element.getAttribute('aria-live') || element.getAttribute('role') === 'status')) return
+
+          const rect = element.getBoundingClientRect()
+          const visibleRect = intersectExportRect(rect, clip)
+
+          if (visibleRect && isExportIconElement(element, computed)) {
+            const glyph = mapExportIconGlyph(element)
+            if (glyph) {
+              const iconShape = makeExportTextShape(glyph, visibleRect, computed, rootRect, 'center', false)
+              iconShape.fontFamily = 'Segoe UI Symbol'
+              shapes.push(iconShape)
+            }
+            return
+          }
+
+          if (visibleRect) {
+            const boxes = captureExportBoxShapes(element, computed, visibleRect, rootRect)
+            for (const box of boxes) shapes.push(box)
+            pushExportControlText(element, computed, visibleRect, rootRect, shapes)
+            pushExportTextNodes(element, computed, clip, rootRect, shapes)
+          }
+
+          const overflow = computed.overflow + computed.overflowX + computed.overflowY
+          const clipsChildren = /(hidden|auto|scroll|clip)/.test(overflow)
+          if (!visibleRect && clipsChildren) return
+          const nextClip = clipsChildren && visibleRect ? visibleRect : clip
+          for (const child of element.children) visit(child, nextClip)
+        }
+
+        for (const child of root.children) visit(child, rootClip)
+        return shapes
+      }
+
+      function intersectExportRect(rect, clip) {
+        const left = Math.max(rect.left, clip.left)
+        const top = Math.max(rect.top, clip.top)
+        const right = Math.min(rect.right, clip.right)
+        const bottom = Math.min(rect.bottom, clip.bottom)
+        if (right - left < 1 || bottom - top < 1) return null
+        return { left, top, right, bottom, width: right - left, height: bottom - top }
+      }
+
+      function captureExportBoxShapes(element, computed, visibleRect, rootRect) {
+        const boxes = []
+        let background = parseExportColor(computed.backgroundColor)
+        if (!background && element.classList.contains('q-toggle__thumb')) {
+          background = { r: 255, g: 255, b: 255 }
+        }
+        let radius = parseFloat(computed.borderTopLeftRadius) || 0
+        const sides = {
+          top: readExportBorderSide(computed, 'Top'),
+          right: readExportBorderSide(computed, 'Right'),
+          bottom: readExportBorderSide(computed, 'Bottom'),
+          left: readExportBorderSide(computed, 'Left')
+        }
+        const sideKeys = ['top', 'right', 'bottom', 'left'].filter((key) => sides[key])
+        let borderColor = null
+        let borderWidth = 0
+        if (sideKeys.length === 4 &&
+          sameExportColor(sides.top.color, sides.right.color) &&
+          sameExportColor(sides.top.color, sides.bottom.color) &&
+          sameExportColor(sides.top.color, sides.left.color)) {
+          borderColor = sides.top.color
+          borderWidth = sides.top.width
+        }
+
+        // Quasar paints outline-button borders, outlined-field borders, and
+        // toggle knobs on ::before/::after pseudo-elements - merge full-size
+        // pseudo paint onto the element box (pseudo rects cannot be measured,
+        // but inset:0 overlays share the element rect).
+        if (!background || (!borderColor && sideKeys.length === 0)) {
+          const pseudoPaint = readExportPseudoPaint(element, visibleRect)
+          if (pseudoPaint) {
+            if (!background && pseudoPaint.background) background = pseudoPaint.background
+            if (!borderColor && sideKeys.length === 0 && pseudoPaint.borderColor) {
+              borderColor = pseudoPaint.borderColor
+              borderWidth = pseudoPaint.borderWidth
+            }
+            if (pseudoPaint.radius > radius) radius = pseudoPaint.radius
+          }
+        }
+
+        const qtId = element.dataset ? String(element.dataset.qtId || '') : ''
+        const size = Math.min(visibleRect.width, visibleRect.height)
+        if (background || borderColor || qtId) {
+          boxes.push({
+            kind: 'box',
+            x: roundExportNumber(visibleRect.left - rootRect.left),
+            y: roundExportNumber(visibleRect.top - rootRect.top),
+            width: roundExportNumber(visibleRect.width),
+            height: roundExportNumber(visibleRect.height),
+            background,
+            borderColor,
+            borderWidth: borderColor ? roundExportNumber(borderWidth || 1) : 0,
+            rounded: radius >= 3,
+            circle: size > 4 && radius >= size / 2 - 1,
+            qtId: qtId || undefined
+          })
+        }
+
+        // Partial borders (AG Grid row/column separators use border-bottom or
+        // border-right only): draw each present side as a thin filled strip so
+        // grid lines survive without inventing a full box border.
+        if (!borderColor && sideKeys.length > 0) {
+          for (const key of sideKeys) {
+            const side = sides[key]
+            const thickness = Math.max(side.width, 0.8)
+            let strip = null
+            if (key === 'top') {
+              strip = { left: visibleRect.left, top: visibleRect.top, width: visibleRect.width, height: thickness }
+            } else if (key === 'bottom') {
+              strip = { left: visibleRect.left, top: visibleRect.top + visibleRect.height - thickness, width: visibleRect.width, height: thickness }
+            } else if (key === 'left') {
+              strip = { left: visibleRect.left, top: visibleRect.top, width: thickness, height: visibleRect.height }
+            } else {
+              strip = { left: visibleRect.left + visibleRect.width - thickness, top: visibleRect.top, width: thickness, height: visibleRect.height }
+            }
+            boxes.push({
+              kind: 'box',
+              x: roundExportNumber(strip.left - rootRect.left),
+              y: roundExportNumber(strip.top - rootRect.top),
+              width: roundExportNumber(strip.width),
+              height: roundExportNumber(strip.height),
+              background: side.color,
+              borderColor: null,
+              borderWidth: 0,
+              rounded: false,
+              circle: false
+            })
+          }
+        }
+
+        return boxes
+      }
+
+      function readExportBorderSide(computed, sideName) {
+        const width = parseFloat(computed['border' + sideName + 'Width']) || 0
+        const style = computed['border' + sideName + 'Style']
+        if (width <= 0 || style === 'none' || style === 'hidden') return null
+        const color = parseExportColor(computed['border' + sideName + 'Color'])
+        if (!color) return null
+        return { color, width }
+      }
+
+      function sameExportColor(a, b) {
+        if (!a || !b) return false
+        return Math.abs(a.r - b.r) <= 2 && Math.abs(a.g - b.g) <= 2 && Math.abs(a.b - b.b) <= 2
+      }
+
+      function readExportPseudoPaint(element, visibleRect) {
+        let result = null
+        for (const pseudoName of ['::before', '::after']) {
+          let computed = null
+          try { computed = window.getComputedStyle(element, pseudoName) } catch (error) { continue }
+          if (!computed || computed.content === 'none' || computed.display === 'none') continue
+          const opacity = parseFloat(computed.opacity)
+          if (Number.isFinite(opacity) && opacity < 0.05) continue
+          // Only trust pseudo paint that covers roughly the whole element -
+          // small pseudo decorations (grid header separator ticks) must not
+          // recolor the element box.
+          const pseudoWidth = parseFloat(computed.width)
+          const pseudoHeight = parseFloat(computed.height)
+          if (Number.isFinite(pseudoWidth) && pseudoWidth < visibleRect.width * 0.85) continue
+          if (Number.isFinite(pseudoHeight) && pseudoHeight < visibleRect.height * 0.85) continue
+          const background = parseExportColor(computed.backgroundColor)
+          const borderWidth = parseFloat(computed.borderTopWidth) || 0
+          const borderStyle = computed.borderTopStyle
+          const borderColor = borderWidth > 0 && borderStyle !== 'none' && borderStyle !== 'hidden'
+            ? parseExportColor(computed.borderTopColor)
+            : null
+          const radius = parseFloat(computed.borderTopLeftRadius) || 0
+          if (!background && !borderColor) continue
+          result = result || { background: null, borderColor: null, borderWidth: 0, radius: 0 }
+          if (!result.background && background) result.background = background
+          if (!result.borderColor && borderColor) {
+            result.borderColor = borderColor
+            result.borderWidth = borderWidth
+          }
+          if (radius > result.radius) result.radius = radius
+        }
+        return result
+      }
+
+      function pushExportControlText(element, computed, visibleRect, rootRect, shapes) {
+        const tagName = String(element.tagName || '').toLowerCase()
+        let value = ''
+        if (tagName === 'input' && element.type !== 'checkbox' && element.type !== 'radio') {
+          value = String(element.value || element.placeholder || '')
+        } else if (tagName === 'textarea') {
+          value = String(element.value || element.placeholder || '')
+        } else if (tagName === 'select') {
+          value = String((element.selectedOptions && element.selectedOptions[0] && element.selectedOptions[0].textContent) || '')
+        }
+        value = value.replace(/\s+/g, ' ').trim()
+        if (!value) return
+        shapes.push(makeExportTextShape(value, visibleRect, computed, rootRect, 'left', false))
+      }
+
+      function pushExportTextNodes(element, computed, clip, rootRect, shapes) {
+        for (const node of element.childNodes) {
+          if (node.nodeType !== 3) continue
+          const text = String(node.textContent || '').replace(/\s+/g, ' ').trim()
+          if (!text) continue
+          const range = document.createRange()
+          range.selectNodeContents(node)
+          const rect = range.getBoundingClientRect()
+          const visibleRect = intersectExportRect(rect, clip)
+          if (!visibleRect) continue
+          const lineHeight = parseFloat(computed.lineHeight) || (parseFloat(computed.fontSize) || 14) * 1.4
+          const wrap = rect.height > lineHeight * 1.6
+          shapes.push(makeExportTextShape(text, visibleRect, computed, rootRect, 'left', wrap))
+        }
+      }
+
+      function makeExportTextShape(text, visibleRect, computed, rootRect, align, wrap) {
+        const fontWeight = parseInt(computed.fontWeight, 10) || 400
+        return {
+          kind: 'text',
+          x: roundExportNumber(visibleRect.left - rootRect.left),
+          y: roundExportNumber(visibleRect.top - rootRect.top),
+          width: roundExportNumber(visibleRect.width),
+          height: roundExportNumber(visibleRect.height),
+          text,
+          color: parseExportColor(computed.color) || { r: 33, g: 33, b: 33 },
+          fontFamily: String(computed.fontFamily || '').split(',')[0].replace(/["']/g, '').trim(),
+          fontSize: Math.max(6, roundExportNumber((parseFloat(computed.fontSize) || 14) * 0.75)),
+          bold: fontWeight >= 600,
+          align: align || 'left',
+          wrap: Boolean(wrap)
+        }
+      }
+
+      function isExportIconElement(element, computed) {
+        if (element.classList.contains('material-icons') || element.classList.contains('q-icon')) return true
+        return /material icons/i.test(String(computed.fontFamily || ''))
+      }
+
+      function mapExportIconGlyph(element) {
+        const name = String(element.textContent || '').trim()
+        const glyphs = {
+          arrow_drop_down: '▼',
+          arrow_drop_up: '▲',
+          expand_more: '▼',
+          expand_less: '▲',
+          chevron_left: '‹',
+          chevron_right: '›',
+          first_page: '«',
+          last_page: '»',
+          close: '✕',
+          check: '✓',
+          add: '+',
+          remove: '−',
+          edit: '✎'
+        }
+        return glyphs[name] || ''
+      }
+
+      function collectExportGridTables(root, rootRect) {
+        const tables = []
+        const skipElements = []
+        const wrappers = root.querySelectorAll('.ag-root-wrapper')
+        for (const wrapper of wrappers) {
+          const info = captureExportGridTable(wrapper, rootRect)
+          if (!info) continue
+          const host = wrapper.closest('[data-qt-id]')
+          if (host && host.dataset) info.qtId = String(host.dataset.qtId || '')
+          tables.push(info)
+          // The grid header/body region is replaced by a native PPT table, so
+          // its raw DOM must not also be captured as loose shapes. Siblings
+          // (toolbar above, paging panel below) still capture normally.
+          const body = wrapper.querySelector('.ag-root-wrapper-body')
+          if (body) skipElements.push(body)
+        }
+        return { tables, skipElements }
+      }
+
+      function captureExportGridTable(wrapper, rootRect) {
+        const headerRowElements = Array.from(wrapper.querySelectorAll('.ag-header-row'))
+        if (headerRowElements.length === 0) return null
+
+        const headerRowsByTop = new Map()
+        for (const rowElement of headerRowElements) {
+          const rowRect = rowElement.getBoundingClientRect()
+          if (rowRect.height < 2) continue
+          const top = Math.round(rowRect.top)
+          if (!headerRowsByTop.has(top)) {
+            headerRowsByTop.set(top, { height: rowRect.height, cells: [] })
+          }
+          const entry = headerRowsByTop.get(top)
+          for (const cell of rowElement.children) {
+            const rect = cell.getBoundingClientRect()
+            if (rect.width < 2) continue
+            const label = cell.querySelector('.ag-header-cell-text')
+            const text = String((label ? label.textContent : cell.textContent) || '').replace(/\s+/g, ' ').trim()
+            entry.cells.push({ left: rect.left, width: rect.width, text })
+          }
+        }
+        const headerTops = Array.from(headerRowsByTop.keys()).sort((a, b) => a - b)
+        if (headerTops.length === 0) return null
+        const lastHeaderRow = headerRowsByTop.get(headerTops[headerTops.length - 1])
+        const leaves = lastHeaderRow.cells.slice().sort((a, b) => a.left - b.left)
+        if (leaves.length === 0) return null
+
+        const findColumnSpan = (cell) => {
+          let start = -1
+          let end = -1
+          for (let index = 0; index < leaves.length; index++) {
+            const center = leaves[index].left + leaves[index].width / 2
+            if (center >= cell.left - 1 && center <= cell.left + cell.width + 1) {
+              if (start === -1) start = index
+              end = index
+            }
+          }
+          if (start === -1) {
+            let nearest = 0
+            let nearestDistance = Infinity
+            const cellCenter = cell.left + cell.width / 2
+            for (let index = 0; index < leaves.length; index++) {
+              const distance = Math.abs(leaves[index].left + leaves[index].width / 2 - cellCenter)
+              if (distance < nearestDistance) { nearestDistance = distance; nearest = index }
+            }
+            return { colStart: nearest, colSpan: 1 }
+          }
+          return { colStart: start, colSpan: end - start + 1 }
+        }
+
+        const rows = []
+        for (const top of headerTops) {
+          const entry = headerRowsByTop.get(top)
+          const cells = entry.cells
+            .slice()
+            .sort((a, b) => a.left - b.left)
+            .map((cell) => {
+              const span = findColumnSpan(cell)
+              return { colStart: span.colStart, colSpan: span.colSpan, rowSpan: 1, text: cell.text }
+            })
+          rows.push({ header: true, height: entry.height, cells })
+        }
+
+        const bodyRowsByIndex = new Map()
+        for (const rowElement of wrapper.querySelectorAll('.ag-row')) {
+          const index = Number(rowElement.getAttribute('row-index'))
+          if (!Number.isFinite(index)) continue
+          const rowRect = rowElement.getBoundingClientRect()
+          if (rowRect.height < 2) continue
+          let entry = bodyRowsByIndex.get(index)
+          if (!entry) {
+            entry = { height: rowRect.height, cells: [] }
+            bodyRowsByIndex.set(index, entry)
+          }
+          for (const cell of rowElement.children) {
+            if (!cell.classList.contains('ag-cell')) continue
+            const rect = cell.getBoundingClientRect()
+            if (rect.width < 2) continue
+            const text = String(cell.innerText || '').replace(/\s+/g, ' ').trim()
+            const span = findColumnSpan({ left: rect.left, width: rect.width })
+            const rowSpan = Math.max(1, Math.round(rect.height / Math.max(1, entry.height)))
+            entry.cells.push({ colStart: span.colStart, colSpan: span.colSpan, rowSpan, text })
+          }
+        }
+        const bodyIndexes = Array.from(bodyRowsByIndex.keys()).sort((a, b) => a - b)
+        for (const index of bodyIndexes) {
+          const entry = bodyRowsByIndex.get(index)
+          rows.push({ header: false, height: entry.height, cells: entry.cells })
+        }
+
+        const headerElement = wrapper.querySelector('.ag-header') || wrapper
+        const headerRect = headerElement.getBoundingClientRect()
+        let totalHeight = 0
+        for (const row of rows) totalHeight += row.height
+
+        const headerCellElement = wrapper.querySelector('.ag-header-cell') || headerElement
+        const headerStyles = window.getComputedStyle(headerCellElement)
+        const headerBackground = parseExportColor(headerStyles.backgroundColor) ||
+          parseExportColor(window.getComputedStyle(headerElement).backgroundColor)
+        const headerLabel = wrapper.querySelector('.ag-header-cell-text')
+        const headerColor = headerLabel ? parseExportColor(window.getComputedStyle(headerLabel).color) : null
+        const bodyCellElement = wrapper.querySelector('.ag-cell')
+        const bodyStyles = bodyCellElement ? window.getComputedStyle(bodyCellElement) : headerStyles
+        const bodyColor = parseExportColor(bodyStyles.color)
+
+        return {
+          qtId: '',
+          x: roundExportNumber(headerRect.left - rootRect.left),
+          y: roundExportNumber(headerRect.top - rootRect.top),
+          width: roundExportNumber(headerRect.width),
+          height: roundExportNumber(totalHeight),
+          columnWidths: leaves.map((leaf) => roundExportNumber(leaf.width)),
+          rows: rows.map((row) => ({
+            header: row.header,
+            height: roundExportNumber(row.height),
+            cells: row.cells
+          })),
+          headerBackground,
+          headerColor,
+          bodyColor,
+          fontSize: Math.max(6, roundExportNumber((parseFloat(bodyStyles.fontSize) || 13) * 0.75)),
+          fontFamily: String(bodyStyles.fontFamily || '').split(',')[0].replace(/["']/g, '').trim()
+        }
+      }
+
+      function roundExportNumber(value) {
+        return Math.round((Number(value) || 0) * 10) / 10
+      }
+
       document.addEventListener('pointerdown', (event) => {
         if (!event.target.closest?.('#form-context-menu')) hideFormContextMenu()
+        if (!event.target.closest?.('#screen-context-menu')) hideScreenContextMenu()
       })
-      window.addEventListener('blur', hideFormContextMenu)
+      window.addEventListener('blur', () => {
+        hideFormContextMenu()
+        hideScreenContextMenu()
+      })
     </script>
   `,
   );
@@ -1587,7 +2176,7 @@ function htmlShell(webview, nonce, title, body) {
     #quasar-preview .q-page-container,
     #quasar-preview .q-page { min-height: calc(100vh - 42px); }
     .qt-selected { box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.85) !important; }
-    .script-editor-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 300px; min-height: calc(100vh - 42px); }
+    .script-editor-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 5px var(--store-state-width, 300px); min-height: calc(100vh - 42px); }
     .script-editor-shell { min-width: 0; overflow: hidden; }
     .script-editor { width: 100%; height: calc(100vh - 42px); overflow: hidden; }
     .script-editor-workspace .script-editor { height: calc(100vh - 42px); }
@@ -1612,6 +2201,7 @@ function htmlShell(webview, nonce, title, body) {
     .store-state { grid-column: 1 / -1; }
     ${getStoreStyles()}
     ${getScreenStoreStateStyles()}
+    ${getScreenSidePanelsStyles()}
     ${getTableStyles()}
     .check { display: flex; gap: 6px; align-items: center; color: var(--vscode-descriptionForeground); }
     .check input { width: auto; min-height: auto; }
@@ -1676,6 +2266,9 @@ function htmlShell(webview, nonce, title, body) {
     .designer-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--vscode-panel-border); }
     .designer-dialog-actions button { min-width: 76px; min-height: 28px; padding: 4px 10px; border: 1px solid var(--vscode-panel-border); border-radius: 3px; color: var(--vscode-button-secondaryForeground); background: var(--vscode-button-secondaryBackground); }
     .designer-dialog-actions button.primary { margin: 0; border-color: var(--vscode-button-background); color: var(--vscode-button-foreground); background: var(--vscode-button-background); }
+    .designer-context-menu { position: fixed; z-index: 10030; min-width: 180px; padding: 4px; border: 1px solid var(--vscode-panel-border); border-radius: 4px; color: var(--vscode-editor-foreground); background: var(--vscode-editorWidget-background); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35); }
+    .designer-context-menu button { display: block; width: 100%; min-height: 28px; padding: 5px 10px; border: 0; color: var(--vscode-editor-foreground); background: transparent; text-align: left; }
+    .designer-context-menu button:hover { background: var(--vscode-list-hoverBackground); }
 
     ${getGridStyles()}
     .hidden { display: none !important; }

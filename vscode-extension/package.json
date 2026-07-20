@@ -28,13 +28,9 @@
     "onCommand:quasarTool.saveActiveEditor",
     "onCommand:quasarTool.watchVue",
     "onCommand:quasarTool.createPiniaStore",
+    "onCommand:quasarTool.createJsonFromTaggedPpt",
     "onStartupFinished",
-    "workspaceContains:**/.src/store/**/*.json",
-    "onView:quasarTool.paletteView",
-    "onView:quasarTool.propertiesView",
-    "onView:quasarTool.eventsView",
-    "onView:quasarTool.pageTreeView",
-    "onView:quasarTool.datasetView"
+    "workspaceContains:**/.src/store/**/*.json"
   ],
   "main": "./src/extension.js",
   "contributes": {
@@ -60,6 +56,11 @@
         "command": "quasarTool.createPiniaStore",
         "title": "Quasar Tool: Pinia 파일 생성",
         "icon": "$(new-file)"
+      },
+      {
+        "command": "quasarTool.createJsonFromTaggedPpt",
+        "title": "Quasar Tool: Create JSON from Tagged PPT",
+        "icon": "$(file-code)"
       }
     ],
     "keybindings": [
@@ -74,54 +75,6 @@
         "key": "ctrl+s",
         "mac": "cmd+s",
         "when": "webviewId == 'quasarTool.pageEditor'"
-      },
-      {
-        "command": "quasarTool.saveActiveEditor",
-        "key": "ctrl+s",
-        "mac": "cmd+s",
-        "when": "focusedView == quasarTool.propertiesView"
-      },
-      {
-        "command": "quasarTool.saveActiveEditor",
-        "key": "ctrl+s",
-        "mac": "cmd+s",
-        "when": "webviewId == 'quasarTool.propertiesView'"
-      },
-      {
-        "command": "quasarTool.saveActiveEditor",
-        "key": "ctrl+s",
-        "mac": "cmd+s",
-        "when": "focusedView == quasarTool.eventsView"
-      },
-      {
-        "command": "quasarTool.saveActiveEditor",
-        "key": "ctrl+s",
-        "mac": "cmd+s",
-        "when": "webviewId == 'quasarTool.eventsView'"
-      },
-      {
-        "command": "quasarTool.saveActiveEditor",
-        "key": "ctrl+s",
-        "mac": "cmd+s",
-        "when": "focusedView == quasarTool.pageTreeView"
-      },
-      {
-        "command": "quasarTool.saveActiveEditor",
-        "key": "ctrl+s",
-        "mac": "cmd+s",
-        "when": "webviewId == 'quasarTool.pageTreeView'"
-      },
-      {
-        "command": "quasarTool.saveActiveEditor",
-        "key": "ctrl+s",
-        "mac": "cmd+s",
-        "when": "focusedView == quasarTool.datasetView"
-      },
-      {
-        "command": "quasarTool.saveActiveEditor",
-        "key": "ctrl+s",
-        "mac": "cmd+s",
-        "when": "webviewId == 'quasarTool.datasetView'"
       }
     ],
     "menus": {
@@ -131,6 +84,9 @@
         },
         {
           "command": "quasarTool.createPiniaStore"
+        },
+        {
+          "command": "quasarTool.createJsonFromTaggedPpt"
         }
       ],
       "explorer/context": [
@@ -149,43 +105,11 @@
           "when": "activeCustomEditorId == quasarTool.pageEditor",
           "group": "navigation@10"
         }
-      ]
-    },
-    "viewsContainers": {
-      "activitybar": [
+      ],
+      "file/newFile": [
         {
-          "id": "quasarTool",
-          "title": "Quasar Tool",
-          "icon": "media/quasar-tool.svg"
-        }
-      ]
-    },
-    "views": {
-      "quasarTool": [
-        {
-          "id": "quasarTool.paletteView",
-          "name": "Component Palette",
-          "type": "webview"
-        },
-        {
-          "id": "quasarTool.propertiesView",
-          "name": "Properties",
-          "type": "webview"
-        },
-        {
-          "id": "quasarTool.eventsView",
-          "name": "Events",
-          "type": "webview"
-        },
-        {
-          "id": "quasarTool.pageTreeView",
-          "name": "Page Tree",
-          "type": "webview"
-        },
-        {
-          "id": "quasarTool.datasetView",
-          "name": "DataSet",
-          "type": "webview"
+          "command": "quasarTool.createJsonFromTaggedPpt",
+          "group": "quasarTool@1"
         }
       ]
     },

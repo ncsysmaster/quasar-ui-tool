@@ -1,24 +1,19 @@
 const vscode = require("vscode");
 
-const { EDITOR_VIEW_TYPE, VIEW_IDS } = require("./constants");
+const { EDITOR_VIEW_TYPE } = require("./constants");
 const { PageEditorStateManager } = require("./stateManager");
-const {
-  DatasetViewProvider,
-  PageEditorProvider,
-  EventsViewProvider,
-  PageTreeViewProvider,
-  PaletteViewProvider,
-  PropertiesViewProvider,
-} = require("./providers");
+const { PageEditorProvider } = require("./providers");
 const { getWebviewRoots } = require("./webviewResources");
 const { registerWatchVueCommand } = require("./watchVueCommand");
 const { registerPiniaStoreCommands } = require("./piniaStoreCommand");
+const { registerPptTaggedJsonCommands } = require("./pptTaggedJsonCommand");
 
 function activate(context) {
   const state = new PageEditorStateManager();
   const webviewRoots = getWebviewRoots(context);
   registerWatchVueCommand(context);
   registerPiniaStoreCommands(context);
+  registerPptTaggedJsonCommands(context);
   const scriptWatcher = vscode.workspace.createFileSystemWatcher(
     "**/.src/pages/*.js",
   );
@@ -35,26 +30,6 @@ function activate(context) {
         supportsMultipleEditorsPerDocument: false,
         webviewOptions: { retainContextWhenHidden: true },
       },
-    ),
-    vscode.window.registerWebviewViewProvider(
-      VIEW_IDS.palette,
-      new PaletteViewProvider(state, webviewRoots),
-    ),
-    vscode.window.registerWebviewViewProvider(
-      VIEW_IDS.properties,
-      new PropertiesViewProvider(state, webviewRoots),
-    ),
-    vscode.window.registerWebviewViewProvider(
-      VIEW_IDS.events,
-      new EventsViewProvider(state, webviewRoots),
-    ),
-    vscode.window.registerWebviewViewProvider(
-      VIEW_IDS.pageTree,
-      new PageTreeViewProvider(state, webviewRoots),
-    ),
-    vscode.window.registerWebviewViewProvider(
-      VIEW_IDS.dataset,
-      new DatasetViewProvider(state, webviewRoots),
     ),
     vscode.workspace.onDidChangeTextDocument((event) =>
       state.onTextDocumentChanged(event.document),
