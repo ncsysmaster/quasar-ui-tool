@@ -234,7 +234,7 @@ function screenStoreValueType(value) {
 }
 
 function getScreenStoreStateStyles() {
-  return `.screen-editor-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 5px var(--store-state-width, 300px); min-height: calc(100vh - 42px); }
+  return `.screen-editor-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 5px var(--store-state-width, 300px); grid-template-rows: minmax(0, 1fr); height: 100%; min-height: 0; }
 .screen-editor-canvas { min-width: 0; overflow: auto; }
 .screen-store-state-panel { min-width: 0; overflow: auto; border-left: 1px solid var(--vscode-panel-border); color: var(--vscode-editor-foreground); background: var(--vscode-sideBar-background); }
 .screen-store-state-resizer { cursor: col-resize; touch-action: none; background: transparent; border-left: 1px solid var(--vscode-panel-border); }

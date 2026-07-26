@@ -216,6 +216,10 @@ class PageEditorProvider {
         });
       }
 
+      if (message.type === "setColumnClass") {
+        await editorState.applyColumnClass(message.targetId, message.colClass);
+      }
+
       if (message.type === "formLayoutAction") {
         await editorState.updateFormLayout(message.action, message.targetId);
       }
@@ -304,6 +308,16 @@ class PageEditorProvider {
       if (message.type === "dropPaletteComponent") {
         await editorState.addComponent(message.index, message.targetId, {
           dropMode: message.mode || "inside",
+        });
+      }
+
+      if (message.type === "createLayoutGrid") {
+        await editorState.addComponent(message.paletteIndex, message.targetId, {
+          dropMode: message.dropMode || "inside",
+          layoutGridOptions: {
+            rows: message.rows,
+            columns: message.columns,
+          },
         });
       }
 

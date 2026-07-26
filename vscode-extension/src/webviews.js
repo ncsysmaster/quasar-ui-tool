@@ -53,6 +53,7 @@ function getEditorHtml(webview, runtimeUris) {
       const vscode = acquireVsCodeApi()
       const componentTypeMap = ${JSON.stringify(NEUTRAL_TO_QUASAR)}
       const tablePaletteIndex = ${PALETTE.findIndex((item) => item.type === "Table")}
+      const gridPaletteIndex = ${PALETTE.findIndex((item) => item.template === "layoutGrid")}
       const vueRuntime = window.Vue
       const quasarRuntime = window.Quasar || window.quasar
       const agGridRuntime = window.agGrid || {}
@@ -415,11 +416,19 @@ function getEditorHtml(webview, runtimeUris) {
           '<div id="screen-side-panels-resizer" class="screen-side-panels-resizer" role="separator" aria-orientation="vertical" title="패널 크기 조절"></div>' +
           '<div class="screen-editor-canvas"><div class="runtime-preview-frame' + (showCanvasGrid ? ' show-canvas-grid' : '') + '"><div id="quasar-preview"></div></div></div>' +
           '<div id="screen-store-state-resizer" class="screen-store-state-resizer" role="separator" aria-orientation="vertical" title="패널 크기 조절"></div>' +
-          '<aside id="screen-store-state-panel" class="screen-store-state-panel" aria-label="Store State"></aside></div>' +
+          '<aside id="screen-right-panel" class="screen-store-state-panel screen-right-panel" aria-label="Page Tree / Store State">' +
+          '<div class="screen-right-tabs" role="tablist">' +
+          '<button type="button" class="screen-right-tab" data-right-tab="pageTree" role="tab">Page Tree</button>' +
+          '<button type="button" class="screen-right-tab" data-right-tab="storeState" role="tab">Store State</button>' +
+          '</div>' +
+          '<div id="screen-right-page-tree" class="screen-right-tab-body screen-right-page-tree"></div>' +
+          '<div id="screen-store-state-panel" class="screen-right-tab-body"></div>' +
+          '</aside></div>' +
           ${JSON.stringify(getGridHtml())}
         mountPreview()
         renderScreenStoreStatePanel()
         setupScreenStoreStatePanelResize()
+        renderScreenRightPanel()
         renderScreenSidePanels()
         setupScreenSidePanelsResize()
 
@@ -427,6 +436,7 @@ function getEditorHtml(webview, runtimeUris) {
         setupScreenContextMenu()
         setupFormContextMenu()
         setupSplitCellDialog()
+        setupLayoutGridWizard()
       }
 
       function updateScreenTools() {
@@ -967,6 +977,17 @@ function getEditorHtml(webview, runtimeUris) {
       }
 
       function renderSingleComponent(component, scope, repeatIndex) {
+        if (component?.designer?.role === 'requiredMark') {
+          return vueRuntime.h('span', {
+            class: component.class || 'text-negative q-ml-xs',
+            style: 'pointer-events: none; user-select: none;',
+            contenteditable: 'false',
+            'data-qt-decoration': 'true',
+            'aria-hidden': 'true',
+            key: component.id || 'qt-required-mark'
+          }, String(component.text ?? '*'))
+        }
+
         if (component.type === 'Table') {
           return renderTablePreviewComponent(component, scope, repeatIndex)
         }
@@ -978,7 +999,7 @@ function getEditorHtml(webview, runtimeUris) {
         const props = buildProps(component, repeatIndex, scope, resizeKind, gridMetric)
 
         let children = buildChildren(component, scope, isHtml)
-        const metricBadge = buildFormGridMetricBadge(gridMetric)
+        const metricBadge = buildFormGridMetricBadge(gridMetric, component)
         const resizeHandle = buildFormResizeHandle(component, resizeKind)
 
         children = appendPreviewChild(children, metricBadge)
@@ -1180,10 +1201,13 @@ function getEditorHtml(webview, runtimeUris) {
 
         const isHtml = component.type === 'HtmlElement'
         const componentChildren = Array.isArray(component.children) ? component.children : []
+        const editableChildren = componentChildren.filter(
+          (child) => child?.designer?.role !== 'requiredMark'
+        )
         const isDirectEditableText = isHtml &&
           component.text !== undefined &&
           !component.textBinding &&
-          componentChildren.length === 0
+          editableChildren.length === 0
 
         if (component.class) classNames.push(component.class)
 
@@ -1243,7 +1267,9 @@ function getEditorHtml(webview, runtimeUris) {
 
         if (isDirectEditableText) {
           props.onBlur = (event) => {
-            const value = event.currentTarget.textContent || ''
+            const clone = event.currentTarget.cloneNode(true)
+            clone.querySelectorAll('[data-qt-decoration]').forEach((decoration) => decoration.remove())
+            const value = clone.textContent || ''
             if (value === String(component.text ?? '')) return
             vscode.postMessage({
               type: 'updateComponentText',
@@ -1260,8 +1286,16 @@ function getEditorHtml(webview, runtimeUris) {
               event.currentTarget.blur()
             } else if (event.key === 'Escape') {
               event.preventDefault()
-              event.currentTarget.textContent = String(component.text ?? '')
-              event.currentTarget.blur()
+              const host = event.currentTarget
+              const originalText = String(component.text ?? '')
+              const textNode = [...host.childNodes].find((node) => node.nodeType === 3)
+              // 장식(필수 * span)은 남기고 텍스트 노드만 원복한다.
+              host.childNodes.forEach((node) => {
+                if (node.nodeType === 3 && node !== textNode) node.nodeValue = ''
+              })
+              if (textNode) textNode.nodeValue = originalText
+              else host.insertBefore(document.createTextNode(originalText), host.firstChild)
+              host.blur()
             }
           }
         }
@@ -1340,6 +1374,14 @@ function getEditorHtml(webview, runtimeUris) {
             if (paletteIndex === tablePaletteIndex) {
               showTableWizard({
                 paletteIndex,
+                targetId: component.id,
+                dropMode: componentCanHaveChildren(component) ? 'inside' : 'after'
+              })
+              return
+            }
+
+            if (paletteIndex === gridPaletteIndex) {
+              showLayoutGridWizard({
                 targetId: component.id,
                 dropMode: componentCanHaveChildren(component) ? 'inside' : 'after'
               })
@@ -1486,7 +1528,7 @@ function getEditorHtml(webview, runtimeUris) {
             .includes(component.tag || 'div')
         }
 
-        return ['Page', 'Card', 'CardSection', 'Layout', 'PageContainer']
+        return ['Page', 'Card', 'CardSection', 'Form', 'Layout', 'PageContainer']
           .includes(component.type)
       }
 
@@ -1552,6 +1594,10 @@ function getEditorHtml(webview, runtimeUris) {
           if (paletteIndex < 0) return
           if (paletteIndex === tablePaletteIndex) {
             showTableWizard({ paletteIndex, targetId: '', dropMode: 'inside' })
+            return
+          }
+          if (paletteIndex === gridPaletteIndex) {
+            showLayoutGridWizard({ targetId: '', dropMode: 'inside' })
             return
           }
           vscode.postMessage({
@@ -2155,11 +2201,12 @@ function htmlShell(webview, nonce, title, body) {
   <title>${escapeHtml(title)}</title>
   <style>
     * { box-sizing: border-box; }
-    body { margin: 0; color: var(--vscode-editor-foreground); background: var(--vscode-editor-background); font-family: var(--vscode-font-family); font-size: var(--vscode-font-size); }
+    html, body { height: 100%; }
+    body { margin: 0; display: flex; flex-direction: column; overflow: hidden; color: var(--vscode-editor-foreground); background: var(--vscode-editor-background); font-family: var(--vscode-font-family); font-size: var(--vscode-font-size); }
     button, input, select, textarea { font: inherit; }
     button { cursor: pointer; }
-    .tabs { display: flex; gap: 2px; padding: 8px 10px 0; border-bottom: 1px solid var(--vscode-panel-border); background: var(--vscode-sideBar-background); }
-    .tab { padding: 8px 14px; border: 1px solid transparent; border-bottom: 0; color: var(--vscode-descriptionForeground); background: transparent; }
+    .tabs { display: flex; flex: 0 0 auto; height: 42px; gap: 2px; padding: 8px 10px 0; border-bottom: 1px solid var(--vscode-panel-border); background: var(--vscode-sideBar-background); }
+    .tab { padding: 7px 14px; border: 1px solid transparent; border-bottom: 0; color: var(--vscode-descriptionForeground); background: transparent; }
     .tab.active { color: var(--vscode-editor-foreground); border-color: var(--vscode-panel-border); background: var(--vscode-editor-background); }
     .screen-tools { display: flex; gap: 2px; margin-left: auto; padding: 2px 2px 5px; align-items: center; }
     .screen-tool-button { display: inline-flex; flex: 0 0 28px; width: 28px; height: 28px; padding: 0; align-items: center; justify-content: center; border: 1px solid transparent; border-radius: 3px; color: var(--vscode-icon-foreground); background: transparent; }
@@ -2167,19 +2214,19 @@ function htmlShell(webview, nonce, title, body) {
     .screen-tool-button.active { color: var(--vscode-focusBorder); border-color: var(--vscode-focusBorder); background: var(--vscode-list-activeSelectionBackground); }
     .screen-tool-button .material-icons { font-size: 18px; line-height: 18px; }
     .tab-action-button { margin: 2px 2px 5px 4px; align-self: center; }
-    #content { min-height: calc(100vh - 42px); }
-    .runtime-preview-frame { min-height: calc(100vh - 42px); overflow: auto; color: #000; background-color: #fafafa; }
+    #content { flex: 1 1 auto; min-height: 0; overflow: auto; }
+    .runtime-preview-frame { min-height: 100%; overflow: auto; color: #000; background-color: #fafafa; }
     .runtime-preview-frame.qt-palette-frame-drop-target { box-shadow: inset 0 0 0 3px rgba(33, 163, 102, 0.85); }
     .runtime-preview-frame.show-canvas-grid { background-image: linear-gradient(rgba(0,0,0,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.06) 1px, transparent 1px); background-size: 20px 20px, 20px 20px; }
-    #quasar-preview { position: relative;  z-index: 1;  min-height: calc(100vh - 42px);  color: #000;  background: transparent;  font-family: Roboto, Arial, sans-serif;  font-size: 14px;  line-height: 1.5;    }    .qt-preview-layout { min-height: calc(100vh - 42px); }
+    #quasar-preview { position: relative;  z-index: 1;  min-height: calc(100vh - 60px);  color: #000;  background: transparent;  font-family: Roboto, Arial, sans-serif;  font-size: 14px;  line-height: 1.5;    }    .qt-preview-layout { min-height: calc(100vh - 60px); }
     #quasar-preview .q-layout,
     #quasar-preview .q-page-container,
-    #quasar-preview .q-page { min-height: calc(100vh - 42px); }
+    #quasar-preview .q-page { min-height: calc(100vh - 60px); }
     .qt-selected { box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.85) !important; }
-    .script-editor-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 5px var(--store-state-width, 300px); min-height: calc(100vh - 42px); }
+    .script-editor-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 5px var(--store-state-width, 300px); grid-template-rows: minmax(0, 1fr); height: 100%; }
     .script-editor-shell { min-width: 0; overflow: hidden; }
-    .script-editor { width: 100%; height: calc(100vh - 42px); overflow: hidden; }
-    .script-editor-workspace .script-editor { height: calc(100vh - 42px); }
+    .script-editor { width: 100%; height: 100%; overflow: hidden; }
+    .script-editor-workspace .script-editor { height: 100%; }
     .qt-script-store-drop-target { outline: 2px solid var(--vscode-focusBorder); outline-offset: -2px; }
     .error-text { color: var(--vscode-errorForeground); }
     .summary, .empty, .view-body { padding: 12px; }

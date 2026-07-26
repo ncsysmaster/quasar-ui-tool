@@ -9,6 +9,14 @@ function getGridHtml() {
     '<button data-form-action="delete-row" role="menuitem">Row 삭제</button>',
     '<button data-form-action="delete-column" role="menuitem">Column 삭제</button>',
     '<span class="form-context-separator"></span>',
+    '<span class="form-context-col-title">Col 폭</span>',
+    '<div class="form-context-col-grid">',
+    '<button data-col-class="col" title="col (균등 분배)">col</button>',
+    '<button data-col-class="col-auto" title="col-auto (내용 크기)">auto</button>',
+    ...Array.from({ length: 12 }, (_, index) =>
+      `<button data-col-class="col-${index + 1}" title="col-${index + 1}">${index + 1}</button>`),
+    '</div>',
+    '<span class="form-context-separator"></span>',
     '<button data-export-tagged-ppt role="menuitem">PPT 파일 생성</button>',
     '</div>',
     '<div id="form-cell-split-dialog" class="designer-dialog-backdrop hidden">',
@@ -27,6 +35,25 @@ function getGridHtml() {
     '<div class="designer-dialog-actions">',
     '<button class="primary" data-split-apply>나누기</button>',
     '<button data-split-cancel>취소</button>',
+    '</div>',
+    '</div>',
+    '</div>',
+    '<div id="layout-grid-dialog" class="designer-dialog-backdrop hidden">',
+    '<div class="designer-dialog" role="dialog" aria-modal="true" aria-labelledby="layout-grid-title">',
+    '<div class="designer-dialog-header">',
+    '<strong id="layout-grid-title">Grid 추가</strong>',
+    '<button class="designer-dialog-close" data-grid-cancel title="닫기" aria-label="닫기">×</button>',
+    '</div>',
+    '<div class="designer-dialog-body">',
+    '<fieldset class="split-cell-fieldset">',
+    '<legend>줄/칸 구성</legend>',
+    '<label class="split-cell-option"><span></span><span>세로(줄)</span><input type="number" data-grid-rows min="1" max="20" value="2"></label>',
+    '<label class="split-cell-option"><span></span><span>가로(칸)</span><input type="number" data-grid-columns min="1" max="12" value="2"></label>',
+    '</fieldset>',
+    '</div>',
+    '<div class="designer-dialog-actions">',
+    '<button class="primary" data-grid-apply>추가</button>',
+    '<button data-grid-cancel>취소</button>',
     '</div>',
     '</div>',
     '</div>',
@@ -58,6 +85,10 @@ function getGridScript() {
     showSplitCellDialog,
     hideSplitCellDialog,
     clampSplitCount,
+    isFormGridTemplateComponent,
+    setupLayoutGridWizard,
+    showLayoutGridWizard,
+    hideLayoutGridWizard,
   ].map((fn) => fn.toString()).join("\n\n");
 }
 
@@ -76,17 +107,21 @@ function getGridStyles() {
     'body.qt-layout-resizing[data-resize-kind="row"], body.qt-layout-resizing[data-resize-kind="row"] * { cursor: ns-resize !important; }',
     'body.qt-layout-resizing[data-resize-kind="column"], body.qt-layout-resizing[data-resize-kind="column"] * { cursor: ew-resize !important; }',
     '.qt-grid-metric-host { position: relative !important; overflow: visible !important; }',
-    '.qt-grid-metric-badge { position: absolute; z-index: 115; display: inline-flex; width: auto; height: 20px; padding: 1px 4px; align-items: center; justify-content: center; border: 1px solid; border-radius: 3px; font-family: var(--vscode-editor-font-family, monospace); font-size: 10px; font-weight: 600; line-height: 16px; white-space: nowrap; opacity: 0.6; pointer-events: none; user-select: none; }',
-    '.qt-grid-metric-cell { top: 2px; right: 2px; color: #7a3215; border-color: rgba(239, 108, 53, 0.5); background: rgba(255, 224, 204, 0.44); }',
+    '.qt-grid-metric-badge { position: absolute; z-index: 115; display: inline-flex; width: auto; height: 20px; padding: 1px 4px; align-items: center; justify-content: center; border: 1px solid; border-radius: 3px; font-family: var(--vscode-editor-font-family, monospace); font-size: 10px; font-weight: 600; line-height: 16px; white-space: nowrap; pointer-events: none; user-select: none; }',
+    '.qt-grid-metric-cell { top: 2px; right: 2px; color: #af8473; border-color: #fad3c2; background: #fff7f1; }',
     '.qt-grid-metric-row { top: 2px; left: 2px; }',
-    '.qt-grid-metric-valid { color: #174f52; border-color: rgba(79, 164, 168, 0.5); background: rgba(216, 241, 242, 0.44); }',
-    '.qt-grid-metric-under { color: #6a4c00; border-color: rgba(214, 165, 0, 0.5); background: rgba(255, 241, 189, 0.44); }',
-    '.qt-grid-metric-over { color: #7a1f26; border-color: rgba(209, 77, 87, 0.5); background: rgba(255, 217, 221, 0.44); }',
+    '.qt-grid-metric-valid { color: #709294; border-color: #cae4e5; background: #f5fbfc; }',
+    '.qt-grid-metric-under { color: #938866; border-color: #f3e4b3; background: #fffbee; }',
+    '.qt-grid-metric-over { color: #af7176; border-color: #f1cacd; background: #fff5f6; }',
     '.form-context-menu { position: fixed; z-index: 10000; display: grid; min-width: 168px; padding: 4px; border: 1px solid var(--vscode-menu-border, var(--vscode-panel-border)); border-radius: 4px; color: var(--vscode-menu-foreground, var(--vscode-editor-foreground)); background: var(--vscode-menu-background, var(--vscode-editorWidget-background)); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35); }',
     '.form-context-menu button { min-height: 26px; padding: 4px 10px; border: 0; border-radius: 2px; color: inherit; background: transparent; text-align: left; }',
     '.form-context-menu button:hover:not(:disabled) { color: var(--vscode-menu-selectionForeground, var(--vscode-list-activeSelectionForeground)); background: var(--vscode-menu-selectionBackground, var(--vscode-list-activeSelectionBackground)); }',
     '.form-context-menu button:disabled { opacity: 0.45; cursor: default; }',
     '.form-context-separator { height: 1px; margin: 4px 6px; background: var(--vscode-menu-separatorBackground, var(--vscode-panel-border)); }',
+    '.form-context-col-title { padding: 2px 10px; color: var(--vscode-descriptionForeground); font-size: 11px; font-weight: 700; }',
+    '.form-context-menu .form-context-col-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; padding: 0 8px 4px; }',
+    '.form-context-menu .form-context-col-grid button { min-height: 22px; padding: 2px 0; border: 1px solid var(--vscode-panel-border); border-radius: 3px; font-size: 11px; text-align: center; }',
+    '.form-context-menu .form-context-col-grid button.active { border-color: var(--vscode-focusBorder); color: var(--vscode-focusBorder); font-weight: 700; }',
     '.split-cell-fieldset { display: grid; gap: 8px; margin: 0; padding: 10px; border: 1px solid var(--vscode-panel-border); border-radius: 5px; }',
     '.split-cell-fieldset legend { padding: 0 5px; color: var(--vscode-descriptionForeground); font-weight: 700; font-size: 12px; }',
     '.split-cell-option { display: grid; grid-template-columns: 18px 72px 1fr; gap: 8px; align-items: center; }',
@@ -95,12 +130,58 @@ function getGridStyles() {
   ].join("\n");
 }
 
+function isFormGridTemplateComponent(component) {
+  return ["courseSearchForm", "layoutGrid"].includes(
+    component?.designer?.template,
+  );
+}
+
+function setupLayoutGridWizard() {
+  const dialog = document.getElementById("layout-grid-dialog");
+  if (!dialog) return;
+  dialog.querySelectorAll("[data-grid-cancel]").forEach((button) =>
+    button.addEventListener("click", hideLayoutGridWizard));
+  dialog.addEventListener("click", (event) => {
+    if (event.target === dialog) hideLayoutGridWizard();
+  });
+  dialog.querySelector("[data-grid-apply]").addEventListener("click", () => {
+    const rows = clampSplitCount(dialog.querySelector("[data-grid-rows]").value);
+    const columns = Math.max(1, Math.min(12,
+      Math.round(Number(dialog.querySelector("[data-grid-columns]").value) || 1)));
+    hideLayoutGridWizard();
+    vscode.postMessage({
+      type: "createLayoutGrid",
+      paletteIndex: gridPaletteIndex,
+      rows,
+      columns,
+      targetId: dialog.dataset.targetId || "",
+      dropMode: dialog.dataset.dropMode || "inside",
+    });
+  });
+}
+
+function showLayoutGridWizard(request = {}) {
+  const dialog = document.getElementById("layout-grid-dialog");
+  if (!dialog) return;
+  dialog.dataset.targetId = request.targetId || "";
+  dialog.dataset.dropMode = request.dropMode || "inside";
+  dialog.querySelector("[data-grid-rows]").value = "2";
+  dialog.querySelector("[data-grid-columns]").value = "2";
+  dialog.classList.remove("hidden");
+  dialog.querySelector("[data-grid-rows]").focus();
+  dialog.querySelector("[data-grid-rows]").select();
+}
+
+function hideLayoutGridWizard() {
+  document.getElementById("layout-grid-dialog")?.classList.add("hidden");
+}
+
 function getFormGridMetric(component) {
   if (!showGridMetrics) return null;
   if (component?.type !== "HtmlElement") return null;
 
   const path = findComponentPath(model?.components || [], component.id);
-  if (!path.some((item) => item?.designer?.template === "courseSearchForm")) return null;
+  if (!path.some(isFormGridTemplateComponent)) return null;
 
   if (isInspectableGridRow(component)) {
     const total = (component.children || [])
@@ -120,10 +201,16 @@ function getFormGridMetric(component) {
     : null;
 }
 
-function buildFormGridMetricBadge(metric) {
+function buildFormGridMetricBadge(metric, component) {
   if (!metric) return null;
+  // 깊은(안쪽) div일수록 앞 레이어: 겹치면 실제 그 위치의 셀 badge가 보이고,
+  // 바깥 컨테이너의 badge는 뒤로 깔린다.
+  const pathLength = component
+    ? findComponentPath(model?.components || [], component.id).length
+    : 0;
   return vueRuntime.h("span", {
     class: ["qt-grid-metric-badge", `qt-grid-metric-${metric.kind}`, `qt-grid-metric-${metric.status}`],
+    style: { zIndex: String(Math.min(117, 80 + pathLength)) },
     title: metric.title,
     "aria-hidden": "true",
   }, metric.label);
@@ -148,7 +235,7 @@ function getNumericColumnValue(component) {
 function getFormResizeKind(component) {
   if (component?.type !== "HtmlElement" || !selectedId) return "";
   const selectedPath = findComponentPath(model?.components || [], selectedId);
-  if (!selectedPath.some((item) => item?.designer?.template === "courseSearchForm")) return "";
+  if (!selectedPath.some(isFormGridTemplateComponent)) return "";
   const selectedColumn = [...selectedPath].reverse().find(isLayoutColumn);
   const selectedRow = [...selectedPath].reverse().find(isFormGridRow);
   if (selectedColumn?.id === component.id) return "column";
@@ -223,7 +310,7 @@ function getFormLayoutContext(componentId) {
   if (!path.length) return { rowId: "", columnId: "", splitCellId: "" };
   const selectedComponent = path[path.length - 1];
   const splitCell = isFormGridRow(selectedComponent) ? null : [...path].reverse().find(isLayoutColumn);
-  const form = path.find((component) => component?.designer?.template === "courseSearchForm");
+  const form = path.find(isFormGridTemplateComponent);
   const layoutContainer = form || [...path].reverse().find((component) =>
     component?.type === "Card" || component?.type === "CardSection");
   let row = [...path].reverse().find(isLayoutRow);
@@ -238,7 +325,7 @@ function getFormLayoutContext(componentId) {
 
 function getFormGridDropCellId(componentId) {
   const path = findComponentPath(model?.components || [], componentId);
-  if (!path.some((component) => component?.designer?.template === "courseSearchForm")) return "";
+  if (!path.some(isFormGridTemplateComponent)) return "";
   return [...path].reverse().find(isLayoutColumn)?.id || "";
 }
 
@@ -318,6 +405,20 @@ function setupFormContextMenu() {
       layoutSnapshot: collectScreenLayoutSnapshot(),
     });
   });
+  menu.querySelectorAll("[data-col-class]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (button.disabled) return;
+      const targetId = menu.dataset.splitCellId;
+      if (!targetId) return;
+      hideFormContextMenu();
+      vscode.postMessage({
+        type: "setColumnClass",
+        targetId,
+        colClass: button.dataset.colClass,
+      });
+    });
+  });
 }
 
 function showFormContextMenu(clientX, clientY, layoutContext) {
@@ -335,6 +436,17 @@ function showFormContextMenu(clientX, clientY, layoutContext) {
   if (splitButton) splitButton.disabled = !layoutContext.splitCellId;
   const mergeButton = menu.querySelector("[data-merge-cells]");
   if (mergeButton) mergeButton.disabled = (layoutContext.mergeCellIds || []).length < 2;
+  const colTarget = layoutContext.splitCellId
+    ? findComponent(model?.components || [], layoutContext.splitCellId)
+    : null;
+  const currentColClass = colTarget
+    ? getComponentClassTokens(colTarget).find((token) =>
+        /^col(?:-auto|-(?:[1-9]|1[0-2]))?$/.test(token)) || ""
+    : "";
+  menu.querySelectorAll("[data-col-class]").forEach((button) => {
+    button.disabled = !layoutContext.splitCellId;
+    button.classList.toggle("active", button.dataset.colClass === currentColClass);
+  });
   menu.classList.remove("hidden");
   const bounds = menu.getBoundingClientRect();
   menu.style.left = `${Math.max(4, Math.min(clientX, window.innerWidth - bounds.width - 4))}px`;

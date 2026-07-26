@@ -58,12 +58,247 @@
   },
   "components": [
     {
-      "id": "page5ity1",
+      "id": "pagencwvk",
       "type": "Page",
       "props": {
         "padding": true
       },
       "children": [
+        {
+          "id": "cardnd3jr",
+          "type": "Card",
+          "props": {
+            "flat": true,
+            "bordered": true
+          },
+          "label": "Card",
+          "children": [
+            {
+              "id": "cardsectionnd4e5",
+              "type": "CardSection",
+              "props": {},
+              "class": "q-pa-sm",
+              "label": "Card Section",
+              "children": [
+                {
+                  "id": "formnd6fj",
+                  "type": "Form",
+                  "props": {},
+                  "class": "q-gutter-sm",
+                  "label": "Form",
+                  "children": [
+                    {
+                      "id": "Div001",
+                      "type": "HtmlElement",
+                      "tag": "div",
+                      "children": [
+                        {
+                          "id": "Div026",
+                          "type": "HtmlElement",
+                          "tag": "div",
+                          "class": "row",
+                          "style": "min-height: 96px",
+                          "designer": {
+                            "role": "verticalMergeRow",
+                            "sourceRowCount": 2
+                          },
+                          "children": [
+                            {
+                              "id": "Div025",
+                              "type": "HtmlElement",
+                              "tag": "div",
+                              "class": "col",
+                              "designer": {
+                                "role": "verticalMergeRegion",
+                                "side": "left"
+                              },
+                              "children": [
+                                {
+                                  "id": "Div023",
+                                  "type": "HtmlElement",
+                                  "tag": "div",
+                                  "class": "row",
+                                  "designer": {
+                                    "role": "verticalMergeSourceRow",
+                                    "side": "left"
+                                  },
+                                  "children": [
+                                    {
+                                      "id": "Div010",
+                                      "type": "HtmlElement",
+                                      "tag": "div",
+                                      "class": "col-2 flex items-center ",
+                                      "style": "min-height: 48px",
+                                      "children": [
+                                        {
+                                          "id": "htmlelementnedcz",
+                                          "type": "HtmlElement",
+                                          "tag": "label",
+                                          "class": "text-body2 bg-grey-4 row items-center q-px-md full-height rounded-borders overflow-hidden",
+                                          "text": "조회구분",
+                                          "style": "width: 100%"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "Div011",
+                                      "type": "HtmlElement",
+                                      "tag": "div",
+                                      "class": "col-4 flex items-center q-px-sm",
+                                      "style": "min-height: 48px",
+                                      "children": [
+                                        {
+                                          "id": "selectnfzo7",
+                                          "type": "Select",
+                                          "props": {
+                                            "outlined": true,
+                                            "dense": true,
+                                            "label": "Combo Box",
+                                            "options": [
+                                              "option1",
+                                              "option2",
+                                              "option3"
+                                            ]
+                                          },
+                                          "label": "Combo Box",
+                                          "style": "width: 100%"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "Div012",
+                                      "type": "HtmlElement",
+                                      "tag": "div",
+                                      "class": "col-2 flex items-center ",
+                                      "style": "min-height: 48px",
+                                      "children": [
+                                        {
+                                          "id": "htmlelementnfev1",
+                                          "type": "HtmlElement",
+                                          "tag": "label",
+                                          "class": "text-body2 bg-grey-4 row items-center q-px-md full-height rounded-borders overflow-hidden",
+                                          "text": "Label",
+                                          "style": "width: 100%"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "Div013",
+                                      "type": "HtmlElement",
+                                      "tag": "div",
+                                      "class": "col-4 flex items-center q-px-sm",
+                                      "style": "min-height: 48px",
+                                      "children": [
+                                        {
+                                          "id": "inputnfviu",
+                                          "type": "Input",
+                                          "props": {
+                                            "outlined": true,
+                                            "dense": true,
+                                            "label": "Input"
+                                          },
+                                          "style": "width: 100%"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "id": "Div024",
+                                  "type": "HtmlElement",
+                                  "tag": "div",
+                                  "class": "row",
+                                  "designer": {
+                                    "role": "verticalMergeSourceRow",
+                                    "side": "left"
+                                  },
+                                  "children": [
+                                    {
+                                      "id": "Div017",
+                                      "type": "HtmlElement",
+                                      "tag": "div",
+                                      "class": "col-2 flex items-center q-px-sm",
+                                      "style": "min-height: 48px"
+                                    },
+                                    {
+                                      "id": "Div018",
+                                      "type": "HtmlElement",
+                                      "tag": "div",
+                                      "class": "col-4 flex items-center q-px-sm",
+                                      "style": "min-height: 48px"
+                                    },
+                                    {
+                                      "id": "Div019",
+                                      "type": "HtmlElement",
+                                      "tag": "div",
+                                      "class": "col-3 flex items-center q-px-sm",
+                                      "style": "min-height: 48px"
+                                    },
+                                    {
+                                      "id": "Div020",
+                                      "type": "HtmlElement",
+                                      "tag": "div",
+                                      "class": "col-2 flex items-center q-px-sm",
+                                      "style": "min-height: 48px"
+                                    },
+                                    {
+                                      "id": "Div021",
+                                      "type": "HtmlElement",
+                                      "tag": "div",
+                                      "class": "col-1 flex items-center q-px-sm",
+                                      "style": "min-height: 48px"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "id": "Div015",
+                              "type": "HtmlElement",
+                              "tag": "div",
+                              "class": "col-auto flex",
+                              "style": "min-height: 96px; min-width:180px;",
+                              "children": [
+                                {
+                                  "id": "buttonngqeo",
+                                  "type": "Button",
+                                  "props": {
+                                    "color": "grey-7",
+                                    "outline": true
+                                  },
+                                  "label": "초기화",
+                                  "style": "align-self: flex-end; margin-left: auto"
+                                },
+                                {
+                                  "id": "buttonngt3l",
+                                  "type": "Button",
+                                  "props": {
+                                    "color": "primary",
+                                    "unelevated": true
+                                  },
+                                  "label": "검색",
+                                  "style": "margin-left: auto; align-self: flex-end"
+                                }
+                              ],
+                              "designer": {
+                                "role": "mergedCell",
+                                "mergeDirection": "vertical",
+                                "sourceRowCount": 2
+                              }
+                            }
+                          ]
+                        }
+                      ],
+                      "designer": {
+                        "template": "layoutGrid"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
         {
           "id": "Card001",
           "type": "Card",
@@ -78,31 +313,31 @@
               "class": "q-pa-sm",
               "children": [
                 {
-                  "id": "Div017",
+                  "id": "Div039",
                   "type": "HtmlElement",
                   "tag": "div",
                   "class": "row q-col-gutter-sm",
                   "children": [
                     {
-                      "id": "Div014",
+                      "id": "Div036",
                       "type": "HtmlElement",
                       "tag": "div",
                       "class": "col",
                       "children": [
                         {
-                          "id": "Div009",
+                          "id": "Div031",
                           "type": "HtmlElement",
                           "tag": "div",
                           "class": "row",
                           "children": [
                             {
-                              "id": "Div002",
+                              "id": "Div014",
                               "type": "HtmlElement",
                               "tag": "div",
                               "class": "col-2",
                               "children": [
                                 {
-                                  "id": "Div001",
+                                  "id": "Div009",
                                   "type": "HtmlElement",
                                   "tag": "div",
                                   "class": "bg-grey-4 row items-center q-px-md full-height rounded-borders overflow-hidden",
@@ -114,14 +349,17 @@
                                       "type": "HtmlElement",
                                       "tag": "span",
                                       "class": "text-negative q-ml-xs",
-                                      "text": "*"
+                                      "text": "*",
+                                      "designer": {
+                                        "role": "requiredMark"
+                                      }
                                     }
                                   ]
                                 }
                               ]
                             },
                             {
-                              "id": "Div003",
+                              "id": "Div016",
                               "type": "HtmlElement",
                               "tag": "div",
                               "class": "col-2 bg-white q-pa-xs",
@@ -144,7 +382,7 @@
                               ]
                             },
                             {
-                              "id": "Div004",
+                              "id": "Div022",
                               "type": "HtmlElement",
                               "tag": "div",
                               "class": "col-2 bg-white q-pa-xs",
@@ -167,13 +405,13 @@
                               ]
                             },
                             {
-                              "id": "Div006",
+                              "id": "Div028",
                               "type": "HtmlElement",
                               "tag": "div",
                               "class": "col-2",
                               "children": [
                                 {
-                                  "id": "Div005",
+                                  "id": "Div027",
                                   "type": "HtmlElement",
                                   "tag": "div",
                                   "class": "bg-grey-4 row items-center q-px-md full-height rounded-borders overflow-hidden",
@@ -183,7 +421,7 @@
                               ]
                             },
                             {
-                              "id": "Div007",
+                              "id": "Div029",
                               "type": "HtmlElement",
                               "tag": "div",
                               "class": "col-2 bg-white row items-center q-px-sm",
@@ -196,23 +434,13 @@
                                     "dense": true
                                   },
                                   "models": {
-                                    "modelValue": "storeName.rows.state1.state1"
-                                  },
-                                  "designer": {
-                                    "storeBinding": {
-                                      "storePath": "d:\\01 PROJECTSRC\\codex\\quasar_tool\\.src\\store\\index\\IndexUtil.json",
-                                      "statePath": [
-                                        "rows",
-                                        "state1",
-                                        "state1"
-                                      ]
-                                    }
+                                    "modelValue": "search.requiredYn"
                                   }
                                 }
                               ]
                             },
                             {
-                              "id": "Div008",
+                              "id": "Div030",
                               "type": "HtmlElement",
                               "tag": "div",
                               "class": "col-2 bg-white row items-center q-px-sm",
@@ -225,15 +453,7 @@
                                     "dense": true
                                   },
                                   "models": {
-                                    "modelValue": "storeName.selectedRow"
-                                  },
-                                  "designer": {
-                                    "storeBinding": {
-                                      "storePath": "d:\\01 PROJECTSRC\\codex\\quasar_tool\\.src\\store\\index\\IndexUtil.json",
-                                      "statePath": [
-                                        "selectedRow"
-                                      ]
-                                    }
+                                    "modelValue": "search.useYn"
                                   }
                                 }
                               ]
@@ -241,19 +461,19 @@
                           ]
                         },
                         {
-                          "id": "Div013",
+                          "id": "Div035",
                           "type": "HtmlElement",
                           "tag": "div",
                           "class": "row",
                           "children": [
                             {
-                              "id": "Div011",
+                              "id": "Div033",
                               "type": "HtmlElement",
                               "tag": "div",
                               "class": "col-2",
                               "children": [
                                 {
-                                  "id": "Div010",
+                                  "id": "Div032",
                                   "type": "HtmlElement",
                                   "tag": "div",
                                   "class": "bg-grey-4 row items-center q-px-md full-height rounded-borders overflow-hidden",
@@ -263,7 +483,7 @@
                               ]
                             },
                             {
-                              "id": "Div012",
+                              "id": "Div034",
                               "type": "HtmlElement",
                               "tag": "div",
                               "class": "col-10 bg-white q-pa-xs",
@@ -277,15 +497,7 @@
                                     "bgColor": "white"
                                   },
                                   "models": {
-                                    "modelValue": "storeName.searchText"
-                                  },
-                                  "designer": {
-                                    "storeBinding": {
-                                      "storePath": "d:\\01 PROJECTSRC\\codex\\quasar_tool\\.src\\store\\index\\IndexUtil.json",
-                                      "statePath": [
-                                        "searchText"
-                                      ]
-                                    }
+                                    "modelValue": "search.name"
                                   }
                                 }
                               ]
@@ -295,14 +507,14 @@
                       ]
                     },
                     {
-                      "id": "Div016",
+                      "id": "Div038",
                       "type": "HtmlElement",
                       "tag": "div",
                       "class": "col-auto",
                       "style": "min-width: 180px; display: flex; align-items: flex-end",
                       "children": [
                         {
-                          "id": "Div015",
+                          "id": "Div037",
                           "type": "HtmlElement",
                           "tag": "div",
                           "class": "row no-wrap",
@@ -345,302 +557,6 @@
           "designer": {
             "template": "courseSearchForm"
           }
-        },
-        {
-          "id": "cardyi9yj",
-          "type": "Card",
-          "props": {
-            "flat": true,
-            "bordered": true
-          },
-          "label": "Card",
-          "children": [
-            {
-              "id": "cardsectionyicnl",
-              "type": "CardSection",
-              "class": "q-pa-sm",
-              "props": {},
-              "label": "Card Section",
-              "children": [
-                {
-                  "id": "Table001",
-                  "type": "Table",
-                  "label": "tblList",
-                  "props": {
-                    "rows": [],
-                    "rowKey": "rowId",
-                    "noDataLabel": "데이터가 없습니다.",
-                    "loadingLabel": "데이터를 불러오는 중입니다."
-                  },
-                  "models": {
-                    "pagination": "Table001Pagination"
-                  },
-                  "columns": [
-                    {
-                      "name": "name",
-                      "label": "명칭",
-                      "field": "name",
-                      "type": "text",
-                      "align": "left",
-                      "sortable": true,
-                      "required": false,
-                      "editable": false
-                    },
-                    {
-                      "name": "dtlDt",
-                      "label": "상세일자",
-                      "field": "dtlDt",
-                      "type": "date",
-                      "align": "center",
-                      "sortable": true,
-                      "required": false,
-                      "editable": false
-                    },
-                    {
-                      "name": "actions",
-                      "label": "작업",
-                      "field": "actions",
-                      "type": "actions",
-                      "align": "center",
-                      "sortable": false,
-                      "required": false,
-                      "editable": false
-                    },
-                    {
-                      "name": "column4",
-                      "label": "주소",
-                      "field": "adress",
-                      "type": "text",
-                      "align": "left",
-                      "sortable": false,
-                      "required": false,
-                      "editable": false
-                    }
-                  ],
-                  "headerRows": [
-                    [
-                      {
-                        "cellId": "header_r1_name",
-                        "label": "명칭",
-                        "field": "name",
-                        "columns": [
-                          "name"
-                        ]
-                      },
-                      {
-                        "cellId": "header_r1_dtlDt",
-                        "label": "상세일자",
-                        "field": "dtlDt",
-                        "columns": [
-                          "dtlDt",
-                          "actions"
-                        ],
-                        "colspan": 2
-                      },
-                      {
-                        "cellId": "header_r1_adress",
-                        "label": "컬럼 4",
-                        "field": "adress",
-                        "columns": [
-                          "adress"
-                        ]
-                      }
-                    ],
-                    [
-                      {
-                        "cellId": "header_r2_name",
-                        "label": "title1",
-                        "field": "name",
-                        "columns": [
-                          "name"
-                        ]
-                      },
-                      {
-                        "cellId": "header_r2_dtlDt",
-                        "label": "title2",
-                        "field": "dtlDt",
-                        "columns": [
-                          "dtlDt"
-                        ]
-                      },
-                      {
-                        "cellId": "header_r2_actions",
-                        "label": "title3",
-                        "field": "actions",
-                        "columns": [
-                          "actions"
-                        ]
-                      },
-                      {
-                        "cellId": "header_r2_adress",
-                        "label": "컬럼 4",
-                        "field": "adress",
-                        "columns": [
-                          "adress"
-                        ]
-                      }
-                    ],
-                    [
-                      {
-                        "cellId": "header_r3_name",
-                        "label": "title1",
-                        "field": "name",
-                        "columns": [
-                          "name"
-                        ]
-                      },
-                      {
-                        "cellId": "header_r3_dtlDt",
-                        "label": "title2",
-                        "field": "dtlDt",
-                        "columns": [
-                          "dtlDt"
-                        ]
-                      },
-                      {
-                        "cellId": "header_r3_actions",
-                        "label": "title3",
-                        "field": "actions",
-                        "columns": [
-                          "actions"
-                        ]
-                      },
-                      {
-                        "cellId": "header_r3_adress",
-                        "label": "컬럼 4",
-                        "field": "adress",
-                        "columns": [
-                          "adress"
-                        ]
-                      }
-                    ]
-                  ],
-                  "bodyRows": [
-                    [
-                      {
-                        "cellId": "body_r1_name",
-                        "label": "명칭",
-                        "field": "name",
-                        "columns": [
-                          "name"
-                        ],
-                        "rowspan": 2
-                      },
-                      {
-                        "cellId": "body_r1_dtlDt",
-                        "label": "상세일자",
-                        "field": "dtlDt",
-                        "columns": [
-                          "dtlDt",
-                          "actions"
-                        ],
-                        "colspan": 2
-                      },
-                      {
-                        "cellId": "body_r1_adress",
-                        "label": "컬럼 4",
-                        "field": "adress",
-                        "columns": [
-                          "adress"
-                        ],
-                        "rowspan": 2
-                      }
-                    ],
-                    [
-                      {
-                        "cellId": "body_r2_dtlDt",
-                        "label": "상세일자",
-                        "field": "dtlDt",
-                        "columns": [
-                          "dtlDt",
-                          "actions"
-                        ],
-                        "colspan": 2
-                      }
-                    ],
-                    [
-                      {
-                        "cellId": "body_r3_name",
-                        "label": "명칭",
-                        "field": "name",
-                        "columns": [
-                          "name"
-                        ]
-                      },
-                      {
-                        "cellId": "body_r3_dtlDt",
-                        "label": "상세일자",
-                        "field": "dtlDt",
-                        "columns": [
-                          "dtlDt"
-                        ]
-                      },
-                      {
-                        "cellId": "body_r3_actions",
-                        "label": "작업",
-                        "field": "actions",
-                        "columns": [
-                          "actions"
-                        ]
-                      },
-                      {
-                        "cellId": "body_r3_adress",
-                        "label": "컬럼 4",
-                        "field": "adress",
-                        "columns": [
-                          "adress"
-                        ]
-                      }
-                    ]
-                  ],
-                  "table": {
-                    "title": "tblList",
-                    "rowKey": "rowId",
-                    "showModeColumn": true,
-                    "excelCopy": false,
-                    "headerRows": 3,
-                    "rowRows": 3,
-                    "selection": "none",
-                    "rowsBinding": "",
-                    "loadingBinding": "",
-                    "toolbar": {
-                      "filter": false,
-                      "search": false,
-                      "add": true,
-                      "save": true,
-                      "delete": true,
-                      "excel": false,
-                      "refresh": true
-                    },
-                    "handlers": {
-                      "add": "onTableAdd_Table001",
-                      "save": "onTableSave_Table001",
-                      "delete": "onTableDelete_Table001",
-                      "refresh": "onTableRefresh_Table001"
-                    },
-                    "pagination": {
-                      "mode": "client",
-                      "rowsPerPage": 10,
-                      "rowsPerPageOptions": [
-                        10,
-                        20,
-                        50,
-                        0
-                      ]
-                    },
-                    "states": {
-                      "noData": true,
-                      "loading": true,
-                      "error": true
-                    }
-                  },
-                  "events": {
-                    "row-click": "onRowClick_Table001"
-                  }
-                }
-              ]
-            }
-          ]
         }
       ]
     }

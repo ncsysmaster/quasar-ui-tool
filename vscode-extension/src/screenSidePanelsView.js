@@ -19,6 +19,9 @@ function getScreenSidePanelsScript() {
     "const spTreeCollapsedIds = new Set()",
     "let spTreeLastSelectedId = ''",
     "let spTreePendingLocalSelection = ''",
+    "let screenRightActiveTab = vscode.getState()?.screenRightActiveTab === 'storeState' ? 'storeState' : 'pageTree'",
+    "let spTreeScrollTop = 0",
+    "let spSidePanelsScrollTop = 0",
   ].join("\n");
 
   return (
@@ -26,6 +29,8 @@ function getScreenSidePanelsScript() {
     "\n\n" +
     [
       renderScreenSidePanels,
+      renderScreenRightPanel,
+      spSetRightPanelTab,
       setupScreenSidePanelsResize,
       spClampPanelWidth,
       spSection,
@@ -36,6 +41,8 @@ function getScreenSidePanelsScript() {
       spTreeRowHtml,
       spTreeDisplayTag,
       spSetupPageTreeSection,
+      spTreeDropMode,
+      spSetTreeDropIndicator,
       spSelectFromTree,
       spExpandSelectedTreeAncestors,
       spRevealSelectedTreeRow,
@@ -47,6 +54,10 @@ function getScreenSidePanelsScript() {
       spFieldWithButton,
       spCheckField,
       spSelectField,
+      spSelectFieldLabeled,
+      spGetButtonStyle,
+      spGetButtonPosition,
+      spHasRequiredMark,
       spGetStyleDeclaration,
       spSetupPropertiesSection,
       spAttachLabelSplitter,
@@ -82,6 +93,31 @@ function renderScreenSidePanels() {
   const panel = document.getElementById("screen-side-panels");
   if (!panel) return;
 
+  panel.innerHTML =
+    spSection("palette", "Components", spPaletteSectionHtml()) +
+    spSection("properties", "Properties", spPropertiesSectionHtml()) +
+    spSection("events", "Events", spEventsSectionHtml()) +
+    spSection("dataset", "DataSet", spDatasetSectionHtml());
+
+  spSetupSectionToggles(panel);
+  spSetupPaletteSection(panel);
+  spSetupPropertiesSection(panel);
+  spSetupEventsSection(panel);
+  spSetupDatasetSection(panel);
+
+  panel.scrollTop = spSidePanelsScrollTop;
+  if (panel.dataset.scrollTracked !== "true") {
+    panel.dataset.scrollTracked = "true";
+    panel.addEventListener("scroll", () => {
+      spSidePanelsScrollTop = panel.scrollTop;
+    });
+  }
+}
+
+function renderScreenRightPanel() {
+  const panel = document.getElementById("screen-right-panel");
+  if (!panel) return;
+
   const selectionChanged = selectedId && selectedId !== spTreeLastSelectedId;
   const isLocalSelection =
     spTreePendingLocalSelection && spTreePendingLocalSelection === selectedId;
@@ -89,23 +125,48 @@ function renderScreenSidePanels() {
   if (selectionChanged) spExpandSelectedTreeAncestors();
   spTreeLastSelectedId = selectedId || "";
 
-  panel.innerHTML =
-    spSection("palette", "Components", spPaletteSectionHtml()) +
-    spSection("properties", "Properties", spPropertiesSectionHtml()) +
-    spSection("events", "Events", spEventsSectionHtml()) +
-    spSection("pageTree", "Page Tree", spPageTreeSectionHtml()) +
-    spSection("dataset", "DataSet", spDatasetSectionHtml());
+  panel.querySelectorAll("[data-right-tab]").forEach((button) => {
+    button.classList.toggle(
+      "active",
+      button.dataset.rightTab === screenRightActiveTab,
+    );
+    if (button.dataset.rightTabReady === "true") return;
+    button.dataset.rightTabReady = "true";
+    button.addEventListener("click", () =>
+      spSetRightPanelTab(button.dataset.rightTab),
+    );
+  });
 
-  spSetupSectionToggles(panel);
-  spSetupPaletteSection(panel);
-  spSetupPageTreeSection(panel);
-  spSetupPropertiesSection(panel);
-  spSetupEventsSection(panel);
-  spSetupDatasetSection(panel);
+  const treeBody = document.getElementById("screen-right-page-tree");
+  document
+    .getElementById("screen-store-state-panel")
+    ?.classList.toggle("hidden", screenRightActiveTab !== "storeState");
+  treeBody?.classList.toggle("hidden", screenRightActiveTab !== "pageTree");
+
+  if (treeBody) {
+    treeBody.innerHTML = spPageTreeSectionHtml();
+    spSetupPageTreeSection(treeBody);
+    treeBody.scrollTop = spTreeScrollTop;
+    if (treeBody.dataset.scrollTracked !== "true") {
+      treeBody.dataset.scrollTracked = "true";
+      treeBody.addEventListener("scroll", () => {
+        spTreeScrollTop = treeBody.scrollTop;
+      });
+    }
+  }
 
   if (selectionChanged && !isLocalSelection) {
     requestAnimationFrame(spRevealSelectedTreeRow);
   }
+}
+
+function spSetRightPanelTab(tab) {
+  screenRightActiveTab = tab === "pageTree" ? "pageTree" : "storeState";
+  vscode.setState({
+    ...(vscode.getState() || {}),
+    screenRightActiveTab,
+  });
+  renderScreenRightPanel();
 }
 
 function setupScreenSidePanelsResize() {
@@ -211,6 +272,10 @@ function spSetupPaletteSection(panel) {
         showTableWizard({ paletteIndex: index });
         return;
       }
+      if (button.dataset.spType === "GridTemplate") {
+        showLayoutGridWizard({});
+        return;
+      }
       vscode.postMessage({ type: "addComponent", index });
     });
 
@@ -237,7 +302,11 @@ function spPageTreeSectionHtml() {
 }
 
 function spTreeRowHtml(component) {
-  const children = Array.isArray(component.children) ? component.children : [];
+  const children = Array.isArray(component.children)
+    ? component.children.filter(
+        (child) => child?.designer?.role !== "requiredMark",
+      )
+    : [];
   const tagName = spTreeDisplayTag(component);
   const idText = component.id || "";
   const hasChildren = children.length > 0;
@@ -304,7 +373,7 @@ function spSetupPageTreeSection(panel) {
       const id = toggle.dataset.spToggle;
       if (spTreeCollapsedIds.has(id)) spTreeCollapsedIds.delete(id);
       else spTreeCollapsedIds.add(id);
-      renderScreenSidePanels();
+      renderScreenRightPanel();
     });
   });
 
@@ -351,38 +420,44 @@ function spSetupPageTreeSection(panel) {
 
     button.addEventListener("dragend", () => {
       button.classList.remove("dragging");
-      panel.querySelectorAll(".tree-row.drag-over").forEach((el) => {
-        el.classList.remove("drag-over");
-      });
+      panel
+        .querySelectorAll(".drag-over, .drag-over-before, .drag-over-after")
+        .forEach((el) => {
+          el.classList.remove("drag-over", "drag-over-before", "drag-over-after");
+        });
     });
 
     button.addEventListener("dragover", (event) => {
       event.preventDefault();
       event.stopPropagation();
 
-      const dragId =
-        event.dataTransfer.getData("application/quasar-tree-id") ||
-        event.dataTransfer.getData("text/plain");
-      const dropId = button.dataset.spSelect;
       if (isPaletteDrag(event.dataTransfer)) {
-        button.classList.add("drag-over");
+        spSetTreeDropIndicator(button, "inside");
         event.dataTransfer.dropEffect = "copy";
         return;
       }
-      if (!dragId || !dropId || dragId === dropId) return;
 
-      button.classList.add("drag-over");
+      const types = Array.from(event.dataTransfer.types || []);
+      if (
+        !types.includes("application/quasar-tree-id") &&
+        !types.includes("text/plain")
+      ) {
+        return;
+      }
+
+      spSetTreeDropIndicator(button, spTreeDropMode(event, button));
       event.dataTransfer.dropEffect = "move";
     });
 
     button.addEventListener("dragleave", () => {
-      button.classList.remove("drag-over");
+      spSetTreeDropIndicator(button, "");
     });
 
     button.addEventListener("drop", (event) => {
       event.preventDefault();
       event.stopPropagation();
-      button.classList.remove("drag-over");
+      const mode = spTreeDropMode(event, button);
+      spSetTreeDropIndicator(button, "");
 
       const dropId = button.dataset.spSelect;
 
@@ -390,6 +465,10 @@ function spSetupPageTreeSection(panel) {
       if (paletteIndex >= 0) {
         if (paletteIndex === tablePaletteIndex) {
           showTableWizard({ paletteIndex, targetId: dropId, dropMode: "inside" });
+          return;
+        }
+        if (paletteIndex === gridPaletteIndex) {
+          showLayoutGridWizard({ targetId: dropId, dropMode: "inside" });
           return;
         }
         vscode.postMessage({
@@ -410,10 +489,24 @@ function spSetupPageTreeSection(panel) {
         type: "moveComponent",
         dragId,
         dropId,
-        mode: "inside",
+        mode,
       });
     });
   });
+}
+
+function spTreeDropMode(event, row) {
+  const rect = row.getBoundingClientRect();
+  const offset = event.clientY - rect.top;
+  if (offset < rect.height * 0.25) return "before";
+  if (offset > rect.height * 0.75) return "after";
+  return "inside";
+}
+
+function spSetTreeDropIndicator(row, mode) {
+  row.classList.toggle("drag-over", mode === "inside");
+  row.classList.toggle("drag-over-before", mode === "before");
+  row.classList.toggle("drag-over-after", mode === "after");
 }
 
 function spSelectFromTree(id) {
@@ -429,9 +522,9 @@ function spExpandSelectedTreeAncestors() {
 }
 
 function spRevealSelectedTreeRow() {
-  const panel = document.getElementById("screen-side-panels");
-  if (!panel) return;
-  const selectedRow = [...panel.querySelectorAll("[data-sp-select]")].find(
+  const treeBody = document.getElementById("screen-right-page-tree");
+  if (!treeBody || treeBody.classList.contains("hidden")) return;
+  const selectedRow = [...treeBody.querySelectorAll("[data-sp-select]")].find(
     (rowElement) => rowElement.dataset.spSelect === selectedId,
   );
   selectedRow?.scrollIntoView({ block: "nearest", inline: "nearest" });
@@ -446,6 +539,7 @@ function spPropertiesSectionHtml() {
   if (!component) return '<div class="empty">Select a component.</div>';
 
   const props = component.props || {};
+  const models = component.models || {};
   const componentStyle = component.style || props.style || "";
 
   const body =
@@ -459,6 +553,10 @@ function spPropertiesSectionHtml() {
           "text",
           component.text || component.label || props.label || "",
         ) +
+        (component.type === "HtmlElement" && component.text !== undefined
+          ? spCheckField("필수(*)", "requiredMark", spHasRequiredMark(component))
+          : "") +
+        spField("Value", "model.modelValue", models.modelValue || "") +
         spFieldWithButton(
           "Class",
           "class",
@@ -470,7 +568,56 @@ function spPropertiesSectionHtml() {
         spField("Height", "style.height", spGetStyleDeclaration(componentStyle, "height")) +
         spField("Color", "prop.color", props.color || "") +
         spField("Label Prop", "prop.label", props.label || "") +
-        spField("Placeholder", "prop.placeholder", props.placeholder || "");
+        spField("Placeholder", "prop.placeholder", props.placeholder || "") +
+        (component.type === "Button"
+          ? spField(
+              "최소 넓이",
+              "style.min-width",
+              spGetStyleDeclaration(componentStyle, "min-width"),
+            ) +
+            spField(
+              "최소 높이",
+              "style.min-height",
+              spGetStyleDeclaration(componentStyle, "min-height"),
+            ) +
+            spSelectFieldLabeled(
+              "버튼 스타일",
+              "buttonStyle",
+              spGetButtonStyle(props),
+              [
+                ["", "기본(입체)"],
+                ["unelevated", "Unelevated(평면)"],
+                ["flat", "Flat(투명)"],
+                ["outline", "Outline(테두리)"],
+                ["push", "Push(눌림)"],
+                ["glossy", "Glossy(광택)"],
+                ["rounded", "Rounded(둥근 모서리)"],
+                ["round", "Round(원형)"],
+              ],
+            ) +
+            spSelectFieldLabeled(
+              "가로 정렬",
+              "buttonPosition.h",
+              spGetButtonPosition(componentStyle, "h"),
+              [
+                ["", "기본"],
+                ["left", "왼쪽"],
+                ["center", "가운데"],
+                ["right", "오른쪽"],
+              ],
+            ) +
+            spSelectFieldLabeled(
+              "세로 정렬",
+              "buttonPosition.v",
+              spGetButtonPosition(componentStyle, "v"),
+              [
+                ["", "기본"],
+                ["top", "위"],
+                ["middle", "중간"],
+                ["bottom", "아래"],
+              ],
+            )
+          : "");
 
   return '<div id="sp-properties-body" class="view-body">' + body + "</div>";
 }
@@ -629,6 +776,69 @@ function spSelectField(label, name, value, options) {
       )
       .join("") +
     "</select></label>"
+  );
+}
+
+function spSelectFieldLabeled(label, name, value, options) {
+  return (
+    '<label class="prop-field"><span class="prop-label">' +
+    escapeHtml(label) +
+    '</span><span class="prop-splitter"></span><select class="prop-input" data-sp-name="' +
+    escapeAttr(name) +
+    '">' +
+    options
+      .map(
+        ([optionValue, optionLabel]) =>
+          '<option value="' +
+          escapeAttr(optionValue) +
+          '"' +
+          (String(value) === optionValue ? " selected" : "") +
+          ">" +
+          escapeHtml(optionLabel) +
+          "</option>",
+      )
+      .join("") +
+    "</select></label>"
+  );
+}
+
+function spGetButtonStyle(props) {
+  const styleFlags = [
+    "flat",
+    "outline",
+    "push",
+    "glossy",
+    "unelevated",
+    "rounded",
+    "round",
+  ];
+  return styleFlags.find((key) => props?.[key] === true) || "";
+}
+
+function spGetButtonPosition(style, axis) {
+  if (axis === "h") {
+    const marginLeft = spGetStyleDeclaration(style, "margin-left") === "auto";
+    const marginRight = spGetStyleDeclaration(style, "margin-right") === "auto";
+    if (marginLeft && marginRight) return "center";
+    if (marginLeft) return "right";
+    if (marginRight) return "left";
+    return "";
+  }
+  const alignSelf = spGetStyleDeclaration(style, "align-self");
+  if (alignSelf === "flex-start") return "top";
+  if (alignSelf === "center") return "middle";
+  if (alignSelf === "flex-end") return "bottom";
+  return "";
+}
+
+function spHasRequiredMark(component) {
+  return (component?.children || []).some(
+    (child) =>
+      child?.designer?.role === "requiredMark" ||
+      (child?.type === "HtmlElement" &&
+        (child.tag || "div") === "span" &&
+        String(child.text || "").trim() === "*" &&
+        String(child.class || "").includes("text-negative")),
   );
 }
 
@@ -806,7 +1016,9 @@ function spIsClassSelected(cls, currentClasses) {
 function spClassGroupsByComponent(component) {
   if (!component) return spHtmlElementClassGroups();
   if (component.type === "Button") return spButtonClassGroups();
-  if (component.type === "Input") return spInputClassGroups();
+  if (["Input", "Checkbox", "Radio", "Select", "Toggle"].includes(component.type)) {
+    return spInputClassGroups();
+  }
   if (component.type === "Card") return spCardClassGroups();
   if (component.type === "CardSection") return spCardSectionClassGroups();
   if (component.type === "Table") return spTableClassGroups();
@@ -1082,7 +1294,7 @@ function spEventsByComponent(component) {
   if (component.type === "Select") {
     return ["update:model-value", "filter", "input-value", "popup-show", "popup-hide", "focus", "blur", "clear"];
   }
-  if (component.type === "Toggle") {
+  if (["Toggle", "Checkbox", "Radio"].includes(component.type)) {
     return ["update:model-value", "click", "focus", "blur"];
   }
   if (component.type === "Table") {
@@ -1090,6 +1302,9 @@ function spEventsByComponent(component) {
   }
   if (component.type === "Card" || component.type === "CardSection") {
     return ["click", "dblclick", "mouseover", "mouseleave"];
+  }
+  if (component.type === "Form") {
+    return ["submit", "reset", "validation-success", "validation-error"];
   }
   if (component.type === "HtmlElement") {
     return ["click", "dblclick", "mouseover", "mouseleave", "mouseenter", "keydown", "keyup"];
@@ -1191,8 +1406,15 @@ function getPaletteIcon(type, label) {
   if (type === "FormTemplate") return "F";
   if (type === "Button") return "🔘";
   if (type === "Input") return "⌨️";
+  if (type === "Checkbox") return "☑";
+  if (type === "Radio") return "◉";
+  if (type === "Toggle") return "⏼";
+  if (type === "Select") return "▼";
+  if (type === "HtmlElement" && label === "Label") return "L";
   if (type === "Card") return "▢";
   if (type === "CardSection") return "▤";
+  if (type === "Form") return "📋";
+  if (type === "GridTemplate") return "⊞";
   if (type === "Table") return "▦";
 
   if (type === "HtmlElement" && label === "Text") return "T";
@@ -1203,8 +1425,9 @@ function getPaletteIcon(type, label) {
 }
 
 function getScreenSidePanelsStyles() {
-  return `.screen-editor-workspace { grid-template-columns: var(--sp-panel-width, 280px) 5px minmax(0, 1fr) 5px var(--store-state-width, 300px); }
-.screen-side-panels { position: sticky; top: 0; min-width: 0; max-height: 100vh; overflow-y: auto; overflow-x: hidden; border-right: 1px solid var(--vscode-panel-border); color: var(--vscode-editor-foreground); background: var(--vscode-sideBar-background); }
+  return `.screen-editor-workspace { grid-template-columns: var(--sp-panel-width, 280px) 5px minmax(0, 1fr) 5px var(--store-state-width, 300px); grid-template-rows: minmax(0, 1fr); height: 100%; min-height: 0; }
+.screen-side-panels { min-width: 0; min-height: 0; overflow-y: auto; overflow-x: hidden; border-right: 1px solid var(--vscode-panel-border); color: var(--vscode-editor-foreground); background: var(--vscode-sideBar-background); }
+.screen-editor-canvas { min-height: 0; }
 .screen-side-panels-resizer { cursor: col-resize; touch-action: none; background: transparent; border-right: 1px solid var(--vscode-panel-border); }
 .screen-side-panels-resizer:hover, .screen-side-panels-resizer.active { background: var(--vscode-focusBorder); border-color: var(--vscode-focusBorder); }
 body.sp-panel-resizing, body.sp-panel-resizing * { cursor: col-resize !important; user-select: none !important; }
@@ -1215,10 +1438,32 @@ body.sp-panel-resizing, body.sp-panel-resizing * { cursor: col-resize !important
 .sp-section:not([open]) > summary::before { transform: translateX(-1px) rotate(-45deg); }
 .sp-section-body { min-width: 0; }
 .sp-section-body .view-body { --label-width: 90px; padding: 8px; }
-.sp-section-body .palette-grid { padding: 8px; }
+.sp-section-body .palette-grid { grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 4px; padding: 6px; }
+.sp-section-body .palette-item { min-height: 37px; padding: 3px 2px; gap: 3px; border-radius: 4px; }
+.sp-section-body .palette-icon { font-size: 9px; line-height: 10px; margin-bottom: 0; }
+.sp-section-body .palette-label { font-size: 9px; line-height: 10px; }
 .sp-section-body .tree-root { padding: 4px 6px; }
 .sp-section-body .empty { padding: 10px; color: var(--vscode-descriptionForeground); }
 .sp-section-body .primary { margin: 8px; }
+.sp-section-body .prop-field { margin-bottom: 2px; border-radius: 3px; }
+.sp-section-body .prop-label { min-height: 21px; padding: 0 6px; font-size: 11px; }
+.sp-section-body .prop-input { min-height: 21px; padding: 1px 6px; font-size: 12px; }
+.sp-section-body select.prop-input { padding: 0 2px; }
+.sp-section-body .prop-button { width: 26px; min-width: 26px; min-height: 21px; }
+.sp-section-body .table-prop-section { margin: 0 0 6px; padding: 0 0 6px; }
+.sp-section-body .table-prop-section h3 { min-height: 22px; margin: 0 0 3px; padding: 2px 4px 2px 7px; }
+.sp-section-body #sp-properties-body.view-body { padding: 6px; }
+.screen-right-panel { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.screen-right-tabs { display: flex; flex: 0 0 auto; border-bottom: 1px solid var(--vscode-panel-border); background: var(--vscode-sideBar-background); }
+.screen-right-tab { flex: 1; min-height: 30px; padding: 4px 8px; border: 0; border-bottom: 2px solid transparent; color: var(--vscode-descriptionForeground); background: transparent; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.screen-right-tab:hover { background: var(--vscode-toolbar-hoverBackground); }
+.screen-right-tab.active { color: var(--vscode-editor-foreground); border-bottom-color: var(--vscode-focusBorder); background: var(--vscode-sideBarSectionHeader-background, var(--vscode-sideBar-background)); }
+.screen-right-tab-body { flex: 1; min-height: 0; overflow: auto; }
+.screen-right-panel .screen-store-state-title { display: none; }
+.screen-right-page-tree .tree-root { padding: 4px 6px; }
+.screen-right-page-tree .empty { padding: 10px; color: var(--vscode-descriptionForeground); }
+.tree-row.drag-over-before { box-shadow: inset 0 3px 0 0 var(--vscode-focusBorder); background: var(--vscode-list-hoverBackground); }
+.tree-row.drag-over-after { box-shadow: inset 0 -3px 0 0 var(--vscode-focusBorder); background: var(--vscode-list-hoverBackground); }
 .class-selector-dialog { width: min(760px, calc(100vw - 32px)); max-height: min(720px, calc(100vh - 32px)); display: flex; flex-direction: column; }
 .class-selector-body { min-height: 0; padding: 0; overflow: hidden; }
 .class-popup-list { flex: 1; overflow: auto; padding: 12px; display: flex; flex-wrap: wrap; align-items: flex-start; gap: 12px; }
@@ -1238,7 +1483,7 @@ body.sp-panel-resizing, body.sp-panel-resizing * { cursor: col-resize !important
 .table-prop-columns { max-height: 150px; margin-bottom: 6px; overflow: auto; border: 1px solid var(--vscode-panel-border); }
 .table-prop-columns > div { display: flex; justify-content: space-between; gap: 8px; padding: 5px 7px; border-bottom: 1px solid var(--vscode-panel-border); }
 .table-prop-columns small { color: var(--vscode-descriptionForeground); }
-@media (max-width: 900px) { .screen-editor-workspace { grid-template-columns: 1fr; } .screen-side-panels { position: static; max-height: 320px; border-right: 0; border-bottom: 1px solid var(--vscode-panel-border); } .screen-side-panels-resizer { display: none; } }`;
+@media (max-width: 900px) { .screen-editor-workspace { grid-template-columns: 1fr; grid-template-rows: none; height: auto; } .screen-side-panels { max-height: 320px; border-right: 0; border-bottom: 1px solid var(--vscode-panel-border); } .screen-side-panels-resizer { display: none; } .screen-right-panel { max-height: 320px; } }`;
 }
 
 module.exports = {

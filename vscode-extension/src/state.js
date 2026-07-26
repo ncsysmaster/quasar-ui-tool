@@ -231,9 +231,11 @@ class PageEditorState {
       const component =
         item.template === "courseSearchForm"
           ? createCourseSearchForm(model)
-          : item.type === "Table" && options.tableOptions
-            ? createTableComponent(model, item, options.tableOptions)
-            : createPaletteComponent(item);
+          : item.template === "layoutGrid"
+            ? createLayoutGridTemplate(model, options.layoutGridOptions || {})
+            : item.type === "Table" && options.tableOptions
+              ? createTableComponent(model, item, options.tableOptions)
+              : createPaletteComponent(item);
 
       if (component.type === "Table") {
         const rowClickHandler = component.events?.["row-click"];
@@ -364,6 +366,34 @@ class PageEditorState {
         } else {
           component.label = value;
         }
+      } else if (name === "requiredMark") {
+        const enabled = value === true || value === "true";
+        const isRequiredMark = (child) =>
+          child?.designer?.role === "requiredMark" ||
+          (child?.type === "HtmlElement" &&
+            (child.tag || "div") === "span" &&
+            String(child.text || "").trim() === "*" &&
+            String(child.class || "").includes("text-negative"));
+        const children = component.children || [];
+        if (enabled && !children.some(isRequiredMark)) {
+          const nextId = createSequentialIdFactory(model.components);
+          component.children = [
+            ...children,
+            {
+              id: nextId("HtmlElement", "span"),
+              type: "HtmlElement",
+              tag: "span",
+              class: "text-negative q-ml-xs",
+              text: "*",
+              designer: { role: "requiredMark" },
+            },
+          ];
+        } else if (!enabled) {
+          component.children = children.filter(
+            (child) => !isRequiredMark(child),
+          );
+          if (component.children.length === 0) delete component.children;
+        }
       } else if (name === "class") {
         if (
           component.type === "Button" ||
@@ -393,6 +423,46 @@ class PageEditorState {
           delete component.props.style;
           if (Object.keys(component.props).length === 0) delete component.props;
         }
+      } else if (name === "buttonStyle") {
+        const styleFlags = [
+          "flat",
+          "outline",
+          "push",
+          "glossy",
+          "unelevated",
+          "rounded",
+          "round",
+        ];
+        component.props ||= {};
+        styleFlags.forEach((key) => delete component.props[key]);
+        const token = String(value || "").trim();
+        if (styleFlags.includes(token)) component.props[token] = true;
+        if (Object.keys(component.props).length === 0) delete component.props;
+      } else if (name.startsWith("buttonPosition.")) {
+        // flex 부모(row 셀) 안에서 가로는 margin auto, 세로는 align-self로 배치
+        const axis = name.slice("buttonPosition.".length);
+        const token = String(value || "").trim();
+        let style = component.style || component.props?.style || "";
+        if (axis === "h") {
+          style = removeStyleDeclarations(style, ["margin-left", "margin-right"]);
+          if (token === "left") style = setStyleDeclaration(style, "margin-right", "auto");
+          if (token === "center") {
+            style = setStyleDeclaration(style, "margin-left", "auto");
+            style = setStyleDeclaration(style, "margin-right", "auto");
+          }
+          if (token === "right") style = setStyleDeclaration(style, "margin-left", "auto");
+        } else if (axis === "v") {
+          style = removeStyleDeclarations(style, ["align-self"]);
+          if (token === "top") style = setStyleDeclaration(style, "align-self", "flex-start");
+          if (token === "middle") style = setStyleDeclaration(style, "align-self", "center");
+          if (token === "bottom") style = setStyleDeclaration(style, "align-self", "flex-end");
+        }
+        if (style) component.style = style;
+        else delete component.style;
+        if (component.props) {
+          delete component.props.style;
+          if (Object.keys(component.props).length === 0) delete component.props;
+        }
       } else if (name.startsWith("prop.")) {
         component.props ||= {};
         component.props[name.slice(5)] = coerceValue(value);
@@ -406,8 +476,22 @@ class PageEditorState {
       } else if (name.startsWith("model.")) {
         component.models ||= {};
         const key = name.slice(6);
-        if (String(value || "").trim()) component.models[key] = String(value).trim();
-        else delete component.models[key];
+        const expression = String(value || "").trim();
+        if (expression) {
+          component.models[key] = expression;
+          // 단순 식별자면 data에 자동 등록해 v-model이 바로 동작하게 한다.
+          if (key === "modelValue" && /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(expression)) {
+            model.data ||= {};
+            if (!(expression in model.data)) {
+              model.data[expression] =
+                component.type === "Checkbox" || component.type === "Toggle"
+                  ? false
+                  : "";
+            }
+          }
+        } else {
+          delete component.models[key];
+        }
       } else if (name.startsWith("event.")) {
         component.events ||= {};
         const key = name.slice(6);
@@ -616,7 +700,12 @@ class PageEditorState {
       if (mode === "inside") {
         moved = moveComponentInside(model.components, dragId, dropId);
       } else {
-        moved = moveComponentInTree(model.components, dragId, dropId);
+        moved = moveComponentInTree(
+          model.components,
+          dragId,
+          dropId,
+          mode === "after" ? "after" : "before",
+        );
       }
 
       if (moved) {
@@ -665,6 +754,32 @@ class PageEditorState {
         target.parent.splice(target.index, 1);
         this.selectedId = parentId || firstSelectableId(model.components);
       }
+    });
+  }
+
+  async applyColumnClass(componentId, colClass) {
+    const token = String(colClass || "").trim();
+    if (!/^col(?:-auto|-(?:[1-9]|1[0-2]))?$/.test(token)) return;
+
+    await this.updateModel((model) => {
+      const component = findComponent(model.components, componentId);
+      if (!component || component.type !== "HtmlElement") return;
+
+      const source = component.class || component.props?.class || "";
+      // 기본 col 계열 토큰만 교체하고 col-md-6 같은 반응형 변형은 보존한다.
+      const tokens = String(source)
+        .split(/\s+/)
+        .filter(Boolean)
+        .filter(
+          (item) =>
+            !/^col(?:-auto|-grow|-shrink|-(?:[1-9]|1[0-2]))?$/.test(item),
+        );
+      component.class = [token, ...tokens].join(" ");
+      if (component.props) {
+        delete component.props.class;
+        if (Object.keys(component.props).length === 0) delete component.props;
+      }
+      this.selectedId = componentId;
     });
   }
 
@@ -1711,7 +1826,11 @@ function createCourseSearchForm(model) {
                           div(labelClass, {
                             text: "조회분류",
                             style: roundedStyle,
-                            children: [span("text-negative q-ml-xs", "*")],
+                            children: [
+                              Object.assign(span("text-negative q-ml-xs", "*"), {
+                                designer: { role: "requiredMark" },
+                              }),
+                            ],
                           }),
                         ],
                       }),
@@ -1831,6 +1950,39 @@ function createCourseSearchForm(model) {
   return form;
 }
 
+// ---- layout-grid template generator ----
+// Form Search와 같은 row/col 그리드 인프라(리사이즈, 셀 나누기/병합, col 배지)를
+// 쓰는 빈 레이아웃 그리드. 셀 구성(줄/칸 수)만 생성 시점에 정한다.
+
+function createLayoutGridTemplate(model, options = {}) {
+  const rowCount = Math.max(1, Math.min(20, Math.round(Number(options.rows) || 2)));
+  const columnCount = Math.max(1, Math.min(12, Math.round(Number(options.columns) || 2)));
+  const nextId = createSequentialIdFactory(model.components);
+  const baseSpan = Math.floor(12 / columnCount);
+  const remainder = 12 - baseSpan * columnCount;
+
+  const grid = {
+    id: nextId("HtmlElement", "div"),
+    type: "HtmlElement",
+    tag: "div",
+    children: Array.from({ length: rowCount }, () => ({
+      id: nextId("HtmlElement", "div"),
+      type: "HtmlElement",
+      tag: "div",
+      class: "row",
+      children: Array.from({ length: columnCount }, (_, columnIndex) => ({
+        id: nextId("HtmlElement", "div"),
+        type: "HtmlElement",
+        tag: "div",
+        class: `col-${baseSpan + (columnIndex < remainder ? 1 : 0)} flex items-center q-px-sm`,
+        style: "min-height: 48px",
+      })),
+    })),
+  };
+  grid.designer = { template: "layoutGrid" };
+  return grid;
+}
+
 function createSequentialIdFactory(components) {
   const usedIds = new Set();
   const counters = new Map();
@@ -1932,7 +2084,7 @@ function createCourseSearchScript(existingScript) {
 
 // ---- generic component-tree utilities ----
 
-function moveComponentInTree(components, dragId, dropId) {
+function moveComponentInTree(components, dragId, dropId, placement = "before") {
   const dragInfo = findComponentWithParent(components, dragId);
   const dropInfo = findComponentWithParent(components, dropId);
 
@@ -1944,7 +2096,7 @@ function moveComponentInTree(components, dragId, dropId) {
 
   const [dragItem] = dragInfo.parent.splice(dragInfo.index, 1);
 
-  let dropIndex = dropInfo.index;
+  let dropIndex = dropInfo.index + (placement === "after" ? 1 : 0);
 
   if (dragInfo.parent === dropInfo.parent && dragInfo.index < dropInfo.index) {
     dropIndex -= 1;
@@ -2037,6 +2189,7 @@ function canHaveChildren(component) {
     "Page",
     "Card",
     "CardSection",
+    "Form",
     "Layout",
     "PageContainer",
   ].includes(component.type);
@@ -2054,8 +2207,10 @@ function isFormGridDropPaletteItem(item) {
 function findFormGridDropCell(components, targetId) {
   const path = findComponentPathById(components, targetId);
   if (
-    !path.some(
-      (component) => component?.designer?.template === "courseSearchForm",
+    !path.some((component) =>
+      ["courseSearchForm", "layoutGrid"].includes(
+        component?.designer?.template,
+      ),
     )
   ) {
     return null;
