@@ -3,13 +3,23 @@
   "displayName": "Quasar UI Tool",
   "description": "VS Code editor integration for Quasar UI page JSON files.",
   "version": "0.1.0",
-  "publisher": "local",
+  "publisher": "ORUM",
+  "icon": "media/quasar-tool.png",
+  "pricing": "Free",
+  "keywords": [
+    "quasar",
+    "vue",
+    "ui builder",
+    "json editor",
+    "powerpoint"
+  ],
   "files": [
     "src/**",
     "generator/**",
     "templates/**",
     "media/**",
-    "README.md"
+    "README.md",
+    "CHANGELOG.md"
   ],
   "engines": {
     "vscode": "^1.90.0"
@@ -24,7 +34,10 @@
   },
   "activationEvents": [
     "onCustomEditor:quasarTool.pageEditor",
+    "onView:quasarTool.projectPropertiesView",
     "onCommand:quasarTool.openPageEditor",
+    "onCommand:quasarTool.openManual",
+    "onCommand:quasarTool.newQuasarProject",
     "onCommand:quasarTool.saveActiveEditor",
     "onCommand:quasarTool.watchVue",
     "onCommand:quasarTool.createPiniaStore",
@@ -38,6 +51,18 @@
       "breadcrumbs.enabled": false
     },
     "commands": [
+      {
+        "command": "quasarTool.openManual",
+        "title": "Quasar UI Tool Manual",
+        "category": "Quasar Tool",
+        "icon": "$(book)"
+      },
+      {
+        "command": "quasarTool.newQuasarProject",
+        "title": "New Quasar Project",
+        "category": "Quasar Tool",
+        "icon": "$(new-folder)"
+      },
       {
         "command": "quasarTool.openPageEditor",
         "title": "Quasar Tool: Open Page Editor"
@@ -80,6 +105,12 @@
     "menus": {
       "commandPalette": [
         {
+          "command": "quasarTool.openManual"
+        },
+        {
+          "command": "quasarTool.newQuasarProject"
+        },
+        {
           "command": "quasarTool.watchVue"
         },
         {
@@ -91,6 +122,15 @@
       ],
       "explorer/context": [
         {
+          "command": "quasarTool.newQuasarProject",
+          "when": "explorerResourceIsFolder",
+          "group": "navigation@7"
+        },
+        {
+          "command": "quasarTool.openManual",
+          "group": "quasarTool@0"
+        },
+        {
           "command": "quasarTool.watchVue",
           "group": "quasarTool@1"
         },
@@ -101,6 +141,16 @@
       ],
       "editor/title": [
         {
+          "command": "quasarTool.openManual",
+          "when": "activeCustomEditorId == quasarTool.pageEditor",
+          "group": "navigation@0"
+        },
+        {
+          "command": "quasarTool.newQuasarProject",
+          "when": "activeCustomEditorId == quasarTool.pageEditor",
+          "group": "navigation@1"
+        },
+        {
           "command": "quasarTool.watchVue",
           "when": "activeCustomEditorId == quasarTool.pageEditor",
           "group": "navigation@10"
@@ -110,6 +160,24 @@
         {
           "command": "quasarTool.createJsonFromTaggedPpt",
           "group": "quasarTool@1"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "quasarTool",
+          "title": "Quasar UI Tool",
+          "icon": "media/quasar-tool.svg"
+        }
+      ]
+    },
+    "views": {
+      "quasarTool": [
+        {
+          "id": "quasarTool.projectPropertiesView",
+          "name": "Project Properties",
+          "type": "webview"
         }
       ]
     },

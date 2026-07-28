@@ -7,10 +7,16 @@ const { getWebviewRoots } = require("./webviewResources");
 const { registerWatchVueCommand } = require("./watchVueCommand");
 const { registerPiniaStoreCommands } = require("./piniaStoreCommand");
 const { registerPptTaggedJsonCommands } = require("./pptTaggedJsonCommand");
+const { registerNewQuasarProjectCommand } = require("./newQuasarProjectCommand");
+const { registerManualCommand } = require("./manualCommand");
+const { registerProjectPropertiesView } = require("./projectPropertiesView");
 
 function activate(context) {
   const state = new PageEditorStateManager();
   const webviewRoots = getWebviewRoots(context);
+  registerProjectPropertiesView(context);
+  registerManualCommand(context);
+  registerNewQuasarProjectCommand(context);
   registerWatchVueCommand(context);
   registerPiniaStoreCommands(context);
   registerPptTaggedJsonCommands(context);
