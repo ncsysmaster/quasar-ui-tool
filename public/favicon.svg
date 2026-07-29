@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bg" x1="8" y1="5" x2="56" y2="59" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#071936"/>
+      <stop offset="1" stop-color="#0b2b60"/>
+    </linearGradient>
+    <linearGradient id="quasar" x1="19" y1="15" x2="44" y2="43" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#44d8ff"/>
+      <stop offset="1" stop-color="#1688f8"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="64" height="64" rx="12" fill="url(#bg)"/>
+
+  <!-- Q -->
+  <circle cx="29" cy="29" r="23" fill="none" stroke="#fff" stroke-width="7"/>
+  <path d="M40 40L57 57" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round"/>
+
+  <!-- simplified Quasar mark -->
+  <path d="M29 12L43 37H36L29 24L22 37H15L29 12Z" fill="url(#quasar)"/>
+  <path d="M20 33H39L34.5 41H15.5L20 33Z" fill="#37c9ff"/>
+</svg>

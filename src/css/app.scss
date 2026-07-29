@@ -2,6 +2,11 @@ body {
   background: #f6f8fb;
 }
 
+/* Shared heading alignment for UI Tool introduction pages */
+.intro-page .page-heading {
+  min-height: 64px;
+}
+
 .qt-ag-table-wrap {
   width: 100%;
 }
