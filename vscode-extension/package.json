@@ -1,8 +1,8 @@
 {
-  "name": "quasar-tool-vscode",
-  "displayName": "Quasar UI Tool",
+  "name": "quasar-ui-editor",
+  "displayName": "Quasar UI Editor",
   "description": "VS Code editor integration for Quasar UI page JSON files.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "ORUM",
   "icon": "media/quasar-tool.png",
   "pricing": "Free",
