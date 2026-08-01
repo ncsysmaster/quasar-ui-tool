@@ -44,6 +44,10 @@ const routes = [
         component: () => import('../pages/QnaPage.vue')
       },
       {
+        path: 'suggestion',
+        component: () => import('../pages/SuggestionPage.vue')
+      },
+      {
         path: 'license',
         component: () => import('../pages/LicensePage.vue')
       }

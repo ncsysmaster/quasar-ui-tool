@@ -43,6 +43,7 @@
             </q-list>
           </q-btn-dropdown>
           <q-btn flat no-caps label="질의응답" to="/qna" />
+          <q-btn flat no-caps label="개선 제안" to="/suggestion" />
           <q-btn flat no-caps label="라이센스" to="/license" />
         </nav>
       </q-toolbar>
@@ -113,6 +114,15 @@
         >
           <q-item-section avatar><q-icon name="contact_support" /></q-item-section>
           <q-item-section>질의응답</q-item-section>
+        </q-item>
+        <q-item
+          clickable
+          to="/suggestion"
+          active-class="drawer-item-active"
+          @click="closeDrawerOnMobile"
+        >
+          <q-item-section avatar><q-icon name="tips_and_updates" /></q-item-section>
+          <q-item-section>개선 제안</q-item-section>
         </q-item>
         <q-item
           clickable

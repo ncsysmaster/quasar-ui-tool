@@ -1,15 +1,15 @@
 <template>
-  <q-page class="qna-page">
-    <main class="qna-content">
+  <q-page class="suggestion-page">
+    <main class="suggestion-content">
       <div class="page-heading">
         <div class="heading-title">
-          <span class="heading-icon"><q-icon name="contact_support" size="30px" /></span>
-          <h1>질의응답</h1>
+          <span class="heading-icon"><q-icon name="tips_and_updates" size="30px" /></span>
+          <h1>개선 제안</h1>
         </div>
         <nav class="breadcrumb" aria-label="현재 위치">
           <span>홈</span>
           <q-icon name="double_arrow" size="20px" />
-          <strong>질의응답</strong>
+          <strong>개선 제안</strong>
         </nav>
       </div>
 
@@ -40,7 +40,7 @@
           </q-input>
           <q-btn color="primary" unelevated label="검색" @click="searchList" />
           <q-space />
-          <q-btn color="primary" unelevated icon="edit" label="질문 등록" @click="openCreate" />
+          <q-btn color="primary" unelevated icon="edit" label="제안 등록" @click="openCreate" />
         </div>
 
         <div v-if="errorMessage" class="error-banner">
@@ -56,27 +56,28 @@
               <th class="col-writer">작성자</th>
               <th class="col-date">등록일</th>
               <th class="col-view">조회</th>
+              <th class="col-like">공감</th>
               <th class="col-status">상태</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="loading">
-              <td colspan="7" class="empty-row"><q-spinner size="22px" /> 불러오는 중…</td>
+              <td colspan="8" class="empty-row"><q-spinner size="22px" /> 불러오는 중…</td>
             </tr>
             <tr v-else-if="items.length === 0">
-              <td colspan="7" class="empty-row">등록된 질문이 없습니다. 첫 질문을 등록해 보세요.</td>
+              <td colspan="8" class="empty-row">등록된 제안이 없습니다. 첫 개선 제안을 등록해 보세요.</td>
             </tr>
-            <tr v-for="item in items" v-else :key="item.questionId" class="board-row" @click="openDetail(item.questionId)">
-              <td class="col-no">{{ item.questionId }}</td>
+            <tr v-for="item in items" v-else :key="item.suggestionId" class="board-row" @click="openDetail(item.suggestionId)">
+              <td class="col-no">{{ item.suggestionId }}</td>
               <td class="col-category"><span class="chip chip-category">{{ categoryLabel(item.category) }}</span></td>
               <td class="col-title">
-                <q-icon v-if="item.secretYn === 'Y'" name="lock" size="14px" class="lock-icon" />
                 {{ item.title }}
-                <span v-if="item.answerCnt > 0" class="answer-count">[{{ item.answerCnt }}]</span>
+                <q-icon v-if="item.replyYn === 'Y'" name="mark_chat_read" size="15px" class="reply-icon" />
               </td>
               <td class="col-writer">{{ item.writerName || item.writerId }}</td>
               <td class="col-date">{{ formatDate(item.createdAt) }}</td>
               <td class="col-view">{{ item.viewCnt }}</td>
+              <td class="col-like">{{ item.likeCnt }}</td>
               <td class="col-status"><span class="chip" :class="statusClass(item.status)">{{ statusLabel(item.status) }}</span></td>
             </tr>
           </tbody>
@@ -96,11 +97,11 @@
       </section>
     </main>
 
-    <!-- 질문 등록 다이얼로그 -->
+    <!-- 제안 등록 다이얼로그 -->
     <q-dialog v-model="createOpen">
-      <q-card class="qna-dialog">
+      <q-card class="suggestion-dialog">
         <q-card-section class="dialog-header">
-          <h2><q-icon name="edit" size="22px" /> 질문 등록</h2>
+          <h2><q-icon name="edit" size="22px" /> 개선 제안 등록</h2>
           <q-btn v-close-popup flat round dense icon="close" />
         </q-card-section>
         <q-card-section class="dialog-body">
@@ -111,27 +112,27 @@
             dense outlined emit-value map-options
           />
           <q-input v-model="createForm.title" label="제목 *" dense outlined maxlength="300" />
-          <q-input v-model="createForm.content" label="내용 *" type="textarea" outlined rows="6" />
+          <q-input v-model="createForm.content" label="제안 내용 * (현재 불편한 점, 개선 아이디어)" type="textarea" outlined rows="5" />
+          <q-input v-model="createForm.expectEffect" label="기대 효과" dense outlined maxlength="1000" />
           <div class="form-row">
             <q-input v-model="createForm.writerId" label="작성자 ID *" dense outlined class="grow" />
             <q-input v-model="createForm.writerName" label="이름" dense outlined class="grow" />
           </div>
-          <q-input v-model="createForm.writerEmail" label="이메일 (답변 알림)" dense outlined type="email" />
-          <q-checkbox v-model="createSecret" label="비밀글로 등록" dense />
+          <q-input v-model="createForm.writerEmail" label="이메일 (처리 결과 알림)" dense outlined type="email" />
           <p v-if="createError" class="form-error">{{ createError }}</p>
         </q-card-section>
         <q-card-actions align="right" class="dialog-actions">
           <q-btn v-close-popup flat label="취소" />
-          <q-btn color="primary" unelevated label="등록" :loading="saving" @click="submitQuestion" />
+          <q-btn color="primary" unelevated label="등록" :loading="saving" @click="submitSuggestion" />
         </q-card-actions>
       </q-card>
     </q-dialog>
 
-    <!-- 질문 상세 다이얼로그 -->
+    <!-- 제안 상세 다이얼로그 -->
     <q-dialog v-model="detailOpen">
-      <q-card class="qna-dialog qna-detail">
+      <q-card class="suggestion-dialog suggestion-detail">
         <q-card-section class="dialog-header">
-          <h2><q-icon name="help_outline" size="22px" /> 질문 상세</h2>
+          <h2><q-icon name="tips_and_updates" size="22px" /> 제안 상세</h2>
           <q-btn v-close-popup flat round dense icon="close" />
         </q-card-section>
 
@@ -145,33 +146,47 @@
             {{ detail.writerName || detail.writerId }} · {{ formatDateTime(detail.createdAt) }} · 조회 {{ detail.viewCnt }}
           </p>
           <div class="detail-content">{{ detail.content }}</div>
+          <div v-if="detail.expectEffect" class="effect-box">
+            <strong><q-icon name="trending_up" size="15px" /> 기대 효과</strong>
+            <p>{{ detail.expectEffect }}</p>
+          </div>
 
-          <div class="answer-section">
-            <h4><q-icon name="question_answer" size="18px" /> 답변 {{ detail.answers?.length || 0 }}건</h4>
+          <div class="like-row">
+            <q-btn outline color="primary" icon="thumb_up" :label="`공감 ${detail.likeCnt}`" @click="likeSuggestion" />
+          </div>
 
-            <article v-for="answer in detail.answers" :key="answer.answerId" class="answer-item">
-              <div class="answer-head">
-                <strong>{{ answer.writerName || answer.writerId }}</strong>
-                <span>{{ formatDateTime(answer.createdAt) }}</span>
-                <q-btn flat dense round size="sm" icon="delete_outline" @click="removeAnswer(answer.answerId)" />
+          <div class="reply-section">
+            <h4><q-icon name="support_agent" size="18px" /> 관리자 회신</h4>
+
+            <article v-if="detail.replyContent" class="reply-item">
+              <div class="reply-head">
+                <strong>{{ detail.replyWriterId }}</strong>
+                <span>{{ formatDateTime(detail.replyAt) }}</span>
               </div>
-              <p>{{ answer.content }}</p>
+              <p>{{ detail.replyContent }}</p>
             </article>
+            <p v-else class="no-reply">아직 회신이 등록되지 않았습니다.</p>
 
-            <div class="answer-form">
+            <div class="reply-form">
               <div class="form-row">
-                <q-input v-model="answerForm.writerId" label="답변자 ID *" dense outlined class="grow" />
-                <q-input v-model="answerForm.writerName" label="이름" dense outlined class="grow" />
+                <q-input v-model="replyForm.replyWriterId" label="회신자 ID *" dense outlined class="grow" />
+                <q-select
+                  v-model="replyForm.status"
+                  :options="replyStatusOptions"
+                  label="처리 상태 *"
+                  dense outlined emit-value map-options
+                  class="grow"
+                />
               </div>
-              <q-input v-model="answerForm.content" label="답변 내용 *" type="textarea" outlined rows="3" />
-              <p v-if="answerError" class="form-error">{{ answerError }}</p>
-              <q-btn color="primary" unelevated icon="reply" label="답변 등록" :loading="saving" @click="submitAnswer" />
+              <q-input v-model="replyForm.replyContent" label="회신 내용 *" type="textarea" outlined rows="3" />
+              <p v-if="replyError" class="form-error">{{ replyError }}</p>
+              <q-btn color="primary" unelevated icon="reply" label="회신 등록" :loading="saving" @click="submitReply" />
             </div>
           </div>
         </q-card-section>
 
         <q-card-actions align="between" class="dialog-actions">
-          <q-btn flat color="negative" icon="delete" label="질문 삭제" @click="removeQuestion" />
+          <q-btn flat color="negative" icon="delete" label="제안 삭제" @click="removeSuggestion" />
           <q-btn v-close-popup flat label="닫기" />
         </q-card-actions>
       </q-card>
@@ -182,35 +197,37 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useQnaStore } from 'src/store/qna/qnaStore'
+import { useSuggestionStore } from 'src/store/suggestion/suggestionStore'
 
-const qnaStore = useQnaStore()
+const suggestionStore = useSuggestionStore()
 const { search, items, total, detail, loading, saving, errorMessage, totalPages } =
-  storeToRefs(qnaStore)
+  storeToRefs(suggestionStore)
 
 const categoryOptions = [
-  { label: '일반', value: 'GENERAL' },
-  { label: '설치', value: 'INSTALL' },
-  { label: '사용법', value: 'USAGE' },
-  { label: '오류', value: 'ERROR' },
-  { label: '기능요청', value: 'FEATURE' }
+  { label: '기능 추가', value: 'FEATURE' },
+  { label: '사용성 개선', value: 'IMPROVE' },
+  { label: '성능', value: 'PERFORMANCE' },
+  { label: '디자인·UI', value: 'DESIGN' },
+  { label: '기타', value: 'ETC' }
 ]
 const statusOptions = [
-  { label: '답변대기', value: 'WAITING' },
-  { label: '답변완료', value: 'ANSWERED' },
-  { label: '종료', value: 'CLOSED' }
+  { label: '접수', value: 'RECEIVED' },
+  { label: '검토중', value: 'REVIEWING' },
+  { label: '반영예정', value: 'ACCEPTED' },
+  { label: '반영완료', value: 'APPLIED' },
+  { label: '미채택', value: 'REJECTED' }
 ]
+const replyStatusOptions = statusOptions.filter((option) => option.value !== 'RECEIVED')
 
 const createOpen = ref(false)
-const createSecret = ref(false)
 const createError = ref('')
 const createForm = reactive({
-  category: 'GENERAL', title: '', content: '', writerId: '', writerName: '', writerEmail: ''
+  category: 'FEATURE', title: '', content: '', expectEffect: '', writerId: '', writerName: '', writerEmail: ''
 })
 
 const detailOpen = ref(false)
-const answerError = ref('')
-const answerForm = reactive({ writerId: '', writerName: '', content: '' })
+const replyError = ref('')
+const replyForm = reactive({ replyWriterId: '', status: 'REVIEWING', replyContent: '' })
 
 function categoryLabel(value) {
   return categoryOptions.find((option) => option.value === value)?.label || value
@@ -219,7 +236,13 @@ function statusLabel(value) {
   return statusOptions.find((option) => option.value === value)?.label || value
 }
 function statusClass(value) {
-  return { WAITING: 'chip-waiting', ANSWERED: 'chip-answered', CLOSED: 'chip-closed' }[value] || ''
+  return {
+    RECEIVED: 'chip-received',
+    REVIEWING: 'chip-reviewing',
+    ACCEPTED: 'chip-accepted',
+    APPLIED: 'chip-applied',
+    REJECTED: 'chip-rejected'
+  }[value] || ''
 }
 function formatDate(value) {
   return value ? String(value).slice(0, 10) : ''
@@ -229,74 +252,71 @@ function formatDateTime(value) {
 }
 
 function fetchList() {
-  return qnaStore.fetchList()
+  return suggestionStore.fetchList()
 }
 
 function searchList() {
-  return qnaStore.searchList()
+  return suggestionStore.searchList()
 }
 
 function openCreate() {
   Object.assign(createForm, {
-    category: 'GENERAL', title: '', content: '', writerId: '', writerName: '', writerEmail: ''
+    category: 'FEATURE', title: '', content: '', expectEffect: '', writerId: '', writerName: '', writerEmail: ''
   })
-  createSecret.value = false
   createError.value = ''
   createOpen.value = true
 }
 
-async function submitQuestion() {
+async function submitSuggestion() {
   if (!createForm.title.trim() || !createForm.content.trim() || !createForm.writerId.trim()) {
-    createError.value = '제목, 내용, 작성자 ID는 필수 입력입니다.'
+    createError.value = '제목, 제안 내용, 작성자 ID는 필수 입력입니다.'
     return
   }
   createError.value = ''
   try {
-    await qnaStore.submitQuestion({ ...createForm, secretYn: createSecret.value ? 'Y' : 'N' })
+    await suggestionStore.submitSuggestion({ ...createForm })
     createOpen.value = false
   } catch (error) {
     createError.value = error.message
   }
 }
 
-async function openDetail(questionId) {
-  answerError.value = ''
-  Object.assign(answerForm, { writerId: '', writerName: '', content: '' })
-  if (await qnaStore.openDetail(questionId)) {
+async function openDetail(suggestionId) {
+  replyError.value = ''
+  Object.assign(replyForm, { replyWriterId: '', status: 'REVIEWING', replyContent: '' })
+  if (await suggestionStore.openDetail(suggestionId)) {
     detailOpen.value = true
   }
 }
 
-async function submitAnswer() {
-  if (!answerForm.content.trim() || !answerForm.writerId.trim()) {
-    answerError.value = '답변자 ID와 답변 내용은 필수 입력입니다.'
+async function likeSuggestion() {
+  try {
+    await suggestionStore.likeSuggestion()
+  } catch (error) {
+    replyError.value = error.message
+  }
+}
+
+async function submitReply() {
+  if (!replyForm.replyContent.trim() || !replyForm.replyWriterId.trim()) {
+    replyError.value = '회신자 ID와 회신 내용은 필수 입력입니다.'
     return
   }
-  answerError.value = ''
+  replyError.value = ''
   try {
-    await qnaStore.submitAnswer({ ...answerForm })
-    Object.assign(answerForm, { writerId: '', writerName: '', content: '' })
+    await suggestionStore.submitReply({ ...replyForm })
   } catch (error) {
-    answerError.value = error.message
+    replyError.value = error.message
   }
 }
 
-async function removeAnswer(answerId) {
-  if (!window.confirm('이 답변을 삭제하시겠습니까?')) return
+async function removeSuggestion() {
+  if (!window.confirm('이 제안을 삭제하시겠습니까?')) return
   try {
-    await qnaStore.removeAnswer(answerId)
-  } catch (error) {
-    answerError.value = error.message
-  }
-}
-
-async function removeQuestion() {
-  if (!window.confirm('이 질문을 삭제하시겠습니까?')) return
-  try {
-    await qnaStore.removeQuestion()
+    await suggestionStore.removeSuggestion()
     detailOpen.value = false
   } catch (error) {
-    answerError.value = error.message
+    replyError.value = error.message
   }
 }
 
@@ -304,8 +324,8 @@ onMounted(fetchList)
 </script>
 
 <style scoped>
-.qna-page { color: #3f4c59; background: #f6f8fb; }
-.qna-content { width: calc(100% - 48px); margin: 0 auto; padding: 14px 0 56px; }
+.suggestion-page { color: #3f4c59; background: #f6f8fb; }
+.suggestion-content { width: calc(100% - 48px); margin: 0 auto; padding: 14px 0 56px; }
 .page-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
 .heading-title { display: flex; align-items: center; gap: 14px; }
 .heading-icon {
@@ -343,31 +363,32 @@ onMounted(fetchList)
 .board-row { cursor: pointer; transition: background 120ms ease; }
 .board-row:hover { background: #f4f8fc; }
 .col-no { width: 64px; color: #8b98a4; }
-.col-category { width: 90px; }
+.col-category { width: 100px; }
 .col-title { color: #303d49; font-weight: 600; }
 .col-writer { width: 110px; }
 .col-date { width: 110px; color: #74808b; }
-.col-view { width: 64px; color: #74808b; text-align: center; }
+.col-view, .col-like { width: 60px; color: #74808b; text-align: center; }
 .col-status { width: 96px; }
 .empty-row { padding: 44px 0; color: #8b98a4; text-align: center; }
-.lock-icon { margin-right: 4px; color: #b7790b; }
-.answer-count { margin-left: 5px; color: var(--q-primary); font-weight: 800; }
+.reply-icon { margin-left: 5px; color: #1d7a46; }
 
 .chip {
   display: inline-block; padding: 3px 10px; border-radius: 20px;
   font-size: 12px; font-weight: 700; white-space: nowrap;
 }
 .chip-category { color: #4d5fc1; background: #eceffd; }
-.chip-waiting { color: #b7790b; background: #fff3d6; }
-.chip-answered { color: #1d7a46; background: #dcf3e5; }
-.chip-closed { color: #66727e; background: #eef1f4; }
+.chip-received { color: #66727e; background: #eef1f4; }
+.chip-reviewing { color: #b7790b; background: #fff3d6; }
+.chip-accepted { color: #176cc0; background: #e7f3ff; }
+.chip-applied { color: #1d7a46; background: #dcf3e5; }
+.chip-rejected { color: #b03a2e; background: #fdeeec; }
 
 .board-footer { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 20px; position: relative; }
 .total-info { position: absolute; right: 0; color: #8b98a4; font-size: 13px; }
 
 /* 다이얼로그 */
-.qna-dialog { width: 620px; max-width: 94vw; border-radius: 14px; }
-.qna-detail { width: 720px; }
+.suggestion-dialog { width: 620px; max-width: 94vw; border-radius: 14px; }
+.suggestion-detail { width: 720px; }
 .dialog-header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 16px 20px; border-bottom: 1px solid #e8edf1;
@@ -386,25 +407,29 @@ onMounted(fetchList)
   padding: 16px; border: 1px solid #e8edf1; border-radius: 10px;
   background: #fafbfd; font-size: 15px; line-height: 1.7; white-space: pre-wrap;
 }
+.effect-box { padding: 12px 14px; border: 1px solid #d8e8f7; border-radius: 10px; background: #f4faff; }
+.effect-box strong { display: flex; align-items: center; gap: 5px; color: #176cc0; font-size: 13.5px; }
+.effect-box p { margin: 6px 0 0; color: #4e5c69; font-size: 14.5px; line-height: 1.6; }
+.like-row { display: flex; justify-content: center; padding: 4px 0; }
 
-.answer-section h4 {
+.reply-section h4 {
   display: flex; align-items: center; gap: 6px;
   margin: 8px 0 10px; color: #3c4955; font-size: 16px; font-weight: 800;
 }
-.answer-item { margin-bottom: 10px; padding: 12px 14px; border: 1px solid #dcebdd; border-radius: 10px; background: #f4faf5; }
-.answer-head { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; }
-.answer-head strong { color: #1d7a46; font-size: 14px; }
-.answer-head span { color: #8b98a4; font-size: 12.5px; }
-.answer-head .q-btn { margin-left: auto; color: #9aa5af; }
-.answer-item p { margin: 0; font-size: 14.5px; line-height: 1.65; white-space: pre-wrap; }
-.answer-form { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; padding-top: 14px; border-top: 1px dashed #dfe5eb; }
-.answer-form .q-btn { align-self: flex-end; }
+.reply-item { margin-bottom: 10px; padding: 12px 14px; border: 1px solid #dcebdd; border-radius: 10px; background: #f4faf5; }
+.reply-head { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; }
+.reply-head strong { color: #1d7a46; font-size: 14px; }
+.reply-head span { color: #8b98a4; font-size: 12.5px; }
+.reply-item p { margin: 0; font-size: 14.5px; line-height: 1.65; white-space: pre-wrap; }
+.no-reply { margin: 0 0 10px; color: #8b98a4; font-size: 14px; }
+.reply-form { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; padding-top: 14px; border-top: 1px dashed #dfe5eb; }
+.reply-form .q-btn { align-self: flex-end; }
 
 @media (max-width: 760px) {
-  .qna-content { width: calc(100% - 28px); padding-top: 14px; }
+  .suggestion-content { width: calc(100% - 28px); padding-top: 14px; }
   .page-heading { flex-wrap: wrap; }
   .detail-card { padding: 18px 14px; }
   .filter-select, .filter-input { width: 100%; }
-  .col-date, .col-view, .col-writer { display: none; }
+  .col-date, .col-view, .col-like, .col-writer { display: none; }
 }
 </style>

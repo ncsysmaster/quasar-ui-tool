@@ -9,6 +9,8 @@ export default defineConfig(() => ({
   extras: ["material-icons"],
   build: {
     vueRouterMode: "hash",
+    // 루트 .env 파일은 @quasar/app-vite가 자동으로 읽는다.
+    // 단, QCLI_ 접두사가 붙은 변수만 클라이언트 코드(process.env.QCLI_*)에 노출된다.
     extendViteConf(viteConf) {
       viteConf.resolve ||= {};
       viteConf.resolve.alias = {

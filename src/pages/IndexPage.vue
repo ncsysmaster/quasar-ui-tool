@@ -134,6 +134,13 @@ const internalResources = [
     icon: 'contact_support',
     accent: 'accent-indigo',
     to: '/qna'
+  },
+  {
+    title: '개선 제안',
+    description: '새로운 기능이나 사용성 개선 의견을 제안하고 처리 현황을 확인합니다.',
+    icon: 'tips_and_updates',
+    accent: 'accent-yellow',
+    to: '/suggestion'
   }
 ]
 
@@ -152,13 +159,6 @@ const contactResources = [
     accent: 'accent-green',
     href: 'mailto:mailmoon@naver.com?subject=Quasar%20UI%20Tool%20문의'
   },
-  {
-    title: '개선 제안',
-    description: '새로운 기능이나 사용성 개선 의견을 제안합니다.',
-    icon: 'tips_and_updates',
-    accent: 'accent-yellow',
-    href: 'mailto:mailmoon@naver.com?subject=%5BQuasar%20UI%20Tool%20개선%20제안%5D'
-  }
 ]
 </script>
 
