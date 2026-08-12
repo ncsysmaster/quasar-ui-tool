@@ -15,36 +15,22 @@
         <q-space />
 
         <nav class="desktop-nav" aria-label="주요 메뉴">
-          <q-btn-dropdown flat no-caps label="UI TOOL 소개">
-            <q-list class="nav-dropdown">
-              <q-item
-                v-for="item in introMenus"
-                :key="item.path"
-                v-close-popup
-                clickable
-                :to="item.path"
-              >
-                <q-item-section>{{ item.label }}</q-item-section>
-              </q-item>
-            </q-list>
-          </q-btn-dropdown>
-          <q-btn flat no-caps label="가이드" to="/guide" />
-          <q-btn-dropdown flat no-caps label="예제">
-            <q-list class="nav-dropdown">
-              <q-item
-                v-for="item in exampleMenus"
-                :key="item.path"
-                v-close-popup
-                clickable
-                :to="item.path"
-              >
-                <q-item-section>{{ item.label }}</q-item-section>
-              </q-item>
-            </q-list>
-          </q-btn-dropdown>
-          <q-btn flat no-caps label="질의응답" to="/qna" />
-          <q-btn flat no-caps label="개선 제안" to="/suggestion" />
-          <q-btn flat no-caps label="라이센스" to="/license" />
+          <template v-for="(menu, index) in menuStore.visibleMenus" :key="`nav-${index}`">
+            <q-btn-dropdown v-if="menu.type === 'group'" flat no-caps :label="menu.label">
+              <q-list class="nav-dropdown">
+                <q-item
+                  v-for="item in menu.children"
+                  :key="item.path"
+                  v-close-popup
+                  clickable
+                  :to="item.path"
+                >
+                  <q-item-section>{{ item.label }}</q-item-section>
+                </q-item>
+              </q-list>
+            </q-btn-dropdown>
+            <q-btn v-else flat no-caps :label="menu.label" :to="menu.path" />
+          </template>
         </nav>
       </q-toolbar>
     </q-header>
@@ -68,71 +54,37 @@
       </div>
 
       <q-list padding class="drawer-menu">
-        <q-item-label header>UI TOOL 소개</q-item-label>
-        <q-item
-          v-for="item in introMenus"
-          :key="item.path"
-          clickable
-          :to="item.path"
-          active-class="drawer-item-active"
-          @click="closeDrawerOnMobile"
-        >
-          <q-item-section avatar><q-icon :name="item.icon" /></q-item-section>
-          <q-item-section>{{ item.label }}</q-item-section>
-        </q-item>
-
-        <q-separator spaced />
-        <q-item
-          clickable
-          to="/guide"
-          active-class="drawer-item-active"
-          @click="closeDrawerOnMobile"
-        >
-          <q-item-section avatar><q-icon name="menu_book" /></q-item-section>
-          <q-item-section>가이드</q-item-section>
-        </q-item>
-
-        <q-item-label header>예제</q-item-label>
-        <q-item
-          v-for="item in exampleMenus"
-          :key="`drawer-${item.path}`"
-          clickable
-          :to="item.path"
-          active-class="drawer-item-active"
-          @click="closeDrawerOnMobile"
-        >
-          <q-item-section avatar><q-icon name="chevron_right" /></q-item-section>
-          <q-item-section>{{ item.label }}</q-item-section>
-        </q-item>
-
-        <q-separator spaced />
-        <q-item
-          clickable
-          to="/qna"
-          active-class="drawer-item-active"
-          @click="closeDrawerOnMobile"
-        >
-          <q-item-section avatar><q-icon name="contact_support" /></q-item-section>
-          <q-item-section>질의응답</q-item-section>
-        </q-item>
-        <q-item
-          clickable
-          to="/suggestion"
-          active-class="drawer-item-active"
-          @click="closeDrawerOnMobile"
-        >
-          <q-item-section avatar><q-icon name="tips_and_updates" /></q-item-section>
-          <q-item-section>개선 제안</q-item-section>
-        </q-item>
-        <q-item
-          clickable
-          to="/license"
-          active-class="drawer-item-active"
-          @click="closeDrawerOnMobile"
-        >
-          <q-item-section avatar><q-icon name="verified_user" /></q-item-section>
-          <q-item-section>라이센스</q-item-section>
-        </q-item>
+        <template v-for="(menu, index) in menuStore.visibleMenus" :key="`drawer-${index}`">
+          <template v-if="menu.type === 'group'">
+            <q-item-label header>{{ menu.label }}</q-item-label>
+            <q-item
+              v-for="item in menu.children"
+              :key="`drawer-${item.path}`"
+              clickable
+              :to="item.path"
+              active-class="drawer-item-active"
+              @click="closeDrawerOnMobile"
+            >
+              <q-item-section avatar><q-icon :name="item.icon || 'chevron_right'" /></q-item-section>
+              <q-item-section>{{ item.label }}</q-item-section>
+            </q-item>
+          </template>
+          <template v-else>
+            <q-separator
+              v-if="index > 0 && menuStore.visibleMenus[index - 1].type === 'group'"
+              spaced
+            />
+            <q-item
+              clickable
+              :to="menu.path"
+              active-class="drawer-item-active"
+              @click="closeDrawerOnMobile"
+            >
+              <q-item-section avatar><q-icon :name="menu.icon || 'chevron_right'" /></q-item-section>
+              <q-item-section>{{ menu.label }}</q-item-section>
+            </q-item>
+          </template>
+        </template>
       </q-list>
     </q-drawer>
 
@@ -143,24 +95,13 @@
 <script setup>
 import { ref } from 'vue'
 import { useQuasar } from 'quasar'
+import { useMenuStore } from '../store/menu/menuStore'
 
 const $q = useQuasar()
 const leftDrawerOpen = ref(false)
+const menuStore = useMenuStore()
 
-const introMenus = [
-  { label: '도구 소개', path: '/intro/overview', icon: 'info' },
-  { label: '주요 기능', path: '/intro/features', icon: 'extension' },
-  { label: '화면 구성', path: '/intro/interface', icon: 'dashboard' },
-  { label: '개발 현황', path: '/intro/status', icon: 'update' }
-]
-
-const exampleMenus = [
-  { label: 'Dashboard', path: '/examples/dashboard' },
-  { label: 'Layout', path: '/examples/layout' },
-  { label: 'Admin', path: '/examples/page' },
-  { label: 'Component', path: '/examples/component' },
-  { label: 'Form', path: '/examples/form' }
-]
+menuStore.loadMenus()
 
 function closeDrawerOnMobile() {
   if ($q.screen.lt.md) leftDrawerOpen.value = false

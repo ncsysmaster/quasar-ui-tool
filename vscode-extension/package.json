@@ -2,8 +2,9 @@
   "name": "quasar-ui-editor",
   "displayName": "Quasar UI Editor",
   "description": "VS Code editor integration for Quasar UI page JSON files.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "ORUM",
+  "homepage": "https://quasar.innoweaver.net/",
   "icon": "media/quasar-tool.png",
   "pricing": "Free",
   "keywords": [

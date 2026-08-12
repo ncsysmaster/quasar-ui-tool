@@ -85,7 +85,7 @@
           <a
             class="resource-card"
             :href="extensionDownloadUrl"
-            download="quasar-tool-vscode-0.1.0.vsix"
+            download="quasar-ui-editor-0.1.2.vsix"
           >
             <span class="resource-icon accent-violet">
               <q-icon name="download" size="28px" />
@@ -104,7 +104,7 @@
 
 <script setup>
 import toolLogo from '../../docs/QuasarUiTool.png'
-import extensionDownloadUrl from '../../vscode-extension/quasar-tool-vscode-0.1.0.vsix?url'
+import extensionDownloadUrl from '../../vscode-extension/quasar-ui-editor-0.1.2.vsix?url'
 
 const internalResources = [
   {

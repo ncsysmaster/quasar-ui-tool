@@ -2,6 +2,10 @@
 
 This extension opens `.src/pages/*.json` files with a visual editor inside VS Code and provides a `Quasar Tool` Activity Bar container.
 
+## Official Website
+
+Visit the [Quasar UI official website](https://quasar.innoweaver.net/) for product information, guides, and updates.
+
 ## Run In Development
 
 1. Open this repository in VS Code.

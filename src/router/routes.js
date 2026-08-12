@@ -50,6 +50,10 @@ const routes = [
       {
         path: 'license',
         component: () => import('../pages/LicensePage.vue')
+      },
+      {
+        path: 'admin/menus',
+        component: () => import('../pages/AdminMenuPage.vue')
       }
     ]
   }

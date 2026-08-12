@@ -2,6 +2,11 @@
 
 All notable changes to the Quasar UI Tool VS Code extension are documented here.
 
+## 0.1.2
+
+- Added the Quasar UI official website link to the Marketplace Details page.
+- Added extension homepage metadata for `https://quasar.innoweaver.net/`.
+
 ## 0.1.0
 
 Initial Marketplace-ready release.

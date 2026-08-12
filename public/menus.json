@@ -1,0 +1,113 @@
+{
+  "menus": [
+    {
+      "type": "group",
+      "label": "UI TOOL 소개",
+      "visible": true,
+      "children": [
+        {
+          "label": "도구 소개",
+          "path": "/intro/overview",
+          "icon": "info",
+          "visible": true
+        },
+        {
+          "label": "주요 기능",
+          "path": "/intro/features",
+          "icon": "extension",
+          "visible": true
+        },
+        {
+          "label": "화면 구성",
+          "path": "/intro/interface",
+          "icon": "dashboard",
+          "visible": true
+        },
+        {
+          "label": "개발 현황",
+          "path": "/intro/status",
+          "icon": "update",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "type": "link",
+      "label": "가이드",
+      "path": "/guide",
+      "icon": "menu_book",
+      "visible": true
+    },
+    {
+      "type": "group",
+      "label": "예제",
+      "visible": true,
+      "children": [
+        {
+          "label": "Dashboard",
+          "path": "/examples/dashboard",
+          "icon": "chevron_right",
+          "visible": true
+        },
+        {
+          "label": "Layout",
+          "path": "/examples/layout",
+          "icon": "chevron_right",
+          "visible": true
+        },
+        {
+          "label": "Admin",
+          "path": "/examples/page",
+          "icon": "chevron_right",
+          "visible": true
+        },
+        {
+          "label": "Component",
+          "path": "/examples/component",
+          "icon": "chevron_right",
+          "visible": true
+        },
+        {
+          "label": "Form",
+          "path": "/examples/form",
+          "icon": "chevron_right",
+          "visible": true
+        },
+        {
+          "label": "test",
+          "path": "/src/page/test",
+          "icon": "chevron_right",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "type": "link",
+      "label": "질의응답",
+      "path": "/qna",
+      "icon": "contact_support",
+      "visible": true
+    },
+    {
+      "type": "link",
+      "label": "개선 제안",
+      "path": "/suggestion",
+      "icon": "tips_and_updates",
+      "visible": true
+    },
+    {
+      "type": "link",
+      "label": "라이센스",
+      "path": "/license",
+      "icon": "verified_user",
+      "visible": true
+    },
+    {
+      "type": "link",
+      "label": "메뉴 관리",
+      "path": "/admin/menus",
+      "icon": "edit_note",
+      "visible": true
+    }
+  ]
+}
